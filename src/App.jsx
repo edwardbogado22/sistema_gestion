@@ -19,6 +19,9 @@ const Asignaturas = lazy(() => import('./pages/Configuracion/Asignaturas').then(
 const Profesores = lazy(() => import('./pages/Configuracion/Profesores').then((m) => ({ default: m.Profesores })))
 const Criterios = lazy(() => import('./pages/Configuracion/Criterios').then((m) => ({ default: m.Criterios })))
 const Usuarios = lazy(() => import('./pages/Configuracion/Usuarios').then((m) => ({ default: m.Usuarios })))
+const DiasNoHabiles = lazy(() =>
+  import('./pages/Configuracion/DiasNoHabiles').then((m) => ({ default: m.DiasNoHabiles })),
+)
 const Llamados = lazy(() => import('./pages/Examenes/Llamados').then((m) => ({ default: m.Llamados })))
 const PanelFechas = lazy(() => import('./pages/Examenes/PanelFechas').then((m) => ({ default: m.PanelFechas })))
 const ReporteCarga = lazy(() => import('./pages/Examenes/ReporteCarga').then((m) => ({ default: m.ReporteCarga })))
@@ -69,6 +72,7 @@ function App() {
           <Route path="asignaturas" element={<Asignaturas />} />
           <Route path="profesores" element={<Profesores />} />
           <Route path="criterios" element={<Criterios />} />
+          <Route path="dias-no-habiles" element={<DiasNoHabiles />} />
           <Route path="usuarios" element={<Usuarios />} />
         </Route>
 

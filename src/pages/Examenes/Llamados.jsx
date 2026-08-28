@@ -282,9 +282,13 @@ export function Llamados() {
             {esAdmin && (
             <div style={{ marginTop: 14 }}>
               <div className="section-label">
-                <span>Días no hábiles</span>
+                <span>Días bloqueados solo en este llamado</span>
               </div>
-              {exc.length === 0 && <p className="muted-text">Sin días excluidos. Acordate de los domingos y feriados.</p>}
+              <p className="muted-text" style={{ fontSize: 12 }}>
+                Los feriados y los domingos ya están bloqueados para todos los llamados desde Configuración →
+                Días no hábiles. Acá van los casos puntuales de este llamado.
+              </p>
+              {exc.length === 0 && <p className="muted-text">Sin bloqueos puntuales.</p>}
               {exc.map((e) => (
                 <div className="stat-breakdown-row" key={e.id}>
                   <span>

@@ -34,8 +34,13 @@ navegador, así que esconder botones no restringe nada.
 
 Módulo de fechas de examen y asistencia a mesas (`supabase/migracion_mesas_examinadoras.sql`):
 
-1. El admin crea un **llamado** (Ordinario / Complementario / Regularización) con su rango de fechas y los
-   días no hábiles (feriados, domingos).
+1. El admin crea un **llamado** (Ordinario / Complementario / Regularización) con su rango de fechas.
+
+   Los feriados **no** se cargan por llamado: viven en `dia_no_habil`, un calendario institucional
+   permanente que se administra desde **Configuración → Días no hábiles** y vale para todos los llamados.
+   Los de fecha fija (8 de diciembre, Virgen de Caacupé) se cargan una vez como recurrentes y aplican todos
+   los años; los móviles (Semana Santa), con la fecha de cada año. Los domingos son un flag del llamado
+   (`excluye_domingos`), no 52 filas. Cada llamado puede sumar bloqueos puntuales propios.
 2. Las propuestas de los alumnos llegan a Secretaría en una **proforma firmada, en papel**; el secretario la
    transcribe al asignar la fecha. No hay cuentas de estudiante.
 3. En Complementario y Regularización no hay proforma: `examen_distribuir()` reparte las materias entre los
@@ -46,8 +51,13 @@ Módulo de fechas de examen y asistencia a mesas (`supabase/migracion_mesas_exam
 5. `recalcular_asistencia_mesas()` consolida la asistencia **por profesor** y escribe ese mismo resultado en
    todas sus cátedras, alimentando el criterio del 10% de la Foja de Desempeño sin carga manual.
 
-El rango se valida en un trigger (`examen_fecha_validar`), no en React: la regla se cumple aunque alguien
-llame la API REST directamente. El calendario de la UI es una comodidad, no la defensa.
+El rango y los días bloqueados se validan en un trigger (`examen_fecha_validar`), no en React: la regla se
+cumple aunque alguien llame la API REST directamente. El calendario de la UI es una comodidad, no la defensa.
+`dia_bloqueado()` devuelve el motivo y no un booleano, para que el error diga "No se puede tomar examen el
+08/12/2026: Día de la Virgen de Caacupé".
+
+Si se agrega un feriado después de haber cargado fechas, `v_examen_fechas_invalidas` lista los exámenes que
+quedaron en días bloqueados. No se borran solos: aparecen como aviso en Configuración → Días no hábiles.
 
 Secretaría puede imprimir la **constancia de carga** con formato institucional desde el panel, para presentar
 el resultado de su trabajo.
@@ -97,7 +107,7 @@ Pasos:
 5. Editar el paso 4 de `supabase/migracion_roles_alcance.sql` con el email de ese usuario y ejecutar el
    archivo completo. **Si el email no coincide con ninguno, el script aborta a propósito**: sin un ADMIN
    cargado, las políticas nuevas dejarían a todos afuera del sistema.
-6. Ejecutar `supabase/migracion_mesas_examinadoras.sql`.
+6. Ejecutar `supabase/migracion_mesas_examinadoras.sql` y después `supabase/migracion_dias_no_habiles.sql`.
 
 ## Self-hosted: probar o crear un nuevo proyecto en un servidor propio
 
@@ -168,6 +178,7 @@ supabase/policies.sql                       RLS + constraints + ajustes de crite
 supabase/migracion_asistencia_reuniones.sql Tabla asistencia_reuniones + criterio de reuniones pasa a % objetivo
 supabase/migracion_roles_alcance.sql        Roles ADMIN/SECRETARIO, alcance por carrera+sede, RLS real
 supabase/migracion_mesas_examinadoras.sql   Llamados, fechas de examen, mesas y recálculo del 10%
+supabase/migracion_dias_no_habiles.sql      Calendario institucional de feriados (bloqueo permanente)
 
 src/
   components/            Layout, PrivateRoute, BuscadorSelect, CalendarioRango

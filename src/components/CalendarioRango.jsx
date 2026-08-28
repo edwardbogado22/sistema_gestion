@@ -9,15 +9,17 @@ const MESES = [
 
 /**
  * Calendario acotado a un rango. Solo deja elegir días entre min y max
- * que no estén en `excepciones`; `carga` marca los días que ya tienen
- * exámenes del mismo curso, para no apilar finales en una jornada.
+ * que no estén bloqueados; `excepciones` es un mapa fecha → motivo, que
+ * se muestra al pasar el mouse ("Día de la Virgen de Caacupé"). `carga`
+ * marca los días que ya tienen exámenes del mismo curso, para no apilar
+ * finales en una jornada.
  */
-export function CalendarioRango({ value, onChange, min, max, excepciones = [], carga = {}, disabled }) {
+export function CalendarioRango({ value, onChange, min, max, excepciones = {}, carga = {}, disabled }) {
   const [abierto, setAbierto] = useState(false)
   const [mesVisible, setMesVisible] = useState(null)
   const ref = useRef(null)
 
-  const excluidas = useMemo(() => new Set(excepciones), [excepciones])
+  const excluidas = useMemo(() => new Set(Object.keys(excepciones)), [excepciones])
 
   useEffect(() => {
     function onClickFuera(e) {
@@ -115,6 +117,12 @@ export function CalendarioRango({ value, onChange, min, max, excepciones = [], c
               const iso = aISO(fecha)
               const estado = estadoDe(iso)
               const ocupados = carga[iso] || 0
+              const titulo =
+                estado === 'excluido'
+                  ? excepciones[iso]
+                  : ocupados > 0
+                    ? `${ocupados} examen(es) de este curso ese día`
+                    : undefined
               return (
                 <button
                   key={iso}
@@ -128,7 +136,7 @@ export function CalendarioRango({ value, onChange, min, max, excepciones = [], c
                     .filter(Boolean)
                     .join(' ')}
                   disabled={estado !== 'habil'}
-                  title={ocupados > 0 ? `${ocupados} examen(es) de este curso ese día` : undefined}
+                  title={titulo}
                   onClick={() => elegir(iso)}
                 >
                   {fecha.getDate()}

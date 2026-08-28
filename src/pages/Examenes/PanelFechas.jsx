@@ -18,7 +18,7 @@ const sinFiltro = {
 export function PanelFechas() {
   const { llamadoId } = useParams()
   const [filas, setFilas] = useState([])
-  const [excepciones, setExcepciones] = useState([])
+  const [bloqueados, setBloqueados] = useState([])
   const [conflictos, setConflictos] = useState([])
   const [noDisponible, setNoDisponible] = useState([])
   const [filtro, setFiltro] = useState(sinFiltro)
@@ -30,16 +30,18 @@ export function PanelFechas() {
 
   const cargar = async () => {
     setLoading(true)
+    // dias_bloqueados_llamado expande los feriados recurrentes al año
+    // que corresponde y suma los domingos y las excepciones puntuales.
     const [ag, exc, con, nd] = await Promise.all([
       supabase.from('v_examen_agenda').select('*').eq('llamado_id', llamadoId),
-      supabase.from('examen_llamado_excepcion').select('fecha').eq('llamado_id', llamadoId),
+      supabase.rpc('dias_bloqueados_llamado', { p_llamado: llamadoId }),
       supabase.from('v_examen_conflictos').select('*').eq('llamado_id', llamadoId),
       supabase.from('profesor_no_disponible').select('profesor_id, fecha').eq('llamado_id', llamadoId),
     ])
     const err = ag.error || exc.error || con.error || nd.error
     if (err) setError(err.message)
     setFilas(ag.data || [])
-    setExcepciones((exc.data || []).map((e) => e.fecha))
+    setBloqueados(exc.data || [])
     setConflictos(con.data || [])
     setNoDisponible(nd.data || [])
     setLoading(false)
@@ -104,11 +106,16 @@ export function PanelFechas() {
     return conteo
   }
 
-  // Días bloqueados: los del llamado más los que el profesor no puede
-  const excepcionesDe = (fila) => [
-    ...excepciones,
-    ...noDisponible.filter((n) => n.profesor_id === fila.profesor_id).map((n) => n.fecha),
-  ]
+  // Días bloqueados: feriados y domingos del llamado, más los días en
+  // que ese profesor no está disponible
+  const excepcionesDe = (fila) => {
+    const motivos = {}
+    for (const b of bloqueados) motivos[b.fecha] = b.motivo
+    for (const n of noDisponible) {
+      if (n.profesor_id === fila.profesor_id) motivos[n.fecha] = 'El profesor no está disponible'
+    }
+    return motivos
+  }
 
   const conflictoDe = (fila) => {
     const fecha = fechaDe(fila)
