@@ -150,15 +150,15 @@ create policy usuario_alcance_admin on usuario_alcance
 -- ------------------------------------------------------------
 -- 4) >>> CARGAR EL ADMIN ANTES DE SEGUIR <<<
 -- ------------------------------------------------------------
--- Reemplazar el email por el del usuario administrador que ya existe
--- en Authentication → Users. Si el email no coincide con ninguno, no
--- inserta nada y el paso 5 aborta toda la migración.
+-- El email tiene que ser el de un usuario que ya exista en
+-- Authentication → Users. Si no coincide con ninguno, no inserta nada
+-- y el paso 5 aborta toda la migración a propósito.
 -- ------------------------------------------------------------
 
 insert into usuarios_perfil (user_id, rol, nombre_completo)
 select id, 'ADMIN', 'Dirección Académica'
   from auth.users
- where email = 'CAMBIAR-POR-TU-EMAIL@fceune.edu.py'
+ where email = 'edward.bogado@fceune.edu.py'
 on conflict (user_id) do update
    set rol = 'ADMIN', activo = true, actualizado_en = now();
 
