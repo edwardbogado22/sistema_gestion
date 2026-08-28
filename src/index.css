@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap');
+﻿@import url('https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap');
 
 :root {
   --green-950: #06231a;
@@ -84,7 +84,7 @@ a {
   z-index: 40;
 }
 
-/* ---- navegación interna ---- */
+/* ---- navegaciÃ³n interna ---- */
 .nav-bar {
   display: flex;
   align-items: center;
@@ -258,7 +258,7 @@ a {
   box-shadow: 0 0 8px var(--gold);
 }
 
-/* ---- contenedor y grilla de módulos ---- */
+/* ---- contenedor y grilla de mÃ³dulos ---- */
 .container {
   max-width: 1100px;
   margin: 0 auto;
@@ -440,7 +440,7 @@ a {
 }
 
 .menu-card .accent::after {
-  content: '→';
+  content: 'â†’';
 }
 
 .menu-card:hover .accent {
@@ -480,7 +480,7 @@ a {
   margin-top: 4px;
 }
 
-/* ---- layout general de páginas ---- */
+/* ---- layout general de pÃ¡ginas ---- */
 .page-padding {
   padding: 1.75rem;
   max-width: 1100px;
@@ -717,7 +717,7 @@ a {
   }
 }
 
-/* ---- selector con búsqueda ---- */
+/* ---- selector con bÃºsqueda ---- */
 .buscador-select {
   position: relative;
   width: 100%;
@@ -839,7 +839,7 @@ a {
   background: #fffdf6;
 }
 
-/* ---- pestañas (Configuración) ---- */
+/* ---- pestaÃ±as (ConfiguraciÃ³n) ---- */
 .tabs {
   display: flex;
   gap: 4px;
@@ -942,7 +942,166 @@ a {
   }
 }
 
-/* ---- foja de desempeño ---- */
+/* ---- calendario acotado a un rango ---- */
+.calendario-rango {
+  position: relative;
+  display: inline-block;
+}
+
+.calendario-disparador {
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  padding: 4px 10px;
+  border: 1px solid var(--gold);
+  border-radius: var(--radius);
+  background: #fff;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.calendario-disparador.vacio {
+  border-style: dashed;
+  border-color: var(--border);
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.calendario-disparador:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.calendario-popover {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 4px);
+  left: 0;
+  width: 250px;
+  padding: 10px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.16);
+}
+
+.calendario-encabezado {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 600;
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+
+.calendario-encabezado button {
+  border: 0;
+  background: none;
+  font-size: 17px;
+  line-height: 1;
+  padding: 0 6px;
+  cursor: pointer;
+  color: var(--gold);
+}
+
+.calendario-encabezado button:disabled {
+  color: var(--border);
+  cursor: default;
+}
+
+.calendario-grilla {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.calendario-dow {
+  text-align: center;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  padding: 2px 0;
+}
+
+.calendario-dia {
+  font: inherit;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  padding: 5px 0;
+  border: 0;
+  border-radius: 3px;
+  background: none;
+  cursor: pointer;
+  position: relative;
+}
+
+.calendario-dia.habil {
+  background: rgba(197, 160, 71, 0.14);
+}
+
+.calendario-dia.habil:hover {
+  background: rgba(197, 160, 71, 0.32);
+}
+
+/* fuera del rango y dÃ­as no hÃ¡biles: no se pueden elegir */
+.calendario-dia.fuera {
+  color: var(--border);
+  cursor: default;
+}
+
+.calendario-dia.excluido {
+  color: var(--muted);
+  cursor: default;
+  background: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 3px,
+    var(--border) 3px,
+    var(--border) 4px
+  );
+}
+
+.calendario-dia.elegido {
+  background: var(--gold);
+  color: #fff;
+  font-weight: 700;
+}
+
+/* ya hay exÃ¡menes de ese curso ese dÃ­a */
+.calendario-dia.cargado::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 11px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--danger);
+}
+
+.calendario-pie {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 9px;
+  font-size: 10.5px;
+  color: var(--muted);
+}
+
+.calendario-limpiar {
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: var(--gold);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+/* ---- foja de desempeÃ±o ---- */
 .foja-card {
   background: #fff;
   border: 1px solid var(--border);
@@ -1014,9 +1173,9 @@ a {
     padding: 0;
   }
 
-  /* compresión para que la Foja completa entre en una sola A4:
-     las descripciones largas de criterios envuelven a 2 líneas y
-     con el tamaño de pantalla no entraba en una hoja. Los
+  /* compresiÃ³n para que la Foja completa entre en una sola A4:
+     las descripciones largas de criterios envuelven a 2 lÃ­neas y
+     con el tamaÃ±o de pantalla no entraba en una hoja. Los
      "!important" pisan los style inline del JSX (margin, fontSize). */
   .foja-escudo {
     width: 70px !important;

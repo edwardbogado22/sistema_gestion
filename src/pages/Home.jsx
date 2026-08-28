@@ -114,6 +114,14 @@ const CARDS = [
     desc: 'Generar e imprimir la foja de desempeño oficial de una cátedra.',
   },
   {
+    section: 'Mesas examinadoras',
+    to: '/examenes',
+    icon: '🗓️',
+    titulo: 'Fechas de Exámenes',
+    desc: 'Llamados, rango de fechas habilitado y asignación de la fecha de examen por materia.',
+    destacada: true,
+  },
+  {
     section: 'Análisis',
     to: '/informes',
     icon: '📈',

@@ -20,6 +20,38 @@ La "Foja de Desempeño" oficial de cada cátedra se arma con **17 criterios en 2
 Todo esto se define en `criterios_evaluacion` por `periodo_lectivo` y se administra desde
 **Configuración → Criterios de Evaluación**.
 
+## Roles
+
+- **ADMIN** (Dirección Académica): control absoluto, acceso a todo el sistema.
+- **SECRETARIO** (Secretaría de Carrera): solo ve las carreras y sedes que tenga asignadas en
+  `usuario_alcance`. Puede cargar fechas de examen de sus materias; el resto es lectura.
+
+El alcance es dato, no código: se administra desde **Configuración → Usuarios**. La restricción real está en
+las políticas de RLS (`supabase/migracion_roles_alcance.sql`), no en el frontend — la `anon key` viaja en el
+navegador, así que esconder botones no restringe nada.
+
+## Mesas examinadoras
+
+Módulo de fechas de examen y asistencia a mesas (`supabase/migracion_mesas_examinadoras.sql`):
+
+1. El admin crea un **llamado** (Ordinario / Complementario / Regularización) con su rango de fechas y los
+   días no hábiles (feriados, domingos).
+2. Las propuestas de los alumnos llegan a Secretaría en una **proforma firmada, en papel**; el secretario la
+   transcribe al asignar la fecha. No hay cuentas de estudiante.
+3. En Complementario y Regularización no hay proforma: `examen_distribuir()` reparte las materias entre los
+   días hábiles evitando que un curso tenga dos exámenes el mismo día, que un profesor quede en dos mesas a
+   la vez, y respetando `profesor_no_disponible`. El día no es fijo — se combina según carga horaria y
+   disponibilidad de cada docente.
+4. `examen_aprobar()` congela el horario y genera las mesas con su titular.
+5. `recalcular_asistencia_mesas()` consolida la asistencia **por profesor** y escribe ese mismo resultado en
+   todas sus cátedras, alimentando el criterio del 10% de la Foja de Desempeño sin carga manual.
+
+El rango se valida en un trigger (`examen_fecha_validar`), no en React: la regla se cumple aunque alguien
+llame la API REST directamente. El calendario de la UI es una comodidad, no la defensa.
+
+Secretaría puede imprimir la **constancia de carga** con formato institucional desde el panel, para presentar
+el resultado de su trabajo.
+
 ## Funcionalidades
 
 - **Autenticación** con Supabase Auth (uso exclusivo de Dirección Académica, sin autoservicio docente).
@@ -61,8 +93,11 @@ Pasos:
 3. Pegar y ejecutar todo el contenido de `supabase/migracion_asistencia_reuniones.sql` (crea `asistencia_reuniones`
    y convierte el criterio "Participación institucional" en % objetivo de asistencia a reuniones en vez de
    puntaje manual).
-4. En **Authentication → Users**, crear (o ubicar) el usuario administrador — no requiere ninguna fila extra en
-   ninguna tabla de roles, alcanza con estar autenticado.
+4. En **Authentication → Users**, crear (o ubicar) el usuario administrador.
+5. Editar el paso 4 de `supabase/migracion_roles_alcance.sql` con el email de ese usuario y ejecutar el
+   archivo completo. **Si el email no coincide con ninguno, el script aborta a propósito**: sin un ADMIN
+   cargado, las políticas nuevas dejarían a todos afuera del sistema.
+6. Ejecutar `supabase/migracion_mesas_examinadoras.sql`.
 
 ## Self-hosted: probar o crear un nuevo proyecto en un servidor propio
 
@@ -131,12 +166,15 @@ VITE_SUPABASE_ANON_KEY=tu-anon-key
 ```
 supabase/policies.sql                       RLS + constraints + ajustes de criterios_evaluacion + tabla y vista nuevas
 supabase/migracion_asistencia_reuniones.sql Tabla asistencia_reuniones + criterio de reuniones pasa a % objetivo
+supabase/migracion_roles_alcance.sql        Roles ADMIN/SECRETARIO, alcance por carrera+sede, RLS real
+supabase/migracion_mesas_examinadoras.sql   Llamados, fechas de examen, mesas y recálculo del 10%
 
 src/
-  components/            Layout, PrivateRoute
-  contexts/               AuthContext (sesión, sin roles — uso exclusivo admin)
-  lib/                    Cliente de Supabase, helpers de CSV
+  components/            Layout, PrivateRoute, BuscadorSelect, CalendarioRango
+  contexts/               AuthContext (sesión, rol y alcance)
+  lib/                    Cliente de Supabase, helpers de CSV y de fechas
   pages/
+    Examenes/             Llamados (admin), PanelFechas (secretaría), ReporteCarga (imprimible)
     Home.jsx              Portal con los 6 módulos
     Catedras.jsx           CRUD de cátedras (alta, edición inline, baja)
     CargarIndicadores.jsx  Formulario de carga por cátedra (objetivos + manuales + encuesta)
