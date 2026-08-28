@@ -1,0 +1,33 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+.env
+.env.*
+!.env.example
+
+# Datos personales de docentes (nombres y cédulas) - no versionar
+planilla/*.xlsx
+planilla/salida/profesores_plantilla.csv
+planilla/salida/catedras_plantilla.csv
+
+# Editor directories and files
+.claude/settings.local.json
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
