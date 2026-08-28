@@ -1,0 +1,18 @@
+# Normalizar finales de línea: LF en el repositorio, nativo en el working copy
+* text=auto
+
+# Scripts que se ejecutan en Linux: siempre LF, aunque se editen en Windows
+*.sh text eol=lf
+*.sql text eol=lf
+
+# Archivos binarios: sin conversión de finales de línea ni diff de texto
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.xlsx binary
+*.pdf binary
+
+# Lockfiles: evitar ruido en los diffs
+package-lock.json linguist-generated=true
