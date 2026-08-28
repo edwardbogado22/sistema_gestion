@@ -2,7 +2,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 
 export function Layout({ children }) {
-  const { user, logout } = useAuth()
+  const { user, perfil, esSecretario, alcance, logout } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -26,7 +26,16 @@ export function Layout({ children }) {
         <div className="nav-spacer" />
         {user && (
           <>
-            <span className="nav-user">{user.email}</span>
+            {esSecretario && (
+              <span className="nav-user" title="Carreras y sedes a tu cargo">
+                {alcance.length === 0
+                  ? 'Sin alcance asignado'
+                  : alcance
+                      .map((a) => `${a.carreras?.nombre ?? '—'} · ${a.sedes?.nombre ?? 'todas las sedes'}`)
+                      .join('  |  ')}
+              </span>
+            )}
+            <span className="nav-user">{perfil?.nombre_completo || user.email}</span>
             <button type="button" className="btn btn-secondary btn-sm" onClick={handleLogout}>
               Cerrar sesión
             </button>

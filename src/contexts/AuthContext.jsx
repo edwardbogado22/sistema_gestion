@@ -1,30 +1,53 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 
 const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
+  const [perfil, setPerfil] = useState(null)
+  const [alcance, setAlcance] = useState([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    let active = true
+  // El perfil define el rol y, si es secretario, las carreras/sedes que
+  // puede ver. Las policies de RLS ya lo restringen del lado de la base;
+  // esto es para no ofrecerle pantallas que no va a poder usar.
+  const cargarPerfil = useCallback(async (sesionUser) => {
+    if (!sesionUser) {
+      setPerfil(null)
+      setAlcance([])
+      return
+    }
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!active) return
+    const [p, a] = await Promise.all([
+      supabase.from('usuarios_perfil').select('rol, nombre_completo, activo').eq('user_id', sesionUser.id).maybeSingle(),
+      supabase.from('usuario_alcance').select('carrera_id, sede_id, carreras(nombre), sedes(nombre)'),
+    ])
+
+    setPerfil(p.data?.activo ? p.data : null)
+    setAlcance(a.data || [])
+  }, [])
+
+  useEffect(() => {
+    let activo = true
+
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!activo) return
       setUser(session?.user ?? null)
-      setLoading(false)
+      await cargarPerfil(session?.user ?? null)
+      if (activo) setLoading(false)
     })
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setUser(session?.user ?? null)
+      await cargarPerfil(session?.user ?? null)
     })
 
     return () => {
-      active = false
+      activo = false
       listener?.subscription.unsubscribe()
     }
-  }, [])
+  }, [cargarPerfil])
 
   const login = async (email, password) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password })
@@ -35,7 +58,17 @@ export function AuthProvider({ children }) {
     await supabase.auth.signOut()
   }
 
-  return <AuthContext.Provider value={{ user, loading, login, logout }}>{children}</AuthContext.Provider>
+  const rol = perfil?.rol ?? null
+  const esAdmin = rol === 'ADMIN'
+  const esSecretario = rol === 'SECRETARIO'
+
+  return (
+    <AuthContext.Provider
+      value={{ user, perfil, rol, esAdmin, esSecretario, alcance, loading, login, logout }}
+    >
+      {children}
+    </AuthContext.Provider>
+  )
 }
 
 // eslint-disable-next-line react-refresh/only-export-components

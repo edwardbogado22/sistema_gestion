@@ -6,6 +6,7 @@ const TABS = [
   { to: 'asignaturas', label: 'Asignaturas' },
   { to: 'profesores', label: 'Profesores' },
   { to: 'criterios', label: 'Criterios de Evaluación' },
+  { to: 'usuarios', label: 'Usuarios' },
 ]
 
 export function Configuracion() {

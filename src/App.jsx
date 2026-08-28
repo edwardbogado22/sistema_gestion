@@ -18,6 +18,11 @@ const Carreras = lazy(() => import('./pages/Configuracion/Carreras').then((m) =>
 const Asignaturas = lazy(() => import('./pages/Configuracion/Asignaturas').then((m) => ({ default: m.Asignaturas })))
 const Profesores = lazy(() => import('./pages/Configuracion/Profesores').then((m) => ({ default: m.Profesores })))
 const Criterios = lazy(() => import('./pages/Configuracion/Criterios').then((m) => ({ default: m.Criterios })))
+const Usuarios = lazy(() => import('./pages/Configuracion/Usuarios').then((m) => ({ default: m.Usuarios })))
+
+// Secciones exclusivas de Dirección Académica. La restricción real está en
+// las policies de RLS; esto evita ofrecer pantallas que no van a funcionar.
+const ADMIN = ['ADMIN']
 
 function withLayout(element) {
   return <Layout>{element}</Layout>
@@ -39,15 +44,22 @@ function App() {
         <Route path="/foja/:catedraId" element={<PrivateRoute>{withLayout(<FojaDesempeno />)}</PrivateRoute>} />
 
         <Route path="/informes" element={<PrivateRoute>{withLayout(<InformesConsolidados />)}</PrivateRoute>} />
-        <Route path="/importar" element={<PrivateRoute>{withLayout(<ImportarDatos />)}</PrivateRoute>} />
+        <Route
+          path="/importar"
+          element={<PrivateRoute roles={ADMIN}>{withLayout(<ImportarDatos />)}</PrivateRoute>}
+        />
 
-        <Route path="/configuracion" element={<PrivateRoute>{withLayout(<Configuracion />)}</PrivateRoute>}>
+        <Route
+          path="/configuracion"
+          element={<PrivateRoute roles={ADMIN}>{withLayout(<Configuracion />)}</PrivateRoute>}
+        >
           <Route index element={<Navigate to="sedes" replace />} />
           <Route path="sedes" element={<Sedes />} />
           <Route path="carreras" element={<Carreras />} />
           <Route path="asignaturas" element={<Asignaturas />} />
           <Route path="profesores" element={<Profesores />} />
           <Route path="criterios" element={<Criterios />} />
+          <Route path="usuarios" element={<Usuarios />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />

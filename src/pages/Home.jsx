@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { useAuth } from '../contexts/AuthContext'
 
 function useResumen() {
   const [resumen, setResumen] = useState(null)
@@ -125,20 +126,24 @@ const CARDS = [
     icon: '📥',
     titulo: 'Importar Datos',
     desc: 'Carga masiva por CSV de asignaturas, profesores, cátedras e indicadores.',
+    soloAdmin: true,
   },
   {
     section: 'Gestión',
     to: '/configuracion',
     icon: '⚙️',
     titulo: 'Configuración',
-    desc: 'Sedes, carreras, asignaturas, profesores y criterios de evaluación.',
+    desc: 'Sedes, carreras, asignaturas, profesores, criterios de evaluación y usuarios.',
+    soloAdmin: true,
   },
 ]
 
 export function Home() {
-  const secciones = [...new Set(CARDS.map((c) => c.section))].map((section) => ({
+  const { esAdmin } = useAuth()
+  const visibles = CARDS.filter((c) => esAdmin || !c.soloAdmin)
+  const secciones = [...new Set(visibles.map((c) => c.section))].map((section) => ({
     section,
-    cards: CARDS.filter((c) => c.section === section),
+    cards: visibles.filter((c) => c.section === section),
   }))
 
   return (
