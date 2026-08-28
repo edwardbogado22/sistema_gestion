@@ -77,7 +77,7 @@ insert into dia_no_habil (motivo, ambito, mes, dia) values
   ('Victoria de Boquerón',                   'NACIONAL',  9, 29),
   ('Día de la Virgen de Caacupé',            'NACIONAL', 12,  8),
   ('Navidad',                                'NACIONAL', 12, 25)
-on conflict (mes, dia) do nothing;
+on conflict (mes, dia) where mes is not null do nothing;
 
 
 -- ------------------------------------------------------------
