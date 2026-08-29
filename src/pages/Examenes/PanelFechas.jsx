@@ -322,9 +322,14 @@ export function PanelFechas() {
                 </td>
                 <td>
                   {f.profesor}
-                  {choque && (
+                  {choque && f.optativa && (
+                    <div className="muted-text" style={{ fontSize: 12 }}>
+                      Choque permitido (materia optativa): {choque.materias}
+                    </div>
+                  )}
+                  {choque && !f.optativa && (
                     <div className="error-text" style={{ fontSize: 12 }}>
-                      Choque: {choque.materias}
+                      Choque: {choque.materias}. No es optativa, se bloqueará al guardar.
                     </div>
                   )}
                 </td>

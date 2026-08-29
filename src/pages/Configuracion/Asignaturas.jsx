@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 
-const empty = { codigo: '', nombre: '', carrera_id: '', curso_nivel: '', horas_totales_programadas: '' }
+const empty = { codigo: '', nombre: '', carrera_id: '', curso_nivel: '', horas_totales_programadas: '', optativa: false }
 
 export function Asignaturas() {
   const [asignaturas, setAsignaturas] = useState([])
@@ -39,6 +39,7 @@ export function Asignaturas() {
       carrera_id: form.carrera_id,
       curso_nivel: Number(form.curso_nivel),
       horas_totales_programadas: form.horas_totales_programadas ? Number(form.horas_totales_programadas) : 0,
+      optativa: form.optativa,
     })
     setSaving(false)
     if (error) {
@@ -67,6 +68,7 @@ export function Asignaturas() {
       carrera_id: a.carrera_id,
       curso_nivel: a.curso_nivel,
       horas_totales_programadas: a.horas_totales_programadas ?? '',
+      optativa: a.optativa ?? false,
     })
   }
 
@@ -79,6 +81,7 @@ export function Asignaturas() {
         carrera_id: editForm.carrera_id,
         curso_nivel: Number(editForm.curso_nivel),
         horas_totales_programadas: editForm.horas_totales_programadas ? Number(editForm.horas_totales_programadas) : 0,
+        optativa: editForm.optativa,
       })
       .eq('id', id)
     if (error) {
@@ -137,6 +140,14 @@ export function Asignaturas() {
               onChange={(e) => setForm({ ...form, horas_totales_programadas: e.target.value })}
             />
           </label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6, flexDirection: 'row' }}>
+            <input
+              type="checkbox"
+              checked={form.optativa}
+              onChange={(e) => setForm({ ...form, optativa: e.target.checked })}
+            />
+            Optativa
+          </label>
         </div>
         {error && <p className="error-text">{error}</p>}
         <div className="form-actions">
@@ -155,6 +166,7 @@ export function Asignaturas() {
               <th>Carrera</th>
               <th>Curso</th>
               <th>Hs. programadas</th>
+              <th>Optativa</th>
               <th>Acciones</th>
             </tr>
           </thead>
@@ -204,6 +216,13 @@ export function Asignaturas() {
                       />
                     </td>
                     <td>
+                      <input
+                        type="checkbox"
+                        checked={editForm.optativa}
+                        onChange={(e) => setEditForm({ ...editForm, optativa: e.target.checked })}
+                      />
+                    </td>
+                    <td>
                       <button type="button" className="btn btn-primary btn-sm" onClick={() => guardarEdicion(a.id)}>
                         Guardar
                       </button>{' '}
@@ -219,6 +238,7 @@ export function Asignaturas() {
                     <td>{a.carreras?.nombre}</td>
                     <td>{a.curso_nivel}</td>
                     <td>{a.horas_totales_programadas}</td>
+                    <td>{a.optativa ? 'Sí' : 'No'}</td>
                     <td>
                       <button type="button" className="btn btn-secondary btn-sm" onClick={() => empezarEdicion(a)}>
                         Editar
@@ -233,7 +253,7 @@ export function Asignaturas() {
             ))}
             {asignaturas.length === 0 && (
               <tr>
-                <td colSpan={6}>No hay asignaturas cargadas.</td>
+                <td colSpan={7}>No hay asignaturas cargadas.</td>
               </tr>
             )}
           </tbody>
