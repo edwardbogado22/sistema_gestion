@@ -140,6 +140,11 @@ export function Llamados() {
             ? 'Definí el rango de fechas y los días no hábiles. Ninguna fecha de examen va a poder caer fuera de lo que se configure acá.'
             : 'Elegí el llamado sobre el que vas a cargar las fechas de tus materias.'}
         </p>
+        {esAdmin && (
+          <Link to="/examenes/seguimiento" className="btn btn-secondary btn-sm">
+            Ver seguimiento de carga por secretario
+          </Link>
+        )}
       </div>
 
       {error && <p className="error-text">{error}</p>}

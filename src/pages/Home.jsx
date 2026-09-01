@@ -122,6 +122,14 @@ const CARDS = [
     destacada: true,
   },
   {
+    section: 'Mesas examinadoras',
+    to: '/examenes/seguimiento',
+    icon: '📈',
+    titulo: 'Seguimiento de Carga',
+    desc: 'Progreso de carga de fechas por secretario, carrera y sede, para revisar cómo va Secretaría.',
+    soloAdmin: true,
+  },
+  {
     section: 'Análisis',
     to: '/informes',
     icon: '📈',
