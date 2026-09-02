@@ -31,16 +31,32 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     let activo = true
 
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (!activo) return
-      setUser(session?.user ?? null)
-      await cargarPerfil(session?.user ?? null)
-      if (activo) setLoading(false)
-    })
+    supabase.auth
+      .getSession()
+      .then(async ({ data: { session } }) => {
+        if (!activo) return
+        setUser(session?.user ?? null)
+        await cargarPerfil(session?.user ?? null)
+      })
+      .catch(() => {
+        if (activo) {
+          setUser(null)
+          setPerfil(null)
+          setAlcance([])
+        }
+      })
+      .finally(() => {
+        if (activo) setLoading(false)
+      })
 
     const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setUser(session?.user ?? null)
-      await cargarPerfil(session?.user ?? null)
+      try {
+        await cargarPerfil(session?.user ?? null)
+      } catch {
+        setPerfil(null)
+        setAlcance([])
+      }
     })
 
     return () => {
