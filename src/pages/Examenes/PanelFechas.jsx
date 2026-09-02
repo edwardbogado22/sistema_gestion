@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
+import { useAuth } from '../../contexts/AuthContext'
 import { BuscadorSelect } from '../../components/BuscadorSelect'
 import { CalendarioRango } from '../../components/CalendarioRango'
 import { formatoLargo } from '../../lib/fechas'
@@ -17,6 +18,7 @@ const sinFiltro = {
 
 export function PanelFechas() {
   const { llamadoId } = useParams()
+  const { puedeEscribir } = useAuth()
   const [filas, setFilas] = useState([])
   const [bloqueados, setBloqueados] = useState([])
   const [conflictos, setConflictos] = useState([])
@@ -202,7 +204,8 @@ export function PanelFechas() {
     )
   }
 
-  const editable = llamado.llamado_estado === 'ASIGNACION'
+  const abierto = llamado.llamado_estado === 'ASIGNACION'
+  const editable = abierto && puedeEscribir
   const totalConFecha = filas.filter((f) => fechaDe(f)).length
 
   return (
@@ -216,11 +219,14 @@ export function PanelFechas() {
         </p>
       </div>
 
-      {!editable && (
+      {!abierto && (
         <p className="error-text">
           Este llamado está en estado {llamado.llamado_estado} y no admite cambios. Dirección Académica puede
           reabrirlo desde Llamados a examen.
         </p>
+      )}
+      {abierto && !puedeEscribir && (
+        <p className="muted-text">Tu rol es de auditoría: podés ver el estado pero no cargar fechas.</p>
       )}
       {error && <p className="error-text">{error}</p>}
       {ok && <p className="muted-text">{ok}</p>}

@@ -2,7 +2,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 
 export function Layout({ children }) {
-  const { user, perfil, esSecretario, alcance, logout } = useAuth()
+  const { user, perfil, esSecretario, esDirector, alcance, logout } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -26,7 +26,7 @@ export function Layout({ children }) {
         <div className="nav-spacer" />
         {user && (
           <>
-            {esSecretario && (
+            {(esSecretario || esDirector) && (
               <span className="nav-user" title="Carreras y sedes a tu cargo">
                 {alcance.length === 0
                   ? 'Sin alcance asignado'

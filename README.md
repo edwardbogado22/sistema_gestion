@@ -25,6 +25,10 @@ Todo esto se define en `criterios_evaluacion` por `periodo_lectivo` y se adminis
 - **ADMIN** (Dirección Académica): control absoluto, acceso a todo el sistema.
 - **SECRETARIO** (Secretaría de Carrera): solo ve las carreras y sedes que tenga asignadas en
   `usuario_alcance`. Puede cargar fechas de examen de sus materias; el resto es lectura.
+- **DIRECTOR** (Dirección de Carrera): mismo mecanismo de alcance que el secretario (normalmente con
+  `sede_id` null, para ver todas las sedes de su carrera), pero es de solo lectura — audita el estado de
+  las cátedras, no carga fechas de examen ni disponibilidad de profesores
+  (`supabase/migracion_rol_director.sql`).
 
 El alcance es dato, no código: se administra desde **Configuración → Usuarios**. La restricción real está en
 las políticas de RLS (`supabase/migracion_roles_alcance.sql`), no en el frontend — la `anon key` viaja en el
