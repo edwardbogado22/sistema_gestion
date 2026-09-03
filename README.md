@@ -157,14 +157,40 @@ separado en una instalación nueva.
 ## Configuración del proyecto
 
 1. Instalar dependencias: `npm install`
-2. Crear el archivo `.env` (ver `.env.example`):
+2. Crear el archivo `.env.local` con la anon key (ver `.env.example`):
 
 ```env
-VITE_SUPABASE_URL=tu-url-de-supabase
 VITE_SUPABASE_ANON_KEY=tu-anon-key
 ```
 
+El cliente arma la URL de Supabase como `${window.location.origin}/supabase` — no hace falta
+`VITE_SUPABASE_URL`. `npm run dev` proxea `/supabase` al dominio de Tailscale (ver `vite.config.js`), así que
+funciona desde cualquier máquina, esté o no en la LAN de la facultad.
+
 3. Iniciar en desarrollo: `npm run dev`
+
+## Despliegue (server-fce)
+
+En producción, `nginx` sirve el build y hace de proxy de `/supabase/` hacia el gateway real de Supabase — así
+el mismo build funciona sin importar el dominio/IP desde el que entre cada usuario (ver
+`src/lib/supabase.js` y el comentario en `vite.config.js`).
+
+En el servidor (`server-fce`, `192.168.1.170`), carpeta `~/sistema-gestion` (clon de este repo):
+
+```bash
+cd ~/sistema-gestion
+git pull
+echo "VITE_SUPABASE_ANON_KEY=<anon key>" > .env.production.local   # solo la primera vez
+npm run build
+rsync -a --delete dist/ ~/eval-docente-fix/html/
+sudo docker exec eval-docente-web nginx -s reload
+```
+
+El contenedor `eval-docente-web` (nginx:alpine, puerto 8002, el que Tailscale Funnel expone) está montado por
+bind mount sobre `~/eval-docente-fix/html` y `~/eval-docente-fix/default.conf` — los nombres de carpeta no
+coinciden con el del contenedor porque `eval-docente-fix` fue el fix del problema de IP privada y terminó
+siendo el que quedó en pie. `rsync` actualiza los archivos al instante (sin rebuildear la imagen); el
+`nginx -s reload` es solo para que nginx no sirva nada cacheado en memoria.
 
 ## Scripts
 
