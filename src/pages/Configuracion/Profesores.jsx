@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 
 const empty = { documento_identidad: '', nombres: '', apellidos: '', email: '', telefono: '' }
@@ -11,6 +11,15 @@ export function Profesores() {
   const [saving, setSaving] = useState(false)
   const [editId, setEditId] = useState(null)
   const [editForm, setEditForm] = useState(empty)
+  const [busqueda, setBusqueda] = useState('')
+
+  const profesoresFiltrados = useMemo(() => {
+    const q = busqueda.trim().toLowerCase()
+    if (!q) return profesores
+    return profesores.filter((p) =>
+      [p.documento_identidad, p.nombres, p.apellidos].some((campo) => campo?.toLowerCase().includes(q))
+    )
+  }, [profesores, busqueda])
 
   const cargar = () => {
     setLoading(true)
@@ -131,7 +140,15 @@ export function Profesores() {
       {loading ? (
         <p>Cargando...</p>
       ) : (
-        <div className="data-table-wrap">
+        <>
+          <input
+            type="text"
+            placeholder="Buscar por documento, nombre o apellido..."
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            style={{ marginBottom: '0.75rem', maxWidth: 340 }}
+          />
+          <div className="data-table-wrap">
           <table className="data-table">
             <thead>
               <tr>
@@ -144,7 +161,7 @@ export function Profesores() {
               </tr>
             </thead>
             <tbody>
-              {profesores.map((p) => (
+              {profesoresFiltrados.map((p) => (
                 <tr key={p.id}>
                   {editId === p.id ? (
                     <>
@@ -209,14 +226,17 @@ export function Profesores() {
                   )}
                 </tr>
               ))}
-              {profesores.length === 0 && (
+              {profesoresFiltrados.length === 0 && (
                 <tr>
-                  <td colSpan={6}>No hay profesores cargados.</td>
+                  <td colSpan={6}>
+                    {profesores.length === 0 ? 'No hay profesores cargados.' : 'Ningún profesor coincide con la búsqueda.'}
+                  </td>
                 </tr>
               )}
             </tbody>
           </table>
-        </div>
+          </div>
+        </>
       )}
     </div>
   )

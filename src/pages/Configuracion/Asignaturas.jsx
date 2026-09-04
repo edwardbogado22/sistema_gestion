@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 
 const empty = { codigo: '', nombre: '', carrera_id: '', curso_nivel: '', horas_totales_programadas: '', optativa: false }
@@ -12,6 +12,17 @@ export function Asignaturas() {
   const [saving, setSaving] = useState(false)
   const [editId, setEditId] = useState(null)
   const [editForm, setEditForm] = useState(empty)
+  const [busqueda, setBusqueda] = useState('')
+  const [filtroCarrera, setFiltroCarrera] = useState('')
+
+  const asignaturasFiltradas = useMemo(() => {
+    const q = busqueda.trim().toLowerCase()
+    return asignaturas.filter((a) => {
+      if (filtroCarrera && a.carrera_id !== filtroCarrera) return false
+      if (!q) return true
+      return [a.codigo, a.nombre].some((campo) => campo?.toLowerCase().includes(q))
+    })
+  }, [asignaturas, busqueda, filtroCarrera])
 
   const cargar = async () => {
     setLoading(true)
@@ -157,6 +168,24 @@ export function Asignaturas() {
         </div>
       </form>
 
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: '0.75rem' }}>
+        <input
+          type="text"
+          placeholder="Buscar por código o nombre..."
+          value={busqueda}
+          onChange={(e) => setBusqueda(e.target.value)}
+          style={{ maxWidth: 260 }}
+        />
+        <select value={filtroCarrera} onChange={(e) => setFiltroCarrera(e.target.value)}>
+          <option value="">Todas las carreras</option>
+          {carreras.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.nombre}
+            </option>
+          ))}
+        </select>
+      </div>
+
       <div className="data-table-wrap">
         <table className="data-table">
           <thead>
@@ -171,7 +200,7 @@ export function Asignaturas() {
             </tr>
           </thead>
           <tbody>
-            {asignaturas.map((a) => (
+            {asignaturasFiltradas.map((a) => (
               <tr key={a.id}>
                 {editId === a.id ? (
                   <>
@@ -251,9 +280,11 @@ export function Asignaturas() {
                 )}
               </tr>
             ))}
-            {asignaturas.length === 0 && (
+            {asignaturasFiltradas.length === 0 && (
               <tr>
-                <td colSpan={7}>No hay asignaturas cargadas.</td>
+                <td colSpan={7}>
+                  {asignaturas.length === 0 ? 'No hay asignaturas cargadas.' : 'Ninguna asignatura coincide con la búsqueda.'}
+                </td>
               </tr>
             )}
           </tbody>
