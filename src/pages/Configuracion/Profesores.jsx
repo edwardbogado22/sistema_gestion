@@ -78,22 +78,26 @@ export function Profesores() {
   }
 
   const guardarEdicion = async (id) => {
-    const { error } = await supabase
-      .from('profesores')
-      .update({
-        documento_identidad: editForm.documento_identidad,
-        nombres: editForm.nombres,
-        apellidos: editForm.apellidos,
-        email: editForm.email || null,
-        telefono: editForm.telefono || null,
-      })
-      .eq('id', id)
-    if (error) {
-      alert(error.message)
-      return
+    try {
+      const { error } = await supabase
+        .from('profesores')
+        .update({
+          documento_identidad: editForm.documento_identidad,
+          nombres: editForm.nombres,
+          apellidos: editForm.apellidos,
+          email: editForm.email || null,
+          telefono: editForm.telefono || null,
+        })
+        .eq('id', id)
+      if (error) {
+        alert(error.message)
+        return
+      }
+      setEditId(null)
+      cargar()
+    } catch (e) {
+      alert('No se pudo guardar: ' + e.message)
     }
-    setEditId(null)
-    cargar()
   }
 
   return (

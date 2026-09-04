@@ -84,23 +84,27 @@ export function Asignaturas() {
   }
 
   const guardarEdicion = async (id) => {
-    const { error } = await supabase
-      .from('asignaturas')
-      .update({
-        codigo: editForm.codigo,
-        nombre: editForm.nombre,
-        carrera_id: editForm.carrera_id,
-        curso_nivel: Number(editForm.curso_nivel),
-        horas_totales_programadas: editForm.horas_totales_programadas ? Number(editForm.horas_totales_programadas) : 0,
-        optativa: editForm.optativa,
-      })
-      .eq('id', id)
-    if (error) {
-      alert(error.message)
-      return
+    try {
+      const { error } = await supabase
+        .from('asignaturas')
+        .update({
+          codigo: editForm.codigo,
+          nombre: editForm.nombre,
+          carrera_id: editForm.carrera_id,
+          curso_nivel: Number(editForm.curso_nivel),
+          horas_totales_programadas: editForm.horas_totales_programadas ? Number(editForm.horas_totales_programadas) : 0,
+          optativa: editForm.optativa,
+        })
+        .eq('id', id)
+      if (error) {
+        alert(error.message)
+        return
+      }
+      setEditId(null)
+      cargar()
+    } catch (e) {
+      alert('No se pudo guardar: ' + e.message)
     }
-    setEditId(null)
-    cargar()
   }
 
   if (loading) return <p>Cargando...</p>
