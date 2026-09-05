@@ -231,7 +231,7 @@ export function PanelFechas() {
       {error && <p className="error-text">{error}</p>}
       {ok && <p className="muted-text">{ok}</p>}
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', marginBottom: 16 }}>
+      <div className="form-row" style={{ marginBottom: 16, alignItems: 'center' }}>
         <select value={filtro.sede_id} onChange={(e) => setFiltro({ ...filtro, sede_id: e.target.value })}>
           <option value="">Todas las sedes</option>
           {opciones.sedes.map((o) => (
@@ -289,7 +289,7 @@ export function PanelFechas() {
           Solo sin fecha
         </label>
 
-        <button type="button" className="btn btn-secondary btn-sm" onClick={() => setFiltro(sinFiltro)}>
+        <button type="button" className="chip" onClick={() => setFiltro(sinFiltro)}>
           Limpiar filtros
         </button>
       </div>

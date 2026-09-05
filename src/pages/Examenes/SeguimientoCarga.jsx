@@ -86,14 +86,17 @@ export function SeguimientoCarga() {
 
       {llamados.length > 0 && (
         <>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', marginBottom: 16 }}>
-            <select value={llamadoId} onChange={(e) => setLlamadoId(e.target.value)}>
-              {llamados.map((l) => (
-                <option key={l.id} value={l.id}>
-                  {l.nombre} ({TIPOS[l.tipo] || l.tipo} · {l.periodo_lectivo})
-                </option>
-              ))}
-            </select>
+          <div className="form-row" style={{ marginBottom: 16, alignItems: 'center' }}>
+            <label>
+              Llamado
+              <select value={llamadoId} onChange={(e) => setLlamadoId(e.target.value)}>
+                {llamados.map((l) => (
+                  <option key={l.id} value={l.id}>
+                    {l.nombre} ({TIPOS[l.tipo] || l.tipo} · {l.periodo_lectivo})
+                  </option>
+                ))}
+              </select>
+            </label>
             {llamado && <span className="badge badge-muted">Estado: {llamado.estado}</span>}
           </div>
 

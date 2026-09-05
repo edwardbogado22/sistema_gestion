@@ -10,6 +10,43 @@ const empty = {
   sede_id: '',
   periodo_lectivo: '',
   seccion_grupo: 'A',
+  dias_semana: [],
+}
+
+// value = extract(dow from fecha) de Postgres. Solo lunes a viernes:
+// en la facultad no se dictan clases sábado ni domingo.
+const DIAS_SEMANA = [
+  { value: 1, label: 'Lun' },
+  { value: 2, label: 'Mar' },
+  { value: 3, label: 'Mié' },
+  { value: 4, label: 'Jue' },
+  { value: 5, label: 'Vie' },
+]
+
+function SelectorDias({ seleccionados, onChange }) {
+  const toggle = (dia) => {
+    onChange(seleccionados.includes(dia) ? seleccionados.filter((d) => d !== dia) : [...seleccionados, dia])
+  }
+  return (
+    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+      {DIAS_SEMANA.map((d) => (
+        <label key={d.value} style={{ display: 'flex', alignItems: 'center', gap: 3, fontWeight: 400 }}>
+          <input type="checkbox" checked={seleccionados.includes(d.value)} onChange={() => toggle(d.value)} />
+          {d.label}
+        </label>
+      ))}
+    </div>
+  )
+}
+
+async function sincronizarHorario(catedraId, dias) {
+  const { error: eDel } = await supabase.from('catedra_horario').delete().eq('catedra_id', catedraId)
+  if (eDel) return eDel
+  if (!dias.length) return null
+  const { error: eIns } = await supabase
+    .from('catedra_horario')
+    .insert(dias.map((dia_semana) => ({ catedra_id: catedraId, dia_semana })))
+  return eIns
 }
 
 export function Catedras() {
@@ -25,6 +62,7 @@ export function Catedras() {
   const [saving, setSaving] = useState(false)
   const [form, setForm] = useState(empty)
   const [filtroPeriodo, setFiltroPeriodo] = useState('')
+  const [busqueda, setBusqueda] = useState('')
   const [editId, setEditId] = useState(null)
   const [editForm, setEditForm] = useState({})
 
@@ -50,7 +88,7 @@ export function Catedras() {
     let query = supabase
       .from('catedras')
       .select(
-        'id, periodo_lectivo, seccion_grupo, activo, profesor_id, asignatura_id, sede_id, profesores(nombres, apellidos), asignaturas(nombre, carreras(nombre)), sedes(nombre)',
+        'id, periodo_lectivo, seccion_grupo, activo, profesor_id, asignatura_id, sede_id, profesores(nombres, apellidos), asignaturas(nombre, carreras(nombre)), sedes(nombre), catedra_horario(dia_semana)',
       )
       .order('periodo_lectivo', { ascending: false })
     if (filtroPeriodo) query = query.eq('periodo_lectivo', filtroPeriodo)
@@ -68,6 +106,21 @@ export function Catedras() {
     cargarCatedras()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filtroPeriodo])
+
+  const catedrasFiltradas = useMemo(() => {
+    const q = busqueda.trim().toLowerCase()
+    if (!q) return catedras
+    return catedras.filter((c) =>
+      [
+        c.profesores?.nombres,
+        c.profesores?.apellidos,
+        c.asignaturas?.nombre,
+        c.asignaturas?.carreras?.nombre,
+        c.sedes?.nombre,
+        c.seccion_grupo,
+      ].some((campo) => campo?.toLowerCase().includes(q)),
+    )
+  }, [catedras, busqueda])
 
   const carrerasFiltradas = useMemo(() => {
     if (!form.sede_id) return carreras
@@ -89,22 +142,33 @@ export function Catedras() {
     setSaving(true)
     setError('')
     setOk('')
-    const { error } = await supabase.from('catedras').insert({
-      profesor_id: form.profesor_id,
-      asignatura_id: form.asignatura_id,
-      sede_id: form.sede_id,
-      periodo_lectivo: form.periodo_lectivo.trim(),
-      seccion_grupo: form.seccion_grupo || 'A',
-    })
-    setSaving(false)
+    const { data, error } = await supabase
+      .from('catedras')
+      .insert({
+        profesor_id: form.profesor_id,
+        asignatura_id: form.asignatura_id,
+        sede_id: form.sede_id,
+        periodo_lectivo: form.periodo_lectivo.trim(),
+        seccion_grupo: form.seccion_grupo || 'A',
+      })
+      .select('id')
+      .single()
     if (error) {
+      setSaving(false)
       setError(
         error.code === '23505' ? 'Ya existe una cátedra igual (mismo profesor, asignatura y periodo).' : error.message,
       )
       return
     }
+    const eHorario = form.dias_semana.length ? await sincronizarHorario(data.id, form.dias_semana) : null
+    setSaving(false)
+    if (eHorario) {
+      setError('La cátedra se creó, pero no se pudo guardar el horario: ' + eHorario.message)
+      cargarCatedras()
+      return
+    }
     setOk('Cátedra creada.')
-    setForm((f) => ({ ...f, asignatura_id: '', profesor_id: '' }))
+    setForm((f) => ({ ...f, asignatura_id: '', profesor_id: '', dias_semana: [] }))
     cargarCatedras()
   }
 
@@ -116,14 +180,20 @@ export function Catedras() {
       sede_id: c.sede_id,
       seccion_grupo: c.seccion_grupo,
       activo: c.activo,
+      dias_semana: (c.catedra_horario || []).map((h) => h.dia_semana),
     })
   }
 
   const guardarEdicion = async (id) => {
-    const { error } = await supabase.from('catedras').update(editForm).eq('id', id)
+    const { dias_semana, ...campos } = editForm
+    const { error } = await supabase.from('catedras').update(campos).eq('id', id)
     if (error) {
       alert(error.code === '23505' ? 'Ya existe esa combinación.' : error.message)
       return
+    }
+    const eHorario = await sincronizarHorario(id, dias_semana || [])
+    if (eHorario) {
+      alert('Se guardó la cátedra, pero no se pudo actualizar el horario: ' + eHorario.message)
     }
     setEditId(null)
     cargarCatedras()
@@ -219,6 +289,10 @@ export function Catedras() {
               onChange={(e) => setForm({ ...form, seccion_grupo: e.target.value })}
             />
           </label>
+          <label>
+            Días de clase
+            <SelectorDias seleccionados={form.dias_semana} onChange={(dias) => setForm({ ...form, dias_semana: dias })} />
+          </label>
         </div>
         {error && <p className="error-text">{error}</p>}
         {ok && <p className="success-text">{ok}</p>}
@@ -229,9 +303,18 @@ export function Catedras() {
         </div>
       </form>
 
-      <div className="form-grid" style={{ maxWidth: 260, marginBottom: '1rem' }}>
-        <label>
-          Filtrar por periodo
+      <div className="form-row" style={{ marginBottom: '0.75rem' }}>
+        <label style={{ flex: '1 1 300px' }}>
+          Buscar
+          <input
+            type="text"
+            placeholder="Profesor, materia, carrera o sede..."
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+          />
+        </label>
+        <label style={{ maxWidth: 160 }}>
+          Periodo
           <input
             value={filtroPeriodo}
             onChange={(e) => setFiltroPeriodo(e.target.value)}
@@ -254,11 +337,12 @@ export function Catedras() {
                 <th>Carrera</th>
                 <th>Sede</th>
                 <th>Sección</th>
+                <th>Días</th>
                 <th>Acciones</th>
               </tr>
             </thead>
             <tbody>
-              {catedras.map((c) => (
+              {catedrasFiltradas.map((c) => (
                 <tr key={c.id}>
                   <td>{c.periodo_lectivo}</td>
                   {editId === c.id ? (
@@ -299,6 +383,12 @@ export function Catedras() {
                           style={{ width: 60 }}
                         />
                       </td>
+                      <td style={{ minWidth: 180 }}>
+                        <SelectorDias
+                          seleccionados={editForm.dias_semana || []}
+                          onChange={(dias) => setEditForm({ ...editForm, dias_semana: dias })}
+                        />
+                      </td>
                       <td>
                         <button type="button" className="btn btn-primary btn-sm" onClick={() => guardarEdicion(c.id)}>
                           Guardar
@@ -317,6 +407,13 @@ export function Catedras() {
                       <td>{c.asignaturas?.carreras?.nombre}</td>
                       <td>{c.sedes?.nombre}</td>
                       <td>{c.seccion_grupo}</td>
+                      <td className="muted-text" style={{ fontSize: 12 }}>
+                        {(c.catedra_horario || []).length
+                          ? DIAS_SEMANA.filter((d) => c.catedra_horario.some((h) => h.dia_semana === d.value))
+                              .map((d) => d.label)
+                              .join(', ')
+                          : '—'}
+                      </td>
                       <td>
                         <Link to={`/indicadores/${c.id}`} className="btn btn-secondary btn-sm">
                           Indicadores
@@ -335,9 +432,9 @@ export function Catedras() {
                   )}
                 </tr>
               ))}
-              {catedras.length === 0 && (
+              {catedrasFiltradas.length === 0 && (
                 <tr>
-                  <td colSpan={7}>No hay cátedras cargadas.</td>
+                  <td colSpan={8}>{catedras.length === 0 ? 'No hay cátedras cargadas.' : 'Ninguna cátedra coincide con la búsqueda.'}</td>
                 </tr>
               )}
             </tbody>

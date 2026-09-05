@@ -659,14 +659,54 @@ a {
   margin-bottom: 1rem;
 }
 
-.form-grid label {
+.form-grid label,
+.form-row label {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--green-800);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--green-700);
   min-width: 0;
+}
+
+.form-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-end;
+}
+
+.form-row input,
+.form-row select,
+.form-row textarea {
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--ink);
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: #fff;
+  min-width: 0;
+  transition: border-color 0.16s var(--ease), box-shadow 0.16s var(--ease), background 0.16s var(--ease);
+}
+
+.form-row input:hover,
+.form-row select:hover,
+.form-row textarea:hover {
+  border-color: #c9d4cc;
+}
+
+.form-row input:focus,
+.form-row select:focus,
+.form-row textarea:focus {
+  outline: none;
+  border-color: var(--gold);
+  box-shadow: var(--ring);
+  background: #fffdf6;
 }
 
 .form-grid input,
@@ -715,6 +755,100 @@ a {
   .form-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* ---- rango de fechas agrupado (Desde â†’ Hasta) ---- */
+.rango-fechas {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 14px;
+  padding: 14px 16px;
+  background: var(--canvas);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.rango-fechas-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--green-700);
+  min-width: 0;
+}
+
+.rango-fechas-campo input {
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--ink);
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: #fff;
+  transition: border-color 0.16s var(--ease), box-shadow 0.16s var(--ease), background 0.16s var(--ease);
+}
+
+.rango-fechas-campo input:hover {
+  border-color: #c9d4cc;
+}
+
+.rango-fechas-campo input:focus {
+  outline: none;
+  border-color: var(--gold);
+  box-shadow: var(--ring);
+  background: #fffdf6;
+}
+
+.rango-fechas-flecha {
+  color: var(--muted);
+  font-size: 15px;
+  padding-bottom: 9px;
+}
+
+.rango-fechas-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 12.5px;
+}
+
+/* ---- chip: atajo clickeable (cargar periodo, limpiar filtros) ---- */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 13px;
+  border-radius: 999px;
+  border: 1px solid rgba(201, 162, 39, 0.4);
+  background: var(--gold-soft-bg);
+  color: var(--gold-deep);
+  font-size: 12.5px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.16s var(--ease), border-color 0.16s var(--ease), color 0.16s var(--ease);
+}
+
+.chip:hover {
+  background: rgba(201, 162, 39, 0.24);
+  border-color: var(--gold);
+}
+
+.chip.activo {
+  background: var(--success-soft);
+  border-color: rgba(31, 138, 91, 0.4);
+  color: var(--success);
+}
+
+.chip.activo:hover {
+  background: rgba(31, 138, 91, 0.22);
 }
 
 /* ---- selector con bÃºsqueda ---- */

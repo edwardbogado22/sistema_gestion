@@ -117,18 +117,22 @@ export function InformesConsolidados() {
         <h1>Informes Consolidados</h1>
       </div>
 
-      <div className="form-grid" style={{ maxWidth: 320, marginBottom: '1.5rem' }}>
-        <label>
+      <div style={{ marginBottom: '1.5rem' }}>
+        <p className="muted-text" style={{ margin: '0 0 8px' }}>
           Periodo lectivo
-          <select value={periodo} onChange={(e) => setPeriodo(e.target.value)}>
-            <option value="">Seleccionar...</option>
-            {periodos.map((p) => (
-              <option key={p} value={p}>
-                {p}
-              </option>
-            ))}
-          </select>
-        </label>
+        </p>
+        <div className="rango-fechas-chips" style={{ marginTop: 0 }}>
+          {periodos.map((p) => (
+            <button
+              key={p}
+              type="button"
+              className={`chip${p === periodo ? ' activo' : ''}`}
+              onClick={() => setPeriodo(p)}
+            >
+              {p}
+            </button>
+          ))}
+        </div>
       </div>
 
       {error && <p className="error-text">{error}</p>}

@@ -6,4 +6,14 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = `${window.location.origin}/supabase`
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    // Por defecto, supabase-js serializa el acceso a la sesión con
+    // navigator.locks para coordinar pestañas. Es una app de una sola
+    // pestaña por usuario, y en desarrollo (recargas seguidas de Vite)
+    // ese lock puede quedar tomado y nunca liberarse, dejando cualquier
+    // getSession() colgado para siempre (pantalla de "Cargando..." sin
+    // salida). Se reemplaza por un lock que no bloquea nada.
+    lock: async (_name, _acquireTimeout, fn) => fn(),
+  },
+})

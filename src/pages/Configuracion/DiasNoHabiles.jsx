@@ -7,10 +7,11 @@ const MESES = [
   'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
 ]
 
-const vacio = { motivo: '', ambito: 'INSTITUCIONAL', tipo: 'RECURRENTE', mes: '12', dia: '8', fecha: '' }
+const vacio = { motivo: '', ambito: 'INSTITUCIONAL', tipo: 'RECURRENTE', mes: '12', dia: '8', fecha: '', sede_id: '' }
 
 export function DiasNoHabiles() {
   const [dias, setDias] = useState([])
+  const [sedes, setSedes] = useState([])
   const [invalidas, setInvalidas] = useState([])
   const [form, setForm] = useState(vacio)
   const [loading, setLoading] = useState(true)
@@ -19,12 +20,14 @@ export function DiasNoHabiles() {
 
   const cargar = async () => {
     setLoading(true)
-    const [d, i] = await Promise.all([
-      supabase.from('dia_no_habil').select('*').order('mes').order('dia').order('fecha'),
+    const [d, s, i] = await Promise.all([
+      supabase.from('dia_no_habil').select('*, sedes(nombre)').order('mes').order('dia').order('fecha'),
+      supabase.from('sedes').select('id, nombre').order('nombre'),
       supabase.from('v_examen_fechas_invalidas').select('*'),
     ])
     if (d.error) setError(d.error.message)
     setDias(d.data || [])
+    setSedes(s.data || [])
     // La vista puede no existir todavía si falta correr la migración
     setInvalidas(i.error ? [] : i.data || [])
     setLoading(false)
@@ -46,7 +49,7 @@ export function DiasNoHabiles() {
     ev.preventDefault()
     setError('')
     setOk('')
-    const base = { motivo: form.motivo, ambito: form.ambito }
+    const base = { motivo: form.motivo, ambito: form.ambito, sede_id: form.sede_id || null }
     const fila =
       form.tipo === 'RECURRENTE'
         ? { ...base, mes: Number(form.mes), dia: Number(form.dia) }
@@ -54,7 +57,7 @@ export function DiasNoHabiles() {
 
     const { error } = await supabase.from('dia_no_habil').insert(fila)
     if (error) return setError(error.message)
-    setForm({ ...vacio, tipo: form.tipo })
+    setForm({ ...vacio, tipo: form.tipo, sede_id: form.sede_id })
     setOk('Día agregado. Ningún examen va a poder caer ahí.')
     cargar()
   }
@@ -78,6 +81,8 @@ export function DiasNoHabiles() {
       <span style={{ opacity: d.activo ? 1 : 0.5 }}>
         <strong>{etiqueta}</strong> · {d.motivo}
         {d.ambito === 'INSTITUCIONAL' && ' (institucional)'}
+        {' · '}
+        {d.sede_id ? d.sedes?.nombre : 'todas las sedes'}
         {!d.activo && ' — desactivado'}
       </span>
       <span style={{ display: 'flex', gap: 6 }}>
@@ -124,7 +129,7 @@ export function DiasNoHabiles() {
         <div className="section-label">
           <span>Agregar día no hábil</span>
         </div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end' }}>
+        <div className="form-row">
           <label>
             Tipo
             <select value={form.tipo} onChange={(e) => setForm({ ...form, tipo: e.target.value })}>
@@ -185,6 +190,18 @@ export function DiasNoHabiles() {
             <select value={form.ambito} onChange={(e) => setForm({ ...form, ambito: e.target.value })}>
               <option value="NACIONAL">Feriado nacional</option>
               <option value="INSTITUCIONAL">Institucional</option>
+            </select>
+          </label>
+
+          <label>
+            Sede
+            <select value={form.sede_id} onChange={(e) => setForm({ ...form, sede_id: e.target.value })}>
+              <option value="">— Todas las sedes —</option>
+              {sedes.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.nombre}
+                </option>
+              ))}
             </select>
           </label>
 

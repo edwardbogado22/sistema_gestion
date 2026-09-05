@@ -155,7 +155,7 @@ export function Llamados() {
         <div className="section-label">
           <span>Nuevo llamado</span>
         </div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end' }}>
+        <div className="form-row">
           <label>
             Periodo lectivo
             <input
@@ -305,19 +305,25 @@ export function Llamados() {
                   </button>
                 </div>
               ))}
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 10 }}>
-                <input
-                  type="date"
-                  min={l.fecha_inicio}
-                  max={l.fecha_fin}
-                  value={draft.fecha || ''}
-                  onChange={(e) => setNuevaExcepcion((p) => ({ ...p, [l.id]: { ...draft, fecha: e.target.value } }))}
-                />
-                <input
-                  placeholder="Motivo (feriado, domingo...)"
-                  value={draft.motivo || ''}
-                  onChange={(e) => setNuevaExcepcion((p) => ({ ...p, [l.id]: { ...draft, motivo: e.target.value } }))}
-                />
+              <div className="form-row" style={{ marginTop: 10 }}>
+                <label>
+                  Fecha
+                  <input
+                    type="date"
+                    min={l.fecha_inicio}
+                    max={l.fecha_fin}
+                    value={draft.fecha || ''}
+                    onChange={(e) => setNuevaExcepcion((p) => ({ ...p, [l.id]: { ...draft, fecha: e.target.value } }))}
+                  />
+                </label>
+                <label style={{ flex: '1 1 220px' }}>
+                  Motivo
+                  <input
+                    placeholder="Feriado, domingo..."
+                    value={draft.motivo || ''}
+                    onChange={(e) => setNuevaExcepcion((p) => ({ ...p, [l.id]: { ...draft, motivo: e.target.value } }))}
+                  />
+                </label>
                 <button type="button" className="btn btn-sm" onClick={() => agregarExcepcion(l.id)}>
                   Agregar
                 </button>
