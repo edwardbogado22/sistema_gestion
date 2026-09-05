@@ -28,6 +28,14 @@ const ReporteCarga = lazy(() => import('./pages/Examenes/ReporteCarga').then((m)
 const SeguimientoCarga = lazy(() =>
   import('./pages/Examenes/SeguimientoCarga').then((m) => ({ default: m.SeguimientoCarga })),
 )
+const Periodos = lazy(() => import('./pages/Configuracion/Periodos').then((m) => ({ default: m.Periodos })))
+const RegistrarAsistencia = lazy(() =>
+  import('./pages/Asistencia/RegistrarAsistencia').then((m) => ({ default: m.RegistrarAsistencia })),
+)
+const ReporteAsistencia = lazy(() =>
+  import('./pages/Asistencia/ReporteAsistencia').then((m) => ({ default: m.ReporteAsistencia })),
+)
+const Reemplazos = lazy(() => import('./pages/Asistencia/Reemplazos').then((m) => ({ default: m.Reemplazos })))
 
 // Secciones exclusivas de Dirección Académica. La restricción real está en
 // las policies de RLS; esto evita ofrecer pantallas que no van a funcionar.
@@ -63,6 +71,16 @@ function App() {
           element={<PrivateRoute>{withLayout(<ReporteCarga />)}</PrivateRoute>}
         />
 
+        <Route path="/asistencia" element={<PrivateRoute>{withLayout(<RegistrarAsistencia />)}</PrivateRoute>} />
+        <Route
+          path="/asistencia/reporte"
+          element={<PrivateRoute>{withLayout(<ReporteAsistencia />)}</PrivateRoute>}
+        />
+        <Route
+          path="/asistencia/reemplazos"
+          element={<PrivateRoute>{withLayout(<Reemplazos />)}</PrivateRoute>}
+        />
+
         <Route path="/informes" element={<PrivateRoute>{withLayout(<InformesConsolidados />)}</PrivateRoute>} />
         <Route
           path="/importar"
@@ -80,6 +98,7 @@ function App() {
           <Route path="profesores" element={<Profesores />} />
           <Route path="criterios" element={<Criterios />} />
           <Route path="dias-no-habiles" element={<DiasNoHabiles />} />
+          <Route path="periodos" element={<Periodos />} />
           <Route path="usuarios" element={<Usuarios />} />
         </Route>
 

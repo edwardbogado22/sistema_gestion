@@ -7,6 +7,7 @@ const TABS = [
   { to: 'profesores', label: 'Profesores' },
   { to: 'criterios', label: 'Criterios de Evaluación' },
   { to: 'dias-no-habiles', label: 'Días no hábiles' },
+  { to: 'periodos', label: 'Períodos académicos' },
   { to: 'usuarios', label: 'Usuarios' },
 ]
 

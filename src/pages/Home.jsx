@@ -130,6 +130,28 @@ const CARDS = [
     soloAdmin: true,
   },
   {
+    section: 'Asistencia a Clases',
+    to: '/asistencia',
+    icon: '🗓️',
+    titulo: 'Registrar Asistencia',
+    desc: 'Carga diaria de asistencia a clases por carrera y sede, con suplencias.',
+    destacada: true,
+  },
+  {
+    section: 'Asistencia a Clases',
+    to: '/asistencia/reporte',
+    icon: '📊',
+    titulo: 'Reporte de Asistencia',
+    desc: 'Efectividad por docente en un rango de fechas, exportable e imprimible.',
+  },
+  {
+    section: 'Asistencia a Clases',
+    to: '/asistencia/reemplazos',
+    icon: '🔄',
+    titulo: 'Reemplazos',
+    desc: 'Clases donde el titular faltó y otro profesor cubrió su lugar.',
+  },
+  {
     section: 'Análisis',
     to: '/informes',
     icon: '📈',
