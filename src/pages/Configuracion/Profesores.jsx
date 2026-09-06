@@ -21,6 +21,8 @@ export function Profesores() {
     )
   }, [profesores, busqueda])
 
+  const pendientes = useMemo(() => profesores.filter((p) => p.confirmado === false), [profesores])
+
   const cargar = () => {
     setLoading(true)
     supabase
@@ -61,6 +63,15 @@ export function Profesores() {
     const { error } = await supabase.from('profesores').delete().eq('id', id)
     if (error) {
       alert('No se pudo eliminar (probablemente tiene cátedras asociadas).')
+      return
+    }
+    cargar()
+  }
+
+  const confirmarPendiente = async (id) => {
+    const { error } = await supabase.from('profesores').update({ confirmado: true }).eq('id', id)
+    if (error) {
+      alert(error.message)
       return
     }
     cargar()
@@ -145,6 +156,12 @@ export function Profesores() {
         <p>Cargando...</p>
       ) : (
         <>
+          {pendientes.length > 0 && (
+            <p className="error-text">
+              Hay {pendientes.length} profesor(es) cargado(s) rápido desde Asistencia a Eventos, pendientes de
+              confirmar contra los datos oficiales de la universidad.
+            </p>
+          )}
           <input
             type="text"
             placeholder="Buscar por documento, nombre o apellido..."
@@ -161,6 +178,7 @@ export function Profesores() {
                 <th>Apellidos</th>
                 <th>Email</th>
                 <th>Teléfono</th>
+                <th>Estado</th>
                 <th>Acciones</th>
               </tr>
             </thead>
@@ -203,6 +221,13 @@ export function Profesores() {
                         />
                       </td>
                       <td>
+                        {p.confirmado === false ? (
+                          <span className="badge badge-gold">Pendiente</span>
+                        ) : (
+                          <span className="badge badge-success">Confirmado</span>
+                        )}
+                      </td>
+                      <td>
                         <button type="button" className="btn btn-primary btn-sm" onClick={() => guardarEdicion(p.id)}>
                           Guardar
                         </button>{' '}
@@ -219,6 +244,20 @@ export function Profesores() {
                       <td>{p.email || '—'}</td>
                       <td>{p.telefono || '—'}</td>
                       <td>
+                        {p.confirmado === false ? (
+                          <span className="badge badge-gold">Pendiente</span>
+                        ) : (
+                          <span className="badge badge-success">Confirmado</span>
+                        )}
+                      </td>
+                      <td>
+                        {p.confirmado === false && (
+                          <>
+                            <button type="button" className="btn btn-primary btn-sm" onClick={() => confirmarPendiente(p.id)}>
+                              Confirmar
+                            </button>{' '}
+                          </>
+                        )}
                         <button type="button" className="btn btn-secondary btn-sm" onClick={() => empezarEdicion(p)}>
                           Editar
                         </button>{' '}
@@ -232,7 +271,7 @@ export function Profesores() {
               ))}
               {profesoresFiltrados.length === 0 && (
                 <tr>
-                  <td colSpan={6}>
+                  <td colSpan={7}>
                     {profesores.length === 0 ? 'No hay profesores cargados.' : 'Ningún profesor coincide con la búsqueda.'}
                   </td>
                 </tr>

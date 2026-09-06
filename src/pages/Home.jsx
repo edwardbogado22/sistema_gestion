@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
@@ -218,7 +218,13 @@ const CARDS = [
 ]
 
 export function Home() {
-  const { esAdmin } = useAuth()
+  const { esAdmin, esAsistente } = useAuth()
+
+  // El asistente solo hace check-in de eventos, normalmente desde el
+  // celular en la puerta: directo a la pantalla que necesita, sin
+  // pasar por un menú que no puede usar para nada más.
+  if (esAsistente) return <Navigate to="/eventos" replace />
+
   const visibles = CARDS.filter((c) => esAdmin || !c.soloAdmin)
   const secciones = [...new Set(visibles.map((c) => c.section))].map((section) => ({
     section,

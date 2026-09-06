@@ -103,7 +103,12 @@ export function RegistrarAsistenciaEvento() {
     setError('')
     const { data: nuevo, error: eIns } = await supabase
       .from('profesores')
-      .insert({ documento_identidad: documento.trim(), nombres: nombres.trim(), apellidos: apellidos.trim() })
+      .insert({
+        documento_identidad: documento.trim(),
+        nombres: nombres.trim(),
+        apellidos: apellidos.trim(),
+        confirmado: false,
+      })
       .select('id, nombres, apellidos')
       .single()
     if (eIns) {
@@ -124,7 +129,9 @@ export function RegistrarAsistenciaEvento() {
       setError(eReg.message)
       return
     }
-    setOk(`Profesor creado y asistencia registrada: ${nuevo.apellidos}, ${nuevo.nombres}`)
+    setOk(
+      `Profesor creado y asistencia registrada: ${nuevo.apellidos}, ${nuevo.nombres}. Queda pendiente de confirmación por Dirección Académica.`,
+    )
     setHistorial((h) => [{ nombre: `${nuevo.apellidos}, ${nuevo.nombres}`, evento: evento?.nombre, nuevo: true }, ...h].slice(0, 8))
     limpiar()
   }

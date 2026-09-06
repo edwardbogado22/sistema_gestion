@@ -6,6 +6,7 @@ const ROLES = [
   { value: 'ADMIN', label: 'Administrador' },
   { value: 'SECRETARIO', label: 'Secretario de Carrera' },
   { value: 'DIRECTOR', label: 'Director de Carrera' },
+  { value: 'ASISTENTE', label: 'Asistente (solo registra eventos)' },
 ]
 
 // Crear la cuenta de acceso (email + contraseña) exige la service_role key,

@@ -68,7 +68,7 @@ export function Catedras() {
 
   const cargarBase = async () => {
     const [p, c, a, s, cs] = await Promise.all([
-      supabase.from('profesores').select('*').order('apellidos'),
+      supabase.from('profesores').select('*').eq('confirmado', true).order('apellidos'),
       supabase.from('carreras').select('*').order('nombre'),
       supabase.from('asignaturas').select('*').order('nombre'),
       supabase.from('sedes').select('*').order('nombre'),

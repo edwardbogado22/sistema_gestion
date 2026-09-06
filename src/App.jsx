@@ -49,6 +49,7 @@ const PlanAnual = lazy(() => import('./pages/PlanAnual').then((m) => ({ default:
 // Secciones exclusivas de Dirección Académica. La restricción real está en
 // las policies de RLS; esto evita ofrecer pantallas que no van a funcionar.
 const ADMIN = ['ADMIN']
+const ADMIN_ASISTENTE = ['ADMIN', 'ASISTENTE']
 
 function withLayout(element) {
   return <Layout>{element}</Layout>
@@ -92,7 +93,7 @@ function App() {
 
         <Route
           path="/eventos"
-          element={<PrivateRoute roles={ADMIN}>{withLayout(<RegistrarAsistenciaEvento />)}</PrivateRoute>}
+          element={<PrivateRoute roles={ADMIN_ASISTENTE}>{withLayout(<RegistrarAsistenciaEvento />)}</PrivateRoute>}
         />
         <Route path="/eventos/gestion" element={<PrivateRoute roles={ADMIN}>{withLayout(<Eventos />)}</PrivateRoute>} />
         <Route

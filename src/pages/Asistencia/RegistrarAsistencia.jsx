@@ -34,7 +34,7 @@ export function RegistrarAsistencia() {
     const [c, h, p, per] = await Promise.all([
       supabase.from('catedras').select('sede_id, sedes(nombre), asignaturas(carrera_id, carreras(nombre))').eq('activo', true),
       supabase.from('v_catedra_horario').select('*'),
-      supabase.from('profesores').select('id, documento_identidad, nombres, apellidos').order('apellidos'),
+      supabase.from('profesores').select('id, documento_identidad, nombres, apellidos').eq('confirmado', true).order('apellidos'),
       supabase.from('periodo_academico').select('*').eq('activo', true).maybeSingle(),
     ])
     const err = c.error || h.error || p.error || per.error

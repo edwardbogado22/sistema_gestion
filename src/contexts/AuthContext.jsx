@@ -78,13 +78,14 @@ export function AuthProvider({ children }) {
   const esAdmin = rol === 'ADMIN'
   const esSecretario = rol === 'SECRETARIO'
   const esDirector = rol === 'DIRECTOR'
+  const esAsistente = rol === 'ASISTENTE'
   // DIRECTOR audita: mismo alcance por carrera/sede que el secretario,
   // pero sin permiso de carga (la RLS es la que realmente lo impide).
   const puedeEscribir = esAdmin || esSecretario
 
   return (
     <AuthContext.Provider
-      value={{ user, perfil, rol, esAdmin, esSecretario, esDirector, puedeEscribir, alcance, loading, login, logout }}
+      value={{ user, perfil, rol, esAdmin, esSecretario, esDirector, esAsistente, puedeEscribir, alcance, loading, login, logout }}
     >
       {children}
     </AuthContext.Provider>
