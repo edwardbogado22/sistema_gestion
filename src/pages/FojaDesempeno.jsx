@@ -17,9 +17,7 @@ export function FojaDesempeno() {
   useEffect(() => {
     setLoading(true)
     supabase
-      .from('v_evaluacion_docente_detalle')
-      .select('*')
-      .eq('catedra_id', catedraId)
+      .rpc('v_evaluacion_docente_ver', { p_catedra_id: catedraId })
       .order('grupo')
       .order('orden')
       .then(({ data, error }) => {
@@ -47,8 +45,8 @@ export function FojaDesempeno() {
     return (
       <div className="page-padding">
         <p className="muted-text">
-          No hay criterios activos configurados para el periodo de esta cátedra. Revisá Configuración → Criterios
-          de Evaluación.
+          No hay resultados para mostrar: puede que no haya criterios activos configurados para el periodo de esta
+          cátedra (revisá Configuración → Criterios de Evaluación), o que no tengas acceso a verla.
         </p>
       </div>
     )

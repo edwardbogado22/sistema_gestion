@@ -73,9 +73,7 @@ export function InformesConsolidados() {
     }
     setLoadingDatos(true)
     supabase
-      .from('v_evaluacion_docente_detalle')
-      .select('*')
-      .eq('periodo_lectivo', periodo)
+      .rpc('v_evaluacion_docente_ver', { p_periodo_lectivo: periodo })
       .then(({ data, error }) => {
         if (error) setError(error.message)
         else setDetalle(data || [])

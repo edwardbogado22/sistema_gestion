@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { useAuth } from '../contexts/AuthContext'
 import { formatoLargo } from '../lib/fechas'
 
 function pct(dividendo, divisor) {
@@ -10,8 +11,14 @@ function pct(dividendo, divisor) {
   return Math.round((d / v) * 10000) / 100
 }
 
+const hoy = () => {
+  const d = new Date()
+  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`
+}
+
 export function CargarIndicadores() {
   const { catedraId } = useParams()
+  const { perfil } = useAuth()
   const [catedra, setCatedra] = useState(null)
   const [criterios, setCriterios] = useState([])
   const [loading, setLoading] = useState(true)
@@ -210,7 +217,7 @@ export function CargarIndicadores() {
 
   return (
     <div className="page-padding">
-      <div className="page-header">
+      <div className="page-header no-print">
         <div>
           <h1>Cargar Indicadores</h1>
           <p>
@@ -219,12 +226,17 @@ export function CargarIndicadores() {
             Sección {catedra?.seccion_grupo}
           </p>
         </div>
-        <Link to={`/foja/${catedraId}`} className="btn btn-secondary">
-          Ver Foja de Desempeño
-        </Link>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button type="button" className="btn btn-secondary" onClick={() => window.print()}>
+            Imprimir constancia de carga
+          </button>
+          <Link to={`/foja/${catedraId}`} className="btn btn-secondary">
+            Ver Foja de Desempeño
+          </Link>
+        </div>
       </div>
 
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} className="no-print">
         <div className="form-card" style={{ marginBottom: '1.5rem' }}>
           <h3>Datos objetivos</h3>
           <div className="form-grid">
@@ -393,6 +405,115 @@ export function CargarIndicadores() {
           </button>
         </div>
       </form>
+
+      <div className="foja-card">
+        <div className="foja-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
+          <img src="/escudo-une.png" alt="Escudo UNE" className="foja-escudo" />
+          <div>
+            <p className="eyebrow" style={{ color: 'var(--gold)' }}>
+              Universidad Nacional del Este
+            </p>
+            <h2 style={{ margin: '2px 0' }}>Facultad de Ciencias Económicas</h2>
+            <p className="muted-text" style={{ margin: 0 }}>
+              Constancia de Carga de Indicadores — Secretaría de Carrera
+            </p>
+          </div>
+        </div>
+
+        <table className="foja-datos">
+          <tbody>
+            <tr>
+              <td>
+                <strong>Carrera:</strong> {catedra?.asignaturas?.carreras?.nombre}
+              </td>
+              <td>
+                <strong>Sede:</strong> {catedra?.sedes?.nombre}
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <strong>Materia:</strong> {catedra?.asignaturas?.nombre}
+              </td>
+              <td>
+                <strong>Sección:</strong> {catedra?.seccion_grupo}
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <strong>Profesor:</strong> {catedra?.profesores?.apellidos}, {catedra?.profesores?.nombres}
+              </td>
+              <td>
+                <strong>Periodo:</strong> {catedra?.periodo_lectivo}
+              </td>
+            </tr>
+            <tr className="no-print">
+              <td colSpan={2}>
+                <strong>Responsable:</strong> {perfil?.nombre_completo || '—'}
+              </td>
+            </tr>
+            <tr>
+              <td colSpan={2}>
+                <strong>Emitido:</strong> {hoy()}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <table className="data-table foja-tabla">
+          <thead>
+            <tr>
+              <th>Dato cargado</th>
+              <th style={{ width: 140 }}>Valor</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Horas programadas / dictadas</td>
+              <td>
+                {clases.horas_programadas || '—'} / {clases.horas_dictadas || '—'}
+              </td>
+            </tr>
+            <tr>
+              <td>Unidades programadas / desarrolladas</td>
+              <td>
+                {contenido.unidades_programadas || '—'} / {contenido.unidades_desarrolladas || '—'}
+              </td>
+            </tr>
+            <tr>
+              <td>Mesas examinadoras convocadas / asistidas</td>
+              <td>
+                {mesas.mesas_convocadas || '—'} / {mesas.mesas_asistidas || '—'}
+              </td>
+            </tr>
+            <tr>
+              <td>Reuniones convocadas / asistidas</td>
+              <td>
+                {reuniones.reuniones_convocadas || '—'} / {reuniones.reuniones_asistidas || '—'}
+              </td>
+            </tr>
+            <tr>
+              <td>Plan anual</td>
+              <td>{planAnual?.fecha_entrega ? `Entregado el ${formatoLargo(planAnual.fecha_entrega)}` : 'Pendiente'}</td>
+            </tr>
+            {institucionalesManual.map((c) => (
+              <tr key={c.id}>
+                <td>{c.nombre}</td>
+                <td>{manualValores[c.id] ?? '—'}</td>
+              </tr>
+            ))}
+            <tr>
+              <td>Cantidad de estudiantes encuestados</td>
+              <td>{totalEncuestados || '—'}</td>
+            </tr>
+            {alumnosItems.map((c) => (
+              <tr key={c.id}>
+                <td>{c.nombre}</td>
+                <td>{alumnosValores[c.id] ?? '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   )
 }

@@ -50,6 +50,7 @@ const PlanAnual = lazy(() => import('./pages/PlanAnual').then((m) => ({ default:
 // las policies de RLS; esto evita ofrecer pantallas que no van a funcionar.
 const ADMIN = ['ADMIN']
 const ADMIN_ASISTENTE = ['ADMIN', 'ASISTENTE']
+const ADMIN_DIRECTOR = ['ADMIN', 'DIRECTOR']
 
 function withLayout(element) {
   return <Layout>{element}</Layout>
@@ -68,7 +69,10 @@ function App() {
           path="/indicadores/:catedraId"
           element={<PrivateRoute>{withLayout(<CargarIndicadores />)}</PrivateRoute>}
         />
-        <Route path="/foja/:catedraId" element={<PrivateRoute>{withLayout(<FojaDesempeno />)}</PrivateRoute>} />
+        <Route
+          path="/foja/:catedraId"
+          element={<PrivateRoute roles={ADMIN_DIRECTOR}>{withLayout(<FojaDesempeno />)}</PrivateRoute>}
+        />
 
         <Route path="/examenes" element={<PrivateRoute>{withLayout(<Llamados />)}</PrivateRoute>} />
         <Route
@@ -107,7 +111,10 @@ function App() {
 
         <Route path="/plan-anual" element={<PrivateRoute>{withLayout(<PlanAnual />)}</PrivateRoute>} />
 
-        <Route path="/informes" element={<PrivateRoute>{withLayout(<InformesConsolidados />)}</PrivateRoute>} />
+        <Route
+          path="/informes"
+          element={<PrivateRoute roles={ADMIN_DIRECTOR}>{withLayout(<InformesConsolidados />)}</PrivateRoute>}
+        />
         <Route
           path="/importar"
           element={<PrivateRoute roles={ADMIN}>{withLayout(<ImportarDatos />)}</PrivateRoute>}

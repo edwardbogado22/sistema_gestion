@@ -198,6 +198,7 @@ const CARDS = [
     icon: '📈',
     titulo: 'Informes Consolidados',
     desc: 'Rendimiento promedio por carrera, por sede y ranking de profesores.',
+    soloAdminODirector: true,
   },
   {
     section: 'Gestión',
@@ -218,14 +219,16 @@ const CARDS = [
 ]
 
 export function Home() {
-  const { esAdmin, esAsistente } = useAuth()
+  const { esAdmin, esAsistente, esDirector } = useAuth()
 
   // El asistente solo hace check-in de eventos, normalmente desde el
   // celular en la puerta: directo a la pantalla que necesita, sin
   // pasar por un menú que no puede usar para nada más.
   if (esAsistente) return <Navigate to="/eventos" replace />
 
-  const visibles = CARDS.filter((c) => esAdmin || !c.soloAdmin)
+  const visibles = CARDS.filter(
+    (c) => (esAdmin || !c.soloAdmin) && (!c.soloAdminODirector || esAdmin || esDirector),
+  )
   const secciones = [...new Set(visibles.map((c) => c.section))].map((section) => ({
     section,
     cards: visibles.filter((c) => c.section === section),
