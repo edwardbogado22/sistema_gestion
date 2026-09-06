@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
+import { aISO } from '../lib/fechas'
+
+const HOY = aISO(new Date())
 
 export function PlanAnual() {
   const { puedeEscribir } = useAuth()
@@ -54,6 +57,7 @@ export function PlanAnual() {
 
   const valorDe = (id, campo) => {
     if (cambios[id]?.[campo] !== undefined) return cambios[id][campo]
+    if (campo === 'fecha_entrega') return entregas[id]?.fecha_entrega ?? HOY
     return entregas[id]?.[campo] ?? ''
   }
 
@@ -63,6 +67,10 @@ export function PlanAnual() {
       [id]: { fecha_entrega: valorDe(id, 'fecha_entrega'), observaciones: valorDe(id, 'observaciones'), ...c[id], [campo]: valor },
     }))
   }
+
+  // Sin fecha guardada: se muestra hoy como sugerencia, no como entrega real —
+  // "Entregado" solo si ya hay una fecha guardada en la base.
+  const yaEntregado = (id) => !!entregas[id]?.fecha_entrega
 
   const guardar = async (id) => {
     setGuardandoId(id)
@@ -134,63 +142,62 @@ export function PlanAnual() {
               <th>Carrera</th>
               <th>Sede</th>
               <th>Período</th>
-              <th>Fecha de entrega</th>
+              <th style={{ width: 160 }}>Fecha de entrega</th>
               <th>Observaciones</th>
               <th>Estado</th>
-              {puedeEscribir && <th></th>}
             </tr>
           </thead>
           <tbody>
-            {filtradas.map((c) => {
-              const fecha = valorDe(c.id, 'fecha_entrega')
-              const hayCambio = cambios[c.id] !== undefined
-              return (
-                <tr key={c.id}>
-                  <td>
-                    {c.profesores?.apellidos}, {c.profesores?.nombres}
-                  </td>
-                  <td>{c.asignaturas?.nombre}</td>
-                  <td>{c.asignaturas?.carreras?.nombre}</td>
-                  <td>{c.sedes?.nombre}</td>
-                  <td>{c.periodo_lectivo}</td>
-                  <td>
-                    <input
-                      type="date"
-                      value={fecha || ''}
-                      disabled={!puedeEscribir}
-                      onChange={(e) => setCambio(c.id, 'fecha_entrega', e.target.value)}
-                    />
-                  </td>
-                  <td>
-                    <input
-                      value={valorDe(c.id, 'observaciones') || ''}
-                      disabled={!puedeEscribir}
-                      placeholder="Opcional"
-                      style={{ minWidth: 160 }}
-                      onChange={(e) => setCambio(c.id, 'observaciones', e.target.value)}
-                    />
-                  </td>
-                  <td>
-                    {fecha ? <span className="badge badge-success">Entregado</span> : <span className="badge badge-muted">Pendiente</span>}
-                  </td>
+            {filtradas.map((c) => (
+              <tr key={c.id}>
+                <td>
+                  {c.profesores?.apellidos}, {c.profesores?.nombres}
+                </td>
+                <td>{c.asignaturas?.nombre}</td>
+                <td>{c.asignaturas?.carreras?.nombre}</td>
+                <td>{c.sedes?.nombre}</td>
+                <td>{c.periodo_lectivo}</td>
+                <td>
+                  <input
+                    type="date"
+                    value={valorDe(c.id, 'fecha_entrega')}
+                    disabled={!puedeEscribir}
+                    onChange={(e) => setCambio(c.id, 'fecha_entrega', e.target.value)}
+                    style={{ marginBottom: 6 }}
+                  />
                   {puedeEscribir && (
-                    <td>
-                      <button
-                        type="button"
-                        className="btn btn-secondary btn-sm"
-                        disabled={!hayCambio || guardandoId === c.id}
-                        onClick={() => guardar(c.id)}
-                      >
-                        {guardandoId === c.id ? 'Guardando...' : 'Guardar'}
-                      </button>
-                    </td>
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      disabled={guardandoId === c.id}
+                      onClick={() => guardar(c.id)}
+                      style={{ display: 'block', width: '100%' }}
+                    >
+                      {guardandoId === c.id ? 'Guardando...' : 'Guardar'}
+                    </button>
                   )}
-                </tr>
-              )
-            })}
+                </td>
+                <td>
+                  <input
+                    value={valorDe(c.id, 'observaciones') || ''}
+                    disabled={!puedeEscribir}
+                    placeholder="Opcional"
+                    style={{ minWidth: 160 }}
+                    onChange={(e) => setCambio(c.id, 'observaciones', e.target.value)}
+                  />
+                </td>
+                <td>
+                  {yaEntregado(c.id) ? (
+                    <span className="badge badge-success">Entregado</span>
+                  ) : (
+                    <span className="badge badge-muted">Pendiente</span>
+                  )}
+                </td>
+              </tr>
+            ))}
             {filtradas.length === 0 && (
               <tr>
-                <td colSpan={puedeEscribir ? 9 : 8}>Ninguna cátedra coincide con la búsqueda.</td>
+                <td colSpan={8}>Ninguna cátedra coincide con la búsqueda.</td>
               </tr>
             )}
           </tbody>
