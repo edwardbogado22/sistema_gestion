@@ -185,6 +185,14 @@ const CARDS = [
     soloAdmin: true,
   },
   {
+    section: 'Plan Anual de Clases',
+    to: '/plan-anual',
+    icon: '📘',
+    titulo: 'Registrar Entregas',
+    desc: 'Registro por cátedra de la entrega del plan anual. Aporta al 20% de "Planificación y documentación" en la Foja de Desempeño.',
+    destacada: true,
+  },
+  {
     section: 'Análisis',
     to: '/informes',
     icon: '📈',

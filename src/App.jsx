@@ -44,6 +44,7 @@ const BusquedaAsistenciaEvento = lazy(() =>
   import('./pages/Eventos/BusquedaAsistenciaEvento').then((m) => ({ default: m.BusquedaAsistenciaEvento })),
 )
 const ReporteEventos = lazy(() => import('./pages/Eventos/ReporteEventos').then((m) => ({ default: m.ReporteEventos })))
+const PlanAnual = lazy(() => import('./pages/PlanAnual').then((m) => ({ default: m.PlanAnual })))
 
 // Secciones exclusivas de Dirección Académica. La restricción real está en
 // las policies de RLS; esto evita ofrecer pantallas que no van a funcionar.
@@ -102,6 +103,8 @@ function App() {
           path="/eventos/reporte"
           element={<PrivateRoute roles={ADMIN}>{withLayout(<ReporteEventos />)}</PrivateRoute>}
         />
+
+        <Route path="/plan-anual" element={<PrivateRoute>{withLayout(<PlanAnual />)}</PrivateRoute>} />
 
         <Route path="/informes" element={<PrivateRoute>{withLayout(<InformesConsolidados />)}</PrivateRoute>} />
         <Route

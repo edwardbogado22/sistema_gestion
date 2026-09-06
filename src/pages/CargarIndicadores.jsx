@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { formatoLargo } from '../lib/fechas'
 
 function pct(dividendo, divisor) {
   const d = Number(dividendo)
@@ -25,6 +26,7 @@ export function CargarIndicadores() {
   const [manualValores, setManualValores] = useState({})
   const [alumnosValores, setAlumnosValores] = useState({})
   const [totalEncuestados, setTotalEncuestados] = useState('')
+  const [planAnual, setPlanAnual] = useState(null)
 
   useEffect(() => {
     ;(async () => {
@@ -41,12 +43,13 @@ export function CargarIndicadores() {
       }
       setCatedra(c)
 
-      const [{ data: cr }, { data: ac }, { data: cc }, { data: ame }, { data: ar }, { data: ecc }] = await Promise.all([
+      const [{ data: cr }, { data: ac }, { data: cc }, { data: ame }, { data: ar }, { data: pae }, { data: ecc }] = await Promise.all([
         supabase.from('criterios_evaluacion').select('*').eq('periodo_lectivo', c.periodo_lectivo).eq('activo', true).order('orden'),
         supabase.from('asistencia_clases').select('*').eq('catedra_id', catedraId).maybeSingle(),
         supabase.from('cumplimiento_contenido').select('*').eq('catedra_id', catedraId).maybeSingle(),
         supabase.from('asistencia_mesas_examinadoras').select('*').eq('catedra_id', catedraId).maybeSingle(),
         supabase.from('asistencia_reuniones').select('*').eq('catedra_id', catedraId).maybeSingle(),
+        supabase.from('plan_anual_entrega').select('*').eq('catedra_id', catedraId).maybeSingle(),
         supabase.from('evaluacion_criterio_catedra').select('*').eq('catedra_id', catedraId),
       ])
 
@@ -55,6 +58,7 @@ export function CargarIndicadores() {
       if (cc) setContenido({ unidades_programadas: cc.unidades_programadas, unidades_desarrolladas: cc.unidades_desarrolladas })
       if (ame) setMesas({ mesas_convocadas: ame.mesas_convocadas, mesas_asistidas: ame.mesas_asistidas })
       if (ar) setReuniones({ reuniones_convocadas: ar.reuniones_convocadas, reuniones_asistidas: ar.reuniones_asistidas })
+      setPlanAnual(pae || null)
 
       const manual = {}
       const alumnos = {}
@@ -81,6 +85,7 @@ export function CargarIndicadores() {
   const criterioClases = criterios.find((c) => c.origen === 'OBJETIVO_CLASES_CONTENIDO')
   const criterioMesas = criterios.find((c) => c.origen === 'OBJETIVO_MESAS_EXAMINADORAS')
   const criterioReuniones = criterios.find((c) => c.origen === 'OBJETIVO_REUNIONES')
+  const criterioPlanAnual = criterios.find((c) => c.origen === 'OBJETIVO_PLAN_ANUAL')
 
   const pctClases = pct(clases.horas_dictadas, clases.horas_programadas)
   const pctContenido = pct(contenido.unidades_desarrolladas, contenido.unidades_programadas)
@@ -313,6 +318,19 @@ export function CargarIndicadores() {
                 <> · aporta a &quot;{criterioReuniones.nombre}&quot; ({criterioReuniones.peso_porcentaje}%)</>
               )}
             </div>
+
+            {criterioPlanAnual && (
+              <div className="muted-text full-width">
+                Plan anual:{' '}
+                {planAnual?.fecha_entrega ? (
+                  <span className="badge badge-success">Entregado el {formatoLargo(planAnual.fecha_entrega)}</span>
+                ) : (
+                  <span className="badge badge-muted">Pendiente</span>
+                )}{' '}
+                · aporta a &quot;{criterioPlanAnual.nombre}&quot; ({criterioPlanAnual.peso_porcentaje}%) ·{' '}
+                <Link to="/plan-anual">Registrar en Plan Anual de Clases</Link>
+              </div>
+            )}
           </div>
         </div>
 
