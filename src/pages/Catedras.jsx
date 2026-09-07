@@ -414,72 +414,80 @@ export function Catedras() {
             <thead>
               <tr>
                 <th style={{ width: 1 }}>Acciones</th>
+                <th>Días</th>
                 <th>Periodo</th>
                 <th>Profesor</th>
                 <th>Asignatura</th>
                 <th>Carrera</th>
                 <th>Sede</th>
                 <th>Sección</th>
-                <th>Días</th>
               </tr>
             </thead>
             <tbody>
               {catedrasFiltradas.map((c) => (
                 <tr key={c.id}>
                   {editId === c.id ? (
-                    <>
-                      <td style={{ whiteSpace: 'nowrap' }}>
-                        <button type="button" className="btn btn-primary btn-sm" onClick={() => guardarEdicion(c.id)}>
-                          Guardar
-                        </button>{' '}
-                        <button type="button" className="btn btn-secondary btn-sm" onClick={() => setEditId(null)}>
-                          Cancelar
-                        </button>
-                      </td>
-                      <td>{c.periodo_lectivo}</td>
-                      <td style={{ minWidth: 200 }}>
-                        <BuscadorSelect
-                          opciones={profesores.map((p) => ({ value: p.id, label: `${p.apellidos}, ${p.nombres}` }))}
-                          value={editForm.profesor_id}
-                          onChange={(id) => setEditForm({ ...editForm, profesor_id: id })}
-                          placeholder="Buscar profesor..."
-                        />
-                      </td>
-                      <td style={{ minWidth: 200 }}>
-                        <BuscadorSelect
-                          opciones={asignaturas.map((a) => ({ value: a.id, label: a.nombre }))}
-                          value={editForm.asignatura_id}
-                          onChange={(id) => setEditForm({ ...editForm, asignatura_id: id })}
-                          placeholder="Buscar asignatura..."
-                        />
-                      </td>
-                      <td>—</td>
-                      <td>
-                        <select
-                          value={editForm.sede_id}
-                          onChange={(e) => setEditForm({ ...editForm, sede_id: e.target.value })}
-                        >
-                          {sedes.map((s) => (
-                            <option key={s.id} value={s.id}>
-                              {s.nombre}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      <td>
-                        <input
-                          value={editForm.seccion_grupo}
-                          onChange={(e) => setEditForm({ ...editForm, seccion_grupo: e.target.value })}
-                          style={{ width: 60 }}
-                        />
-                      </td>
-                      <td style={{ minWidth: 180 }}>
-                        <SelectorDias
-                          seleccionados={editForm.dias_semana || []}
-                          onChange={(dias) => setEditForm({ ...editForm, dias_semana: dias })}
-                        />
-                      </td>
-                    </>
+                    <td colSpan={8}>
+                      <div className="form-row" style={{ marginBottom: 0 }}>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <button
+                            type="button"
+                            className="btn btn-primary btn-sm"
+                            onClick={() => guardarEdicion(c.id)}
+                          >
+                            Guardar
+                          </button>
+                          <button type="button" className="btn btn-secondary btn-sm" onClick={() => setEditId(null)}>
+                            Cancelar
+                          </button>
+                        </div>
+                        <label style={{ minWidth: 220, flex: '1 1 220px' }}>
+                          Profesor
+                          <BuscadorSelect
+                            opciones={profesores.map((p) => ({ value: p.id, label: `${p.apellidos}, ${p.nombres}` }))}
+                            value={editForm.profesor_id}
+                            onChange={(id) => setEditForm({ ...editForm, profesor_id: id })}
+                            placeholder="Buscar profesor..."
+                          />
+                        </label>
+                        <label style={{ minWidth: 220, flex: '1 1 220px' }}>
+                          Asignatura
+                          <BuscadorSelect
+                            opciones={asignaturas.map((a) => ({ value: a.id, label: a.nombre }))}
+                            value={editForm.asignatura_id}
+                            onChange={(id) => setEditForm({ ...editForm, asignatura_id: id })}
+                            placeholder="Buscar asignatura..."
+                          />
+                        </label>
+                        <label style={{ maxWidth: 170 }}>
+                          Sede
+                          <select
+                            value={editForm.sede_id}
+                            onChange={(e) => setEditForm({ ...editForm, sede_id: e.target.value })}
+                          >
+                            {sedes.map((s) => (
+                              <option key={s.id} value={s.id}>
+                                {s.nombre}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <label style={{ maxWidth: 90 }}>
+                          Sección
+                          <input
+                            value={editForm.seccion_grupo}
+                            onChange={(e) => setEditForm({ ...editForm, seccion_grupo: e.target.value })}
+                          />
+                        </label>
+                        <label>
+                          Días de clase
+                          <SelectorDias
+                            seleccionados={editForm.dias_semana || []}
+                            onChange={(dias) => setEditForm({ ...editForm, dias_semana: dias })}
+                          />
+                        </label>
+                      </div>
+                    </td>
                   ) : (
                     <>
                       <td style={{ whiteSpace: 'nowrap' }}>
@@ -498,6 +506,13 @@ export function Catedras() {
                           </button>
                         </div>
                       </td>
+                      <td className="muted-text" style={{ fontSize: 12, whiteSpace: 'nowrap' }}>
+                        {(c.catedra_horario || []).length
+                          ? DIAS_SEMANA.filter((d) => c.catedra_horario.some((h) => h.dia_semana === d.value))
+                              .map((d) => d.label)
+                              .join(', ')
+                          : '—'}
+                      </td>
                       <td>{c.periodo_lectivo}</td>
                       <td>
                         {c.profesores?.apellidos}, {c.profesores?.nombres}
@@ -506,13 +521,6 @@ export function Catedras() {
                       <td>{c.asignaturas?.carreras?.nombre}</td>
                       <td>{c.sedes?.nombre}</td>
                       <td>{c.seccion_grupo}</td>
-                      <td className="muted-text" style={{ fontSize: 12 }}>
-                        {(c.catedra_horario || []).length
-                          ? DIAS_SEMANA.filter((d) => c.catedra_horario.some((h) => h.dia_semana === d.value))
-                              .map((d) => d.label)
-                              .join(', ')
-                          : '—'}
-                      </td>
                     </>
                   )}
                 </tr>
