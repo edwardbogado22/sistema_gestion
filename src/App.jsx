@@ -28,6 +28,13 @@ const ReporteCarga = lazy(() => import('./pages/Examenes/ReporteCarga').then((m)
 const SeguimientoCarga = lazy(() =>
   import('./pages/Examenes/SeguimientoCarga').then((m) => ({ default: m.SeguimientoCarga })),
 )
+const AsignacionVocales = lazy(() =>
+  import('./pages/Examenes/AsignacionVocales').then((m) => ({ default: m.AsignacionVocales })),
+)
+const ReporteMesas = lazy(() => import('./pages/Examenes/ReporteMesas').then((m) => ({ default: m.ReporteMesas })))
+const AsistenciaMesas = lazy(() =>
+  import('./pages/Examenes/AsistenciaMesas').then((m) => ({ default: m.AsistenciaMesas })),
+)
 const Periodos = lazy(() => import('./pages/Configuracion/Periodos').then((m) => ({ default: m.Periodos })))
 const RegistrarAsistencia = lazy(() =>
   import('./pages/Asistencia/RegistrarAsistencia').then((m) => ({ default: m.RegistrarAsistencia })),
@@ -89,6 +96,18 @@ function App() {
         <Route
           path="/examenes/:llamadoId/reporte"
           element={<PrivateRoute>{withLayout(<ReporteCarga />)}</PrivateRoute>}
+        />
+        <Route
+          path="/examenes/:llamadoId/vocales"
+          element={<PrivateRoute roles={ADMIN}>{withLayout(<AsignacionVocales />)}</PrivateRoute>}
+        />
+        <Route
+          path="/examenes/:llamadoId/mesas-reporte"
+          element={<PrivateRoute roles={ADMIN}>{withLayout(<ReporteMesas />)}</PrivateRoute>}
+        />
+        <Route
+          path="/examenes/:llamadoId/asistencia-mesas"
+          element={<PrivateRoute roles={ADMIN}>{withLayout(<AsistenciaMesas />)}</PrivateRoute>}
         />
 
         <Route path="/asistencia" element={<PrivateRoute>{withLayout(<RegistrarAsistencia />)}</PrivateRoute>} />

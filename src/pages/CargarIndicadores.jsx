@@ -28,7 +28,6 @@ export function CargarIndicadores() {
 
   const [clases, setClases] = useState({ horas_programadas: '', horas_dictadas: '' })
   const [contenido, setContenido] = useState({ unidades_programadas: '', unidades_desarrolladas: '' })
-  const [mesas, setMesas] = useState({ mesas_convocadas: '', mesas_asistidas: '' })
   const [manualValores, setManualValores] = useState({})
   const [alumnosValores, setAlumnosValores] = useState({})
   const [totalEncuestados, setTotalEncuestados] = useState('')
@@ -49,11 +48,10 @@ export function CargarIndicadores() {
       }
       setCatedra(c)
 
-      const [{ data: cr }, { data: ac }, { data: cc }, { data: ame }, { data: pae }, { data: ecc }] = await Promise.all([
+      const [{ data: cr }, { data: ac }, { data: cc }, { data: pae }, { data: ecc }] = await Promise.all([
         supabase.from('criterios_evaluacion').select('*').eq('periodo_lectivo', c.periodo_lectivo).eq('activo', true).order('orden'),
         supabase.from('asistencia_clases').select('*').eq('catedra_id', catedraId).maybeSingle(),
         supabase.from('cumplimiento_contenido').select('*').eq('catedra_id', catedraId).maybeSingle(),
-        supabase.from('asistencia_mesas_examinadoras').select('*').eq('catedra_id', catedraId).maybeSingle(),
         supabase.from('plan_anual_entrega').select('*').eq('catedra_id', catedraId).maybeSingle(),
         supabase.from('evaluacion_criterio_catedra').select('*').eq('catedra_id', catedraId),
       ])
@@ -61,7 +59,6 @@ export function CargarIndicadores() {
       setCriterios(cr || [])
       if (ac) setClases({ horas_programadas: ac.horas_programadas, horas_dictadas: ac.horas_dictadas })
       if (cc) setContenido({ unidades_programadas: cc.unidades_programadas, unidades_desarrolladas: cc.unidades_desarrolladas })
-      if (ame) setMesas({ mesas_convocadas: ame.mesas_convocadas, mesas_asistidas: ame.mesas_asistidas })
       setPlanAnual(pae || null)
 
       const manual = {}
@@ -94,7 +91,6 @@ export function CargarIndicadores() {
 
   const pctClases = pct(clases.horas_dictadas, clases.horas_programadas)
   const pctContenido = pct(contenido.unidades_desarrolladas, contenido.unidades_programadas)
-  const pctMesas = pct(mesas.mesas_asistidas, mesas.mesas_convocadas)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -126,23 +122,6 @@ export function CargarIndicadores() {
           unidades_programadas: Number(contenido.unidades_programadas),
           unidades_desarrolladas: Number(contenido.unidades_desarrolladas),
           porcentaje_cumplimiento: pctContenido,
-        },
-        { onConflict: 'catedra_id' },
-      )
-      if (error) {
-        setSaving(false)
-        setError(error.message)
-        return
-      }
-    }
-
-    if (mesas.mesas_convocadas !== '' && mesas.mesas_asistidas !== '') {
-      const { error } = await supabase.from('asistencia_mesas_examinadoras').upsert(
-        {
-          catedra_id: catedraId,
-          mesas_convocadas: Number(mesas.mesas_convocadas),
-          mesas_asistidas: Number(mesas.mesas_asistidas),
-          porcentaje_asistencia: pctMesas,
         },
         { onConflict: 'catedra_id' },
       )
@@ -263,28 +242,12 @@ export function CargarIndicadores() {
             </label>
             <div className="muted-text full-width">% cumplimiento de contenido: {pctContenido ?? '—'}%</div>
 
-            <label>
-              Mesas examinadoras convocadas
-              <input
-                type="number"
-                min="0"
-                value={mesas.mesas_convocadas}
-                onChange={(e) => setMesas({ ...mesas, mesas_convocadas: e.target.value })}
-              />
-            </label>
-            <label>
-              Mesas examinadoras asistidas
-              <input
-                type="number"
-                min="0"
-                value={mesas.mesas_asistidas}
-                onChange={(e) => setMesas({ ...mesas, mesas_asistidas: e.target.value })}
-              />
-            </label>
-            <div className="muted-text full-width">
-              % asistencia a mesas: {pctMesas ?? '—'}%
-              {criterioMesas && <> · aporta a &quot;{criterioMesas.nombre}&quot; ({criterioMesas.peso_porcentaje}%)</>}
-            </div>
+            {criterioMesas && (
+              <div className="muted-text full-width">
+                Asistencia a mesas examinadoras: se calcula automáticamente desde Asignación de Vocales y Asistencia a
+                Mesas (Exámenes) · aporta a &quot;{criterioMesas.nombre}&quot; ({criterioMesas.peso_porcentaje}%)
+              </div>
+            )}
 
             {criterioReuniones && (
               <div className="muted-text full-width">
@@ -446,12 +409,6 @@ export function CargarIndicadores() {
               <td>Unidades programadas / desarrolladas</td>
               <td>
                 {contenido.unidades_programadas || '—'} / {contenido.unidades_desarrolladas || '—'}
-              </td>
-            </tr>
-            <tr>
-              <td>Mesas examinadoras convocadas / asistidas</td>
-              <td>
-                {mesas.mesas_convocadas || '—'} / {mesas.mesas_asistidas || '—'}
               </td>
             </tr>
             <tr>

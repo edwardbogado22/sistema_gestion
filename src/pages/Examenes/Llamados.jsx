@@ -257,6 +257,20 @@ export function Llamados() {
                 Abrir panel de fechas
               </Link>
 
+              {esAdmin && (
+                <>
+                  <Link to={`/examenes/${l.id}/vocales`} className="btn btn-secondary btn-sm">
+                    Asignar vocales
+                  </Link>
+                  <Link to={`/examenes/${l.id}/mesas-reporte`} className="btn btn-secondary btn-sm">
+                    Reporte de mesas
+                  </Link>
+                  <Link to={`/examenes/${l.id}/asistencia-mesas`} className="btn btn-secondary btn-sm">
+                    Asistencia a mesas
+                  </Link>
+                </>
+              )}
+
               {esAdmin && l.estado === 'BORRADOR' && (
                 <button type="button" className="btn btn-secondary btn-sm" onClick={() => cambiarEstado(l.id, 'ASIGNACION')}>
                   Abrir asignación
