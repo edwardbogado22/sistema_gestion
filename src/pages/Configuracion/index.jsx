@@ -9,6 +9,7 @@ const TABS = [
   { to: 'dias-no-habiles', label: 'Días no hábiles' },
   { to: 'periodos', label: 'Períodos académicos' },
   { to: 'usuarios', label: 'Usuarios' },
+  { to: 'migraciones', label: 'Migraciones' },
 ]
 
 export function Configuracion() {

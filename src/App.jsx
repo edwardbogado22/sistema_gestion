@@ -19,6 +19,7 @@ const Asignaturas = lazy(() => import('./pages/Configuracion/Asignaturas').then(
 const Profesores = lazy(() => import('./pages/Configuracion/Profesores').then((m) => ({ default: m.Profesores })))
 const Criterios = lazy(() => import('./pages/Configuracion/Criterios').then((m) => ({ default: m.Criterios })))
 const Usuarios = lazy(() => import('./pages/Configuracion/Usuarios').then((m) => ({ default: m.Usuarios })))
+const Migraciones = lazy(() => import('./pages/Configuracion/Migraciones').then((m) => ({ default: m.Migraciones })))
 const DiasNoHabiles = lazy(() =>
   import('./pages/Configuracion/DiasNoHabiles').then((m) => ({ default: m.DiasNoHabiles })),
 )
@@ -166,6 +167,7 @@ function App() {
           <Route path="dias-no-habiles" element={<DiasNoHabiles />} />
           <Route path="periodos" element={<Periodos />} />
           <Route path="usuarios" element={<Usuarios />} />
+          <Route path="migraciones" element={<Migraciones />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />
