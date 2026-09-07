@@ -2,7 +2,15 @@ import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { formatoLargo } from '../../lib/fechas'
 
-const empty = { nombre: '', fecha: '', grupo: '' }
+const empty = { nombre: '', fecha: '', grupo: '', tipo: 'REUNION' }
+
+const TIPOS = [
+  { value: 'REUNION', label: 'Reunión / Claustro' },
+  { value: 'CAPACITACION_EVALUADA', label: 'Capacitación evaluada (con examen)' },
+  { value: 'CAPACITACION_NO_EVALUADA', label: 'Capacitación no evaluada (sin examen)' },
+]
+
+const tipoLabel = (tipo) => TIPOS.find((t) => t.value === tipo)?.label || tipo
 
 export function Eventos() {
   const [eventos, setEventos] = useState([])
@@ -38,6 +46,7 @@ export function Eventos() {
       nombre: form.nombre.trim(),
       fecha: form.fecha,
       grupo: form.grupo.trim() || null,
+      tipo: form.tipo,
     })
     setSaving(false)
     if (error) {
@@ -59,7 +68,7 @@ export function Eventos() {
 
   const empezarEdicion = (e) => {
     setEditId(e.id)
-    setEditForm({ nombre: e.nombre, fecha: e.fecha, grupo: e.grupo || '' })
+    setEditForm({ nombre: e.nombre, fecha: e.fecha, grupo: e.grupo || '', tipo: e.tipo || 'REUNION' })
   }
 
   const guardarEdicion = async (id) => {
@@ -69,6 +78,7 @@ export function Eventos() {
         nombre: editForm.nombre.trim(),
         fecha: editForm.fecha,
         grupo: editForm.grupo.trim() || null,
+        tipo: editForm.tipo,
       })
       .eq('id', id)
     if (error) {
@@ -115,6 +125,16 @@ export function Eventos() {
               ))}
             </datalist>
           </label>
+          <label>
+            Tipo
+            <select value={form.tipo} onChange={(e) => setForm({ ...form, tipo: e.target.value })}>
+              {TIPOS.map((t) => (
+                <option key={t.value} value={t.value}>
+                  {t.label}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
         {error && <p className="error-text">{error}</p>}
         <div className="form-actions">
@@ -134,6 +154,7 @@ export function Eventos() {
                 <th>Nombre</th>
                 <th>Fecha</th>
                 <th>Grupo</th>
+                <th>Tipo</th>
                 <th>Estado</th>
                 <th>Acciones</th>
               </tr>
@@ -161,6 +182,15 @@ export function Eventos() {
                         />
                       </td>
                       <td>
+                        <select value={editForm.tipo} onChange={(ev) => setEditForm({ ...editForm, tipo: ev.target.value })}>
+                          {TIPOS.map((t) => (
+                            <option key={t.value} value={t.value}>
+                              {t.label}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td>
                         {e.activo ? <span className="badge badge-success">Activo</span> : <span className="badge badge-muted">Inactivo</span>}
                       </td>
                       <td>
@@ -177,6 +207,7 @@ export function Eventos() {
                       <td>{e.nombre}</td>
                       <td>{formatoLargo(e.fecha)}</td>
                       <td>{e.grupo ? <span className="badge badge-gold">{e.grupo}</span> : <span className="muted-text">—</span>}</td>
+                      <td>{tipoLabel(e.tipo)}</td>
                       <td>
                         {e.activo ? <span className="badge badge-success">Activo</span> : <span className="badge badge-muted">Inactivo</span>}
                       </td>
@@ -194,7 +225,7 @@ export function Eventos() {
               ))}
               {eventos.length === 0 && (
                 <tr>
-                  <td colSpan={5}>No hay eventos cargados.</td>
+                  <td colSpan={6}>No hay eventos cargados.</td>
                 </tr>
               )}
             </tbody>

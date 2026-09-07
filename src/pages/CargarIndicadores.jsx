@@ -29,7 +29,6 @@ export function CargarIndicadores() {
   const [clases, setClases] = useState({ horas_programadas: '', horas_dictadas: '' })
   const [contenido, setContenido] = useState({ unidades_programadas: '', unidades_desarrolladas: '' })
   const [mesas, setMesas] = useState({ mesas_convocadas: '', mesas_asistidas: '' })
-  const [reuniones, setReuniones] = useState({ reuniones_convocadas: '', reuniones_asistidas: '' })
   const [manualValores, setManualValores] = useState({})
   const [alumnosValores, setAlumnosValores] = useState({})
   const [totalEncuestados, setTotalEncuestados] = useState('')
@@ -50,12 +49,11 @@ export function CargarIndicadores() {
       }
       setCatedra(c)
 
-      const [{ data: cr }, { data: ac }, { data: cc }, { data: ame }, { data: ar }, { data: pae }, { data: ecc }] = await Promise.all([
+      const [{ data: cr }, { data: ac }, { data: cc }, { data: ame }, { data: pae }, { data: ecc }] = await Promise.all([
         supabase.from('criterios_evaluacion').select('*').eq('periodo_lectivo', c.periodo_lectivo).eq('activo', true).order('orden'),
         supabase.from('asistencia_clases').select('*').eq('catedra_id', catedraId).maybeSingle(),
         supabase.from('cumplimiento_contenido').select('*').eq('catedra_id', catedraId).maybeSingle(),
         supabase.from('asistencia_mesas_examinadoras').select('*').eq('catedra_id', catedraId).maybeSingle(),
-        supabase.from('asistencia_reuniones').select('*').eq('catedra_id', catedraId).maybeSingle(),
         supabase.from('plan_anual_entrega').select('*').eq('catedra_id', catedraId).maybeSingle(),
         supabase.from('evaluacion_criterio_catedra').select('*').eq('catedra_id', catedraId),
       ])
@@ -64,7 +62,6 @@ export function CargarIndicadores() {
       if (ac) setClases({ horas_programadas: ac.horas_programadas, horas_dictadas: ac.horas_dictadas })
       if (cc) setContenido({ unidades_programadas: cc.unidades_programadas, unidades_desarrolladas: cc.unidades_desarrolladas })
       if (ame) setMesas({ mesas_convocadas: ame.mesas_convocadas, mesas_asistidas: ame.mesas_asistidas })
-      if (ar) setReuniones({ reuniones_convocadas: ar.reuniones_convocadas, reuniones_asistidas: ar.reuniones_asistidas })
       setPlanAnual(pae || null)
 
       const manual = {}
@@ -93,11 +90,11 @@ export function CargarIndicadores() {
   const criterioMesas = criterios.find((c) => c.origen === 'OBJETIVO_MESAS_EXAMINADORAS')
   const criterioReuniones = criterios.find((c) => c.origen === 'OBJETIVO_REUNIONES')
   const criterioPlanAnual = criterios.find((c) => c.origen === 'OBJETIVO_PLAN_ANUAL')
+  const criterioCapacitaciones = criterios.find((c) => c.origen === 'OBJETIVO_CAPACITACIONES')
 
   const pctClases = pct(clases.horas_dictadas, clases.horas_programadas)
   const pctContenido = pct(contenido.unidades_desarrolladas, contenido.unidades_programadas)
   const pctMesas = pct(mesas.mesas_asistidas, mesas.mesas_convocadas)
-  const pctReuniones = pct(reuniones.reuniones_asistidas, reuniones.reuniones_convocadas)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -146,23 +143,6 @@ export function CargarIndicadores() {
           mesas_convocadas: Number(mesas.mesas_convocadas),
           mesas_asistidas: Number(mesas.mesas_asistidas),
           porcentaje_asistencia: pctMesas,
-        },
-        { onConflict: 'catedra_id' },
-      )
-      if (error) {
-        setSaving(false)
-        setError(error.message)
-        return
-      }
-    }
-
-    if (reuniones.reuniones_convocadas !== '' && reuniones.reuniones_asistidas !== '') {
-      const { error } = await supabase.from('asistencia_reuniones').upsert(
-        {
-          catedra_id: catedraId,
-          reuniones_convocadas: Number(reuniones.reuniones_convocadas),
-          reuniones_asistidas: Number(reuniones.reuniones_asistidas),
-          porcentaje_asistencia: pctReuniones,
         },
         { onConflict: 'catedra_id' },
       )
@@ -306,30 +286,19 @@ export function CargarIndicadores() {
               {criterioMesas && <> · aporta a &quot;{criterioMesas.nombre}&quot; ({criterioMesas.peso_porcentaje}%)</>}
             </div>
 
-            <label>
-              Reuniones convocadas
-              <input
-                type="number"
-                min="0"
-                value={reuniones.reuniones_convocadas}
-                onChange={(e) => setReuniones({ ...reuniones, reuniones_convocadas: e.target.value })}
-              />
-            </label>
-            <label>
-              Reuniones asistidas
-              <input
-                type="number"
-                min="0"
-                value={reuniones.reuniones_asistidas}
-                onChange={(e) => setReuniones({ ...reuniones, reuniones_asistidas: e.target.value })}
-              />
-            </label>
-            <div className="muted-text full-width">
-              % asistencia a reuniones: {pctReuniones ?? '—'}%
-              {criterioReuniones && (
-                <> · aporta a &quot;{criterioReuniones.nombre}&quot; ({criterioReuniones.peso_porcentaje}%)</>
-              )}
-            </div>
+            {criterioReuniones && (
+              <div className="muted-text full-width">
+                Participación institucional: se calcula automáticamente desde el check-in de Asistencia a Eventos ·
+                aporta a &quot;{criterioReuniones.nombre}&quot; ({criterioReuniones.peso_porcentaje}%)
+              </div>
+            )}
+
+            {criterioCapacitaciones && (
+              <div className="muted-text full-width">
+                Capacitaciones: se calcula automáticamente desde el check-in de Asistencia a Eventos · aporta a &quot;
+                {criterioCapacitaciones.nombre}&quot; ({criterioCapacitaciones.peso_porcentaje}%)
+              </div>
+            )}
 
             {criterioPlanAnual && (
               <div className="muted-text full-width">
@@ -483,12 +452,6 @@ export function CargarIndicadores() {
               <td>Mesas examinadoras convocadas / asistidas</td>
               <td>
                 {mesas.mesas_convocadas || '—'} / {mesas.mesas_asistidas || '—'}
-              </td>
-            </tr>
-            <tr>
-              <td>Reuniones convocadas / asistidas</td>
-              <td>
-                {reuniones.reuniones_convocadas || '—'} / {reuniones.reuniones_asistidas || '—'}
               </td>
             </tr>
             <tr>

@@ -44,6 +44,12 @@ const BusquedaAsistenciaEvento = lazy(() =>
   import('./pages/Eventos/BusquedaAsistenciaEvento').then((m) => ({ default: m.BusquedaAsistenciaEvento })),
 )
 const ReporteEventos = lazy(() => import('./pages/Eventos/ReporteEventos').then((m) => ({ default: m.ReporteEventos })))
+const CapacitacionResultados = lazy(() =>
+  import('./pages/Eventos/CapacitacionResultados').then((m) => ({ default: m.CapacitacionResultados })),
+)
+const MisRegistrosEvento = lazy(() =>
+  import('./pages/Eventos/MisRegistrosEvento').then((m) => ({ default: m.MisRegistrosEvento })),
+)
 const PlanAnual = lazy(() => import('./pages/PlanAnual').then((m) => ({ default: m.PlanAnual })))
 
 // Secciones exclusivas de Dirección Académica. La restricción real está en
@@ -107,6 +113,14 @@ function App() {
         <Route
           path="/eventos/reporte"
           element={<PrivateRoute roles={ADMIN}>{withLayout(<ReporteEventos />)}</PrivateRoute>}
+        />
+        <Route
+          path="/eventos/capacitaciones"
+          element={<PrivateRoute roles={ADMIN}>{withLayout(<CapacitacionResultados />)}</PrivateRoute>}
+        />
+        <Route
+          path="/eventos/mis-registros"
+          element={<PrivateRoute roles={ADMIN_ASISTENTE}>{withLayout(<MisRegistrosEvento />)}</PrivateRoute>}
         />
 
         <Route path="/plan-anual" element={<PrivateRoute>{withLayout(<PlanAnual />)}</PrivateRoute>} />

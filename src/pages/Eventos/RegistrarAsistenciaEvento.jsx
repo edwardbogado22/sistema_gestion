@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { formatoLargo } from '../../lib/fechas'
 
@@ -140,6 +141,9 @@ export function RegistrarAsistenciaEvento() {
     <div className="page-padding">
       <div className="page-header">
         <h1>Registrar Asistencia a Eventos</h1>
+        <Link to="/eventos/mis-registros" className="btn btn-secondary">
+          Ver mis registros
+        </Link>
       </div>
 
       <div className="form-row" style={{ marginBottom: 20 }}>

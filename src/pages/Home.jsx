@@ -185,6 +185,14 @@ const CARDS = [
     soloAdmin: true,
   },
   {
+    section: 'Asistencia a Eventos',
+    to: '/eventos/capacitaciones',
+    icon: '🎓',
+    titulo: 'Cargar Resultados de Capacitación',
+    desc: 'Aprobado o participación parcial por profesor, una vez sale la resolución del examen.',
+    soloAdmin: true,
+  },
+  {
     section: 'Plan Anual de Clases',
     to: '/plan-anual',
     icon: '📘',
