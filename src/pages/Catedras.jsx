@@ -413,6 +413,7 @@ export function Catedras() {
           <table className="data-table">
             <thead>
               <tr>
+                <th style={{ width: 1 }}>Acciones</th>
                 <th>Periodo</th>
                 <th>Profesor</th>
                 <th>Asignatura</th>
@@ -420,15 +421,22 @@ export function Catedras() {
                 <th>Sede</th>
                 <th>Sección</th>
                 <th>Días</th>
-                <th>Acciones</th>
               </tr>
             </thead>
             <tbody>
               {catedrasFiltradas.map((c) => (
                 <tr key={c.id}>
-                  <td>{c.periodo_lectivo}</td>
                   {editId === c.id ? (
                     <>
+                      <td style={{ whiteSpace: 'nowrap' }}>
+                        <button type="button" className="btn btn-primary btn-sm" onClick={() => guardarEdicion(c.id)}>
+                          Guardar
+                        </button>{' '}
+                        <button type="button" className="btn btn-secondary btn-sm" onClick={() => setEditId(null)}>
+                          Cancelar
+                        </button>
+                      </td>
+                      <td>{c.periodo_lectivo}</td>
                       <td style={{ minWidth: 200 }}>
                         <BuscadorSelect
                           opciones={profesores.map((p) => ({ value: p.id, label: `${p.apellidos}, ${p.nombres}` }))}
@@ -471,17 +479,26 @@ export function Catedras() {
                           onChange={(dias) => setEditForm({ ...editForm, dias_semana: dias })}
                         />
                       </td>
-                      <td>
-                        <button type="button" className="btn btn-primary btn-sm" onClick={() => guardarEdicion(c.id)}>
-                          Guardar
-                        </button>{' '}
-                        <button type="button" className="btn btn-secondary btn-sm" onClick={() => setEditId(null)}>
-                          Cancelar
-                        </button>
-                      </td>
                     </>
                   ) : (
                     <>
+                      <td style={{ whiteSpace: 'nowrap' }}>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                          <button type="button" className="btn btn-secondary btn-sm" onClick={() => empezarEdicion(c)}>
+                            Editar
+                          </button>
+                          <Link to={`/indicadores/${c.id}`} className="btn btn-secondary btn-sm">
+                            Indicadores
+                          </Link>
+                          <Link to={`/foja/${c.id}`} className="btn btn-secondary btn-sm">
+                            Foja
+                          </Link>
+                          <button type="button" className="btn btn-danger btn-sm" onClick={() => eliminar(c.id)}>
+                            Eliminar
+                          </button>
+                        </div>
+                      </td>
+                      <td>{c.periodo_lectivo}</td>
                       <td>
                         {c.profesores?.apellidos}, {c.profesores?.nombres}
                       </td>
@@ -495,20 +512,6 @@ export function Catedras() {
                               .map((d) => d.label)
                               .join(', ')
                           : '—'}
-                      </td>
-                      <td>
-                        <Link to={`/indicadores/${c.id}`} className="btn btn-secondary btn-sm">
-                          Indicadores
-                        </Link>{' '}
-                        <Link to={`/foja/${c.id}`} className="btn btn-secondary btn-sm">
-                          Foja
-                        </Link>{' '}
-                        <button type="button" className="btn btn-secondary btn-sm" onClick={() => empezarEdicion(c)}>
-                          Editar
-                        </button>{' '}
-                        <button type="button" className="btn btn-danger btn-sm" onClick={() => eliminar(c.id)}>
-                          Eliminar
-                        </button>
                       </td>
                     </>
                   )}

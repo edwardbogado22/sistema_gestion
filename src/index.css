@@ -71,6 +71,64 @@ a {
   color: var(--green-700);
 }
 
+/* ---- inputs/selects: base global, para que ningún campo del
+   sistema dependa de estar adentro de .form-grid/.form-row para
+   verse bien ---- */
+input:not([type='checkbox']):not([type='radio']):not([type='file']),
+select,
+textarea {
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--ink);
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  min-width: 0;
+  transition: border-color 0.16s var(--ease), box-shadow 0.16s var(--ease), background 0.16s var(--ease);
+}
+
+input:not([type='checkbox']):not([type='radio']):not([type='file']):hover,
+select:hover,
+textarea:hover {
+  border-color: #c9d4cc;
+}
+
+input:not([type='checkbox']):not([type='radio']):not([type='file']):focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--gold);
+  box-shadow: var(--ring);
+  background: #fffdf6;
+}
+
+input:not([type='checkbox']):not([type='radio']):not([type='file']):disabled,
+select:disabled {
+  background: var(--canvas);
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+input[type='checkbox'],
+input[type='radio'] {
+  accent-color: var(--green-700);
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+select {
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 32px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6' fill='none'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%2364756d' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 11px center;
+}
+
 ::selection {
   background: var(--gold-soft-bg);
   color: var(--green-950);
@@ -682,63 +740,14 @@ a {
 .form-row input,
 .form-row select,
 .form-row textarea {
-  font-family: inherit;
-  font-size: 14px;
-  font-weight: 400;
-  color: var(--ink);
-  padding: 9px 12px;
-  border: 1px solid var(--border);
-  border-radius: 9px;
-  background: #fff;
   min-width: 0;
-  transition: border-color 0.16s var(--ease), box-shadow 0.16s var(--ease), background 0.16s var(--ease);
-}
-
-.form-row input:hover,
-.form-row select:hover,
-.form-row textarea:hover {
-  border-color: #c9d4cc;
-}
-
-.form-row input:focus,
-.form-row select:focus,
-.form-row textarea:focus {
-  outline: none;
-  border-color: var(--gold);
-  box-shadow: var(--ring);
-  background: #fffdf6;
 }
 
 .form-grid input,
 .form-grid select,
 .form-grid textarea {
-  font-family: inherit;
-  font-size: 14px;
-  font-weight: 400;
-  color: var(--ink);
-  padding: 9px 12px;
-  border: 1px solid var(--border);
-  border-radius: 9px;
-  background: #fff;
   width: 100%;
-  min-width: 0;
   max-width: 100%;
-  transition: border-color 0.16s var(--ease), box-shadow 0.16s var(--ease), background 0.16s var(--ease);
-}
-
-.form-grid input:hover,
-.form-grid select:hover,
-.form-grid textarea:hover {
-  border-color: #c9d4cc;
-}
-
-.form-grid input:focus,
-.form-grid select:focus,
-.form-grid textarea:focus {
-  outline: none;
-  border-color: var(--gold);
-  box-shadow: var(--ring);
-  background: #fffdf6;
 }
 
 .form-grid .full-width {
@@ -779,28 +788,6 @@ a {
   letter-spacing: 0.5px;
   color: var(--green-700);
   min-width: 0;
-}
-
-.rango-fechas-campo input {
-  font-family: inherit;
-  font-size: 14px;
-  color: var(--ink);
-  padding: 9px 12px;
-  border: 1px solid var(--border);
-  border-radius: 9px;
-  background: #fff;
-  transition: border-color 0.16s var(--ease), box-shadow 0.16s var(--ease), background 0.16s var(--ease);
-}
-
-.rango-fechas-campo input:hover {
-  border-color: #c9d4cc;
-}
-
-.rango-fechas-campo input:focus {
-  outline: none;
-  border-color: var(--gold);
-  box-shadow: var(--ring);
-  background: #fffdf6;
 }
 
 .rango-fechas-flecha {
@@ -955,22 +942,6 @@ a {
   font-size: 13px;
   font-weight: 600;
   color: var(--green-800);
-}
-
-.login-container input {
-  font-family: inherit;
-  font-size: 14px;
-  padding: 10px 12px;
-  border: 1px solid var(--border);
-  border-radius: 9px;
-  transition: border-color 0.16s var(--ease), box-shadow 0.16s var(--ease), background 0.16s var(--ease);
-}
-
-.login-container input:focus {
-  outline: none;
-  border-color: var(--gold);
-  box-shadow: var(--ring);
-  background: #fffdf6;
 }
 
 /* ---- pestaÃ±as (ConfiguraciÃ³n) ---- */
