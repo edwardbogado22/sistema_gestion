@@ -30,10 +30,14 @@ function SelectorDias({ seleccionados, onChange }) {
   return (
     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
       {DIAS_SEMANA.map((d) => (
-        <label key={d.value} style={{ display: 'flex', alignItems: 'center', gap: 3, fontWeight: 400 }}>
-          <input type="checkbox" checked={seleccionados.includes(d.value)} onChange={() => toggle(d.value)} />
+        <button
+          key={d.value}
+          type="button"
+          className={`chip${seleccionados.includes(d.value) ? ' activo' : ''}`}
+          onClick={() => toggle(d.value)}
+        >
           {d.label}
-        </label>
+        </button>
       ))}
     </div>
   )
@@ -63,6 +67,10 @@ export function Catedras() {
   const [form, setForm] = useState(empty)
   const [filtroPeriodo, setFiltroPeriodo] = useState('')
   const [busqueda, setBusqueda] = useState('')
+  const [filtroSede, setFiltroSede] = useState('')
+  const [filtroCarrera, setFiltroCarrera] = useState('')
+  const [filtroCurso, setFiltroCurso] = useState('')
+  const [filtroSeccion, setFiltroSeccion] = useState('')
   const [editId, setEditId] = useState(null)
   const [editForm, setEditForm] = useState({})
 
@@ -88,7 +96,7 @@ export function Catedras() {
     let query = supabase
       .from('catedras')
       .select(
-        'id, periodo_lectivo, seccion_grupo, activo, profesor_id, asignatura_id, sede_id, profesores(nombres, apellidos), asignaturas(nombre, carreras(nombre)), sedes(nombre), catedra_horario(dia_semana)',
+        'id, periodo_lectivo, seccion_grupo, activo, profesor_id, asignatura_id, sede_id, profesores(nombres, apellidos), asignaturas(nombre, curso_nivel, carrera_id, carreras(nombre)), sedes(nombre), catedra_horario(dia_semana)',
       )
       .order('periodo_lectivo', { ascending: false })
     if (filtroPeriodo) query = query.eq('periodo_lectivo', filtroPeriodo)
@@ -107,20 +115,36 @@ export function Catedras() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filtroPeriodo])
 
+  const opcionesFiltro = useMemo(
+    () => ({
+      cursos: [...new Set(catedras.map((c) => c.asignaturas?.curso_nivel).filter((v) => v != null))].sort(
+        (a, b) => a - b,
+      ),
+      secciones: [...new Set(catedras.map((c) => c.seccion_grupo).filter(Boolean))].sort(),
+    }),
+    [catedras],
+  )
+
   const catedrasFiltradas = useMemo(() => {
     const q = busqueda.trim().toLowerCase()
-    if (!q) return catedras
-    return catedras.filter((c) =>
-      [
-        c.profesores?.nombres,
-        c.profesores?.apellidos,
-        c.asignaturas?.nombre,
-        c.asignaturas?.carreras?.nombre,
-        c.sedes?.nombre,
-        c.seccion_grupo,
-      ].some((campo) => campo?.toLowerCase().includes(q)),
-    )
-  }, [catedras, busqueda])
+    return catedras.filter((c) => {
+      if (filtroSede && c.sede_id !== filtroSede) return false
+      if (filtroCarrera && c.asignaturas?.carrera_id !== filtroCarrera) return false
+      if (filtroCurso && String(c.asignaturas?.curso_nivel) !== filtroCurso) return false
+      if (filtroSeccion && c.seccion_grupo !== filtroSeccion) return false
+      if (q) {
+        return [
+          c.profesores?.nombres,
+          c.profesores?.apellidos,
+          c.asignaturas?.nombre,
+          c.asignaturas?.carreras?.nombre,
+          c.sedes?.nombre,
+          c.seccion_grupo,
+        ].some((campo) => campo?.toLowerCase().includes(q))
+      }
+      return true
+    })
+  }, [catedras, busqueda, filtroSede, filtroCarrera, filtroCurso, filtroSeccion])
 
   const carrerasFiltradas = useMemo(() => {
     if (!form.sede_id) return carreras
@@ -304,7 +328,7 @@ export function Catedras() {
       </form>
 
       <div className="form-row" style={{ marginBottom: '0.75rem' }}>
-        <label style={{ flex: '1 1 300px' }}>
+        <label style={{ flex: '1 1 260px' }}>
           Buscar
           <input
             type="text"
@@ -313,7 +337,7 @@ export function Catedras() {
             onChange={(e) => setBusqueda(e.target.value)}
           />
         </label>
-        <label style={{ maxWidth: 160 }}>
+        <label style={{ maxWidth: 140 }}>
           Periodo
           <input
             value={filtroPeriodo}
@@ -322,6 +346,64 @@ export function Catedras() {
             list="periodos-existentes"
           />
         </label>
+        <label style={{ maxWidth: 180 }}>
+          Sede
+          <select value={filtroSede} onChange={(e) => setFiltroSede(e.target.value)}>
+            <option value="">Todas</option>
+            {sedes.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.nombre}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label style={{ maxWidth: 180 }}>
+          Carrera
+          <select value={filtroCarrera} onChange={(e) => setFiltroCarrera(e.target.value)}>
+            <option value="">Todas</option>
+            {carreras.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.nombre}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label style={{ maxWidth: 120 }}>
+          Curso
+          <select value={filtroCurso} onChange={(e) => setFiltroCurso(e.target.value)}>
+            <option value="">Todos</option>
+            {opcionesFiltro.cursos.map((c) => (
+              <option key={c} value={String(c)}>
+                {c}º
+              </option>
+            ))}
+          </select>
+        </label>
+        <label style={{ maxWidth: 120 }}>
+          Sección
+          <select value={filtroSeccion} onChange={(e) => setFiltroSeccion(e.target.value)}>
+            <option value="">Todas</option>
+            {opcionesFiltro.secciones.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+        </label>
+        {(filtroSede || filtroCarrera || filtroCurso || filtroSeccion) && (
+          <button
+            type="button"
+            className="chip"
+            onClick={() => {
+              setFiltroSede('')
+              setFiltroCarrera('')
+              setFiltroCurso('')
+              setFiltroSeccion('')
+            }}
+          >
+            Limpiar filtros
+          </button>
+        )}
       </div>
 
       {loading ? (
