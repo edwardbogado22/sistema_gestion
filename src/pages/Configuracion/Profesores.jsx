@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../../lib/supabase'
+import { coincideTexto } from '../../lib/buscar'
 
 const empty = { documento_identidad: '', nombres: '', apellidos: '', email: '', telefono: '' }
 
@@ -13,13 +14,11 @@ export function Profesores() {
   const [editForm, setEditForm] = useState(empty)
   const [busqueda, setBusqueda] = useState('')
 
-  const profesoresFiltrados = useMemo(() => {
-    const q = busqueda.trim().toLowerCase()
-    if (!q) return profesores
-    return profesores.filter((p) =>
-      [p.documento_identidad, p.nombres, p.apellidos].some((campo) => campo?.toLowerCase().includes(q))
-    )
-  }, [profesores, busqueda])
+  const profesoresFiltrados = useMemo(
+    () =>
+      profesores.filter((p) => coincideTexto(busqueda, `${p.documento_identidad} ${p.nombres} ${p.apellidos}`)),
+    [profesores, busqueda],
+  )
 
   const pendientes = useMemo(() => profesores.filter((p) => p.confirmado === false), [profesores])
 
@@ -51,7 +50,7 @@ export function Profesores() {
     })
     setSaving(false)
     if (error) {
-      setError(error.message)
+      setError(error.code === '23505' ? 'Ya existe un profesor con ese documento de identidad.' : error.message)
       return
     }
     setForm(empty)
@@ -101,7 +100,7 @@ export function Profesores() {
         })
         .eq('id', id)
       if (error) {
-        alert(error.message)
+        alert(error.code === '23505' ? 'Ya existe un profesor con ese documento de identidad.' : error.message)
         return
       }
       setEditId(null)

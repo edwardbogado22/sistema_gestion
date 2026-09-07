@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { BuscadorSelect } from '../components/BuscadorSelect'
+import { coincideTexto } from '../lib/buscar'
 
 const empty = {
   profesor_id: '',
@@ -126,23 +127,22 @@ export function Catedras() {
   )
 
   const catedrasFiltradas = useMemo(() => {
-    const q = busqueda.trim().toLowerCase()
     return catedras.filter((c) => {
       if (filtroSede && c.sede_id !== filtroSede) return false
       if (filtroCarrera && c.asignaturas?.carrera_id !== filtroCarrera) return false
       if (filtroCurso && String(c.asignaturas?.curso_nivel) !== filtroCurso) return false
       if (filtroSeccion && c.seccion_grupo !== filtroSeccion) return false
-      if (q) {
-        return [
+      return coincideTexto(
+        busqueda,
+        [
           c.profesores?.nombres,
           c.profesores?.apellidos,
           c.asignaturas?.nombre,
           c.asignaturas?.carreras?.nombre,
           c.sedes?.nombre,
           c.seccion_grupo,
-        ].some((campo) => campo?.toLowerCase().includes(q))
-      }
-      return true
+        ].join(' '),
+      )
     })
   }, [catedras, busqueda, filtroSede, filtroCarrera, filtroCurso, filtroSeccion])
 

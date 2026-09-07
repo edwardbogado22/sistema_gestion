@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { coincideTexto } from '../lib/buscar'
 
 export function BuscadorSelect({ opciones, value, onChange, placeholder = 'Escribí para buscar...', required, disabled }) {
   const [query, setQuery] = useState('')
@@ -15,11 +16,7 @@ export function BuscadorSelect({ opciones, value, onChange, placeholder = 'Escri
     return () => document.removeEventListener('mousedown', onClickFuera)
   }, [])
 
-  const filtradas = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    if (!q) return opciones
-    return opciones.filter((o) => o.label.toLowerCase().includes(q))
-  }, [opciones, query])
+  const filtradas = useMemo(() => opciones.filter((o) => coincideTexto(query, o.label)), [opciones, query])
 
   return (
     <div className="buscador-select" ref={ref}>
