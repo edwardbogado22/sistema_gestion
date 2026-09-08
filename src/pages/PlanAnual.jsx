@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { aISO } from '../lib/fechas'
@@ -107,6 +108,12 @@ export function PlanAnual() {
       <div className="page-header">
         <h1>Plan Anual de Clases</h1>
         <p>Registro de entrega del plan anual por cátedra. Aporta al 20% de "Planificación y documentación" en la Foja de Desempeño.</p>
+      </div>
+
+      <div className="form-actions" style={{ marginTop: 0, marginBottom: '1.5rem' }}>
+        <Link to="/plan-anual/reporte" className="btn btn-secondary">
+          Ver constancia imprimible
+        </Link>
       </div>
 
       {error && <p className="error-text">{error}</p>}

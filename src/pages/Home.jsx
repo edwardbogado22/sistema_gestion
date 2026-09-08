@@ -201,6 +201,13 @@ const CARDS = [
     destacada: true,
   },
   {
+    section: 'Plan Anual de Clases',
+    to: '/plan-anual/reporte',
+    icon: '📄',
+    titulo: 'Constancia Imprimible',
+    desc: 'Entregas registradas por carrera y sede, con formato institucional para evidenciar el trabajo de Secretaría.',
+  },
+  {
     section: 'Análisis',
     to: '/informes',
     icon: '📈',

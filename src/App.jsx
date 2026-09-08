@@ -59,6 +59,9 @@ const MisRegistrosEvento = lazy(() =>
   import('./pages/Eventos/MisRegistrosEvento').then((m) => ({ default: m.MisRegistrosEvento })),
 )
 const PlanAnual = lazy(() => import('./pages/PlanAnual').then((m) => ({ default: m.PlanAnual })))
+const ReportePlanAnual = lazy(() =>
+  import('./pages/ReportePlanAnual').then((m) => ({ default: m.ReportePlanAnual })),
+)
 
 // Secciones exclusivas de Dirección Académica. La restricción real está en
 // las policies de RLS; esto evita ofrecer pantallas que no van a funcionar.
@@ -144,6 +147,10 @@ function App() {
         />
 
         <Route path="/plan-anual" element={<PrivateRoute>{withLayout(<PlanAnual />)}</PrivateRoute>} />
+        <Route
+          path="/plan-anual/reporte"
+          element={<PrivateRoute>{withLayout(<ReportePlanAnual />)}</PrivateRoute>}
+        />
 
         <Route
           path="/informes"
