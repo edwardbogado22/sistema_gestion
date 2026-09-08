@@ -23,6 +23,7 @@ export function PanelFechas() {
   const [bloqueados, setBloqueados] = useState([])
   const [conflictos, setConflictos] = useState([])
   const [noDisponible, setNoDisponible] = useState([])
+  const [ocupadoProfesor, setOcupadoProfesor] = useState([])
   const [filtro, setFiltro] = useState(sinFiltro)
   const [cambios, setCambios] = useState({})
   const [loading, setLoading] = useState(true)
@@ -34,18 +35,20 @@ export function PanelFechas() {
     setLoading(true)
     // dias_bloqueados_llamado expande los feriados recurrentes al año
     // que corresponde y suma los domingos y las excepciones puntuales.
-    const [ag, exc, con, nd] = await Promise.all([
+    const [ag, exc, con, nd, ocup] = await Promise.all([
       supabase.from('v_examen_agenda').select('*').eq('llamado_id', llamadoId),
       supabase.rpc('dias_bloqueados_llamado', { p_llamado: llamadoId }),
       supabase.from('v_examen_conflictos').select('*').eq('llamado_id', llamadoId),
       supabase.from('profesor_no_disponible').select('profesor_id, fecha').eq('llamado_id', llamadoId),
+      supabase.rpc('examen_fechas_profesor_llamado', { p_llamado: llamadoId }),
     ])
-    const err = ag.error || exc.error || con.error || nd.error
+    const err = ag.error || exc.error || con.error || nd.error || ocup.error
     if (err) setError(err.message)
     setFilas(ag.data || [])
     setBloqueados(exc.data || [])
     setConflictos(con.data || [])
     setNoDisponible(nd.data || [])
+    setOcupadoProfesor(ocup.data || [])
     setLoading(false)
   }
 
@@ -108,13 +111,23 @@ export function PanelFechas() {
     return conteo
   }
 
-  // Días bloqueados: feriados y domingos del llamado, más los días en
-  // que ese profesor no está disponible
+  // Días bloqueados: feriados y domingos del llamado, días en que ese
+  // profesor no está disponible, y fechas donde ya tiene otra mesa
+  // asignada (en cualquier carrera, no solo la que ve este secretario) —
+  // salvo que la materia de esta fila sea optativa, que es la misma
+  // excepción que aplica el trigger al guardar.
   const excepcionesDe = (fila) => {
     const motivos = {}
     for (const b of bloqueados) motivos[b.fecha] = b.motivo
     for (const n of noDisponible) {
       if (n.profesor_id === fila.profesor_id) motivos[n.fecha] = 'El profesor no está disponible'
+    }
+    if (!fila.optativa) {
+      for (const o of ocupadoProfesor) {
+        if (o.profesor_id === fila.profesor_id && o.catedra_id !== fila.catedra_id) {
+          motivos[o.fecha] = motivos[o.fecha] || `El profesor ya tiene una mesa asignada: ${o.materia}`
+        }
+      }
     }
     return motivos
   }
