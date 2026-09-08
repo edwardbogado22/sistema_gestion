@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { BuscadorSelect } from '../components/BuscadorSelect'
 import { coincideTexto } from '../lib/buscar'
+import { useAuth } from '../contexts/AuthContext'
 
 const empty = {
   profesor_id: '',
@@ -55,6 +56,7 @@ async function sincronizarHorario(catedraId, dias) {
 }
 
 export function Catedras() {
+  const { esAdmin, alcance } = useAuth()
   const [profesores, setProfesores] = useState([])
   const [carreras, setCarreras] = useState([])
   const [carrerasSedes, setCarrerasSedes] = useState([])
@@ -146,15 +148,35 @@ export function Catedras() {
     })
   }, [catedras, busqueda, filtroSede, filtroCarrera, filtroCurso, filtroSeccion])
 
+  // carreras y sedes son catálogos visibles para cualquier autenticado (RLS los
+  // deja abiertos porque no son sensibles), pero acá los acotamos igual al
+  // alcance del usuario: un secretario/director no debería ni ver como opción
+  // una carrera o sede ajena, aunque la tabla catedras ya se lo bloquee.
+  const carrerasPermitidas = useMemo(() => {
+    if (esAdmin) return carreras
+    const ids = new Set(alcance.map((a) => a.carrera_id))
+    return carreras.filter((c) => ids.has(c.id))
+  }, [carreras, esAdmin, alcance])
+
+  const sedesPermitidas = useMemo(() => {
+    if (esAdmin) return sedes
+    const ids = new Set()
+    for (const a of alcance) {
+      if (a.sede_id) ids.add(a.sede_id)
+      else carrerasSedes.filter((cs) => cs.carrera_id === a.carrera_id).forEach((cs) => ids.add(cs.sede_id))
+    }
+    return sedes.filter((s) => ids.has(s.id))
+  }, [sedes, esAdmin, alcance, carrerasSedes])
+
   const carrerasFiltradas = useMemo(() => {
-    if (!form.sede_id) return carreras
+    if (!form.sede_id) return carrerasPermitidas
     // si carreras_sedes todavía no fue poblada, no ocultamos nada para no bloquear la carga
-    if (carrerasSedes.length === 0) return carreras
+    if (carrerasSedes.length === 0) return carrerasPermitidas
     const idsPermitidos = new Set(
       carrerasSedes.filter((cs) => cs.sede_id === form.sede_id).map((cs) => cs.carrera_id),
     )
-    return carreras.filter((c) => idsPermitidos.has(c.id))
-  }, [carreras, carrerasSedes, form.sede_id])
+    return carrerasPermitidas.filter((c) => idsPermitidos.has(c.id))
+  }, [carrerasPermitidas, carrerasSedes, form.sede_id])
 
   const asignaturasFiltradas = useMemo(
     () => asignaturas.filter((a) => !form.carrera_id || a.carrera_id === form.carrera_id),
@@ -239,6 +261,7 @@ export function Catedras() {
         <h1>Cátedras</h1>
       </div>
 
+      {esAdmin && (
       <form className="form-card" onSubmit={handleSubmit} style={{ marginBottom: '2rem' }}>
         <div className="form-grid">
           <label>
@@ -264,7 +287,7 @@ export function Catedras() {
               required
             >
               <option value="">Seleccionar...</option>
-              {sedes.map((s) => (
+              {sedesPermitidas.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.nombre}
                 </option>
@@ -326,6 +349,7 @@ export function Catedras() {
           </button>
         </div>
       </form>
+      )}
 
       <div className="form-row" style={{ marginBottom: '0.75rem' }}>
         <label style={{ flex: '1 1 260px' }}>
@@ -350,7 +374,7 @@ export function Catedras() {
           Sede
           <select value={filtroSede} onChange={(e) => setFiltroSede(e.target.value)}>
             <option value="">Todas</option>
-            {sedes.map((s) => (
+            {sedesPermitidas.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.nombre}
               </option>
@@ -361,7 +385,7 @@ export function Catedras() {
           Carrera
           <select value={filtroCarrera} onChange={(e) => setFiltroCarrera(e.target.value)}>
             <option value="">Todas</option>
-            {carreras.map((c) => (
+            {carrerasPermitidas.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.nombre}
               </option>
@@ -465,7 +489,7 @@ export function Catedras() {
                             value={editForm.sede_id}
                             onChange={(e) => setEditForm({ ...editForm, sede_id: e.target.value })}
                           >
-                            {sedes.map((s) => (
+                            {sedesPermitidas.map((s) => (
                               <option key={s.id} value={s.id}>
                                 {s.nombre}
                               </option>
@@ -492,18 +516,22 @@ export function Catedras() {
                     <>
                       <td style={{ whiteSpace: 'nowrap' }}>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                          <button type="button" className="btn btn-secondary btn-sm" onClick={() => empezarEdicion(c)}>
-                            Editar
-                          </button>
+                          {esAdmin && (
+                            <button type="button" className="btn btn-secondary btn-sm" onClick={() => empezarEdicion(c)}>
+                              Editar
+                            </button>
+                          )}
                           <Link to={`/indicadores/${c.id}`} className="btn btn-secondary btn-sm">
                             Indicadores
                           </Link>
                           <Link to={`/foja/${c.id}`} className="btn btn-secondary btn-sm">
                             Foja
                           </Link>
-                          <button type="button" className="btn btn-danger btn-sm" onClick={() => eliminar(c.id)}>
-                            Eliminar
-                          </button>
+                          {esAdmin && (
+                            <button type="button" className="btn btn-danger btn-sm" onClick={() => eliminar(c.id)}>
+                              Eliminar
+                            </button>
+                          )}
                         </div>
                       </td>
                       <td className="muted-text" style={{ fontSize: 12, whiteSpace: 'nowrap' }}>
