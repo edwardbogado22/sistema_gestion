@@ -12,9 +12,11 @@ const MESES = [
  * que no estén bloqueados; `excepciones` es un mapa fecha → motivo, que
  * se muestra al pasar el mouse ("Día de la Virgen de Caacupé"). `carga`
  * marca los días que ya tienen exámenes del mismo curso, para no apilar
- * finales en una jornada.
+ * finales en una jornada. `avisos` marca días con una propuesta
+ * automática sin confirmar para ese profesor: se muestran pero NO se
+ * bloquean, porque al elegirlos la propuesta cede el lugar.
  */
-export function CalendarioRango({ value, onChange, min, max, excepciones = {}, carga = {}, disabled }) {
+export function CalendarioRango({ value, onChange, min, max, excepciones = {}, avisos = {}, carga = {}, disabled }) {
   const [abierto, setAbierto] = useState(false)
   const [mesVisible, setMesVisible] = useState(null)
   const ref = useRef(null)
@@ -117,12 +119,13 @@ export function CalendarioRango({ value, onChange, min, max, excepciones = {}, c
               const iso = aISO(fecha)
               const estado = estadoDe(iso)
               const ocupados = carga[iso] || 0
+              const aviso = avisos[iso]
               const titulo =
                 estado === 'excluido'
                   ? excepciones[iso]
-                  : ocupados > 0
-                    ? `${ocupados} examen(es) de este curso ese día`
-                    : undefined
+                  : [aviso, ocupados > 0 ? `${ocupados} examen(es) de este curso ese día` : null]
+                      .filter(Boolean)
+                      .join(' · ') || undefined
               return (
                 <button
                   key={iso}
@@ -132,6 +135,7 @@ export function CalendarioRango({ value, onChange, min, max, excepciones = {}, c
                     estado,
                     iso === value ? 'elegido' : '',
                     ocupados > 0 ? 'cargado' : '',
+                    aviso ? 'propuesta' : '',
                   ]
                     .filter(Boolean)
                     .join(' ')}

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../contexts/AuthContext'
@@ -26,10 +26,12 @@ export function PanelFechas() {
   const [ocupadoProfesor, setOcupadoProfesor] = useState([])
   const [filtro, setFiltro] = useState(sinFiltro)
   const [cambios, setCambios] = useState({})
+  const [filaEstado, setFilaEstado] = useState({})
+  const [filaError, setFilaError] = useState({})
   const [loading, setLoading] = useState(true)
-  const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState('')
-  const [ok, setOk] = useState('')
+  const tokenPorFila = useRef({})
+  const draftKey = `examen-fechas-draft-${llamadoId}`
 
   const cargar = async () => {
     setLoading(true)
@@ -52,8 +54,108 @@ export function PanelFechas() {
     setLoading(false)
   }
 
+  const refrescarAuxiliares = async () => {
+    const [con, ocup] = await Promise.all([
+      supabase.from('v_examen_conflictos').select('*').eq('llamado_id', llamadoId),
+      supabase.rpc('examen_fechas_profesor_llamado', { p_llamado: llamadoId }),
+    ])
+    if (!con.error) setConflictos(con.data || [])
+    if (!ocup.error) setOcupadoProfesor(ocup.data || [])
+  }
+
+  // Guarda una sola fila apenas se elige la fecha, en vez de acumular
+  // todo en un lote: un choque de profesor en una materia ya no bloquea
+  // ni hace perder las demás fechas que el secretario ya cargó.
+  const guardarFila = async (catedraId, fecha) => {
+    const token = (tokenPorFila.current[catedraId] || 0) + 1
+    tokenPorFila.current[catedraId] = token
+    const esVigente = () => tokenPorFila.current[catedraId] === token
+
+    setFilaEstado((s) => ({ ...s, [catedraId]: 'guardando' }))
+    setFilaError((s) => {
+      const n = { ...s }
+      delete n[catedraId]
+      return n
+    })
+
+    const fila = filas.find((f) => f.catedra_id === catedraId)
+    let resultado
+
+    if (!fecha) {
+      resultado = fila?.examen_fecha_id
+        ? await supabase.from('examen_fecha').delete().eq('id', fila.examen_fecha_id)
+        : { error: null }
+    } else {
+      // El trigger de la base valida rango, día hábil, estado del
+      // llamado y choque de profesor; si algo no cumple, el mensaje de
+      // Postgres se muestra tal cual junto a esa fila.
+      resultado = await supabase
+        .from('examen_fecha')
+        .upsert(
+          { llamado_id: llamadoId, catedra_id: catedraId, fecha, origen: 'MANUAL' },
+          { onConflict: 'llamado_id,catedra_id' },
+        )
+        .select('id, fecha')
+        .single()
+    }
+
+    if (!esVigente()) return // se eligió otra fecha para esta fila mientras esta se guardaba
+
+    if (resultado.error) {
+      setFilaEstado((s) => ({ ...s, [catedraId]: 'error' }))
+      setFilaError((s) => ({ ...s, [catedraId]: resultado.error.message }))
+      return
+    }
+
+    setFilas((fs) =>
+      fs.map((f) =>
+        f.catedra_id === catedraId
+          ? { ...f, fecha: resultado.data?.fecha ?? null, examen_fecha_id: resultado.data?.id ?? null }
+          : f,
+      ),
+    )
+    setCambios((c) => {
+      const n = { ...c }
+      delete n[catedraId]
+      return n
+    })
+    setFilaEstado((s) => ({ ...s, [catedraId]: 'guardado' }))
+    setTimeout(() => {
+      if (!esVigente()) return
+      setFilaEstado((s) => {
+        const n = { ...s }
+        if (n[catedraId] === 'guardado') delete n[catedraId]
+        return n
+      })
+    }, 2000)
+
+    refrescarAuxiliares()
+  }
+
+  const elegirFecha = (catedraId, fecha) => {
+    setCambios((c) => ({ ...c, [catedraId]: fecha }))
+    guardarFila(catedraId, fecha)
+  }
+
+  const reintentarPendientes = () => {
+    for (const [catedraId, fecha] of Object.entries(cambios)) guardarFila(catedraId, fecha)
+  }
+
   useEffect(() => {
-    cargar()
+    cargar().then(() => {
+      // Si quedó un cambio sin confirmar por un error o un cierre
+      // abrupto de la pestaña, se reintenta guardar solo automáticamente.
+      let draft
+      try {
+        draft = JSON.parse(localStorage.getItem(draftKey) || '{}')
+      } catch {
+        draft = {}
+      }
+      const entradas = Object.entries(draft)
+      if (entradas.length === 0) return
+      setCambios(draft)
+      for (const [catedraId, fecha] of entradas) guardarFila(catedraId, fecha)
+    })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [llamadoId])
 
@@ -113,9 +215,12 @@ export function PanelFechas() {
 
   // Días bloqueados: feriados y domingos del llamado, días en que ese
   // profesor no está disponible, y fechas donde ya tiene otra mesa
-  // asignada (en cualquier carrera, no solo la que ve este secretario) —
-  // salvo que la materia de esta fila sea optativa, que es la misma
-  // excepción que aplica el trigger al guardar.
+  // CONFIRMADA (en cualquier carrera, no solo la que ve este
+  // secretario) — salvo que la materia de esta fila sea optativa, que
+  // es la misma excepción que aplica el trigger al guardar. Las
+  // propuestas automáticas (origen AUTO) no bloquean: se muestran como
+  // aviso en avisosDe() y ceden el lugar si el secretario elige esa
+  // fecha (misma regla que aplica el trigger al guardar).
   const excepcionesDe = (fila) => {
     const motivos = {}
     for (const b of bloqueados) motivos[b.fecha] = b.motivo
@@ -124,12 +229,24 @@ export function PanelFechas() {
     }
     if (!fila.optativa) {
       for (const o of ocupadoProfesor) {
-        if (o.profesor_id === fila.profesor_id && o.catedra_id !== fila.catedra_id) {
+        if (o.profesor_id === fila.profesor_id && o.catedra_id !== fila.catedra_id && o.origen !== 'AUTO') {
           motivos[o.fecha] = motivos[o.fecha] || `El profesor ya tiene una mesa asignada: ${o.materia}`
         }
       }
     }
     return motivos
+  }
+
+  const avisosDe = (fila) => {
+    const avisos = {}
+    if (!fila.optativa) {
+      for (const o of ocupadoProfesor) {
+        if (o.profesor_id === fila.profesor_id && o.catedra_id !== fila.catedra_id && o.origen === 'AUTO') {
+          avisos[o.fecha] = `Propuesta automática sin confirmar: ${o.materia}. Se libera si elegís esta fecha.`
+        }
+      }
+    }
+    return avisos
   }
 
   const conflictoDe = (fila) => {
@@ -139,51 +256,20 @@ export function PanelFechas() {
   }
 
   const pendientes = Object.keys(cambios).length
+  const conError = Object.keys(filaError).length
 
-  const guardar = async () => {
-    setGuardando(true)
-    setError('')
-    setOk('')
-
-    const aInsertar = []
-    const aBorrar = []
-    for (const [catedraId, fecha] of Object.entries(cambios)) {
-      const fila = filas.find((f) => f.catedra_id === catedraId)
-      if (!fecha) {
-        if (fila?.examen_fecha_id) aBorrar.push(fila.examen_fecha_id)
-      } else {
-        aInsertar.push({ llamado_id: llamadoId, catedra_id: catedraId, fecha })
-      }
+  // Persiste en localStorage lo que todavía no se confirmó en el
+  // servidor (en vuelo o en error), para no perderlo ante un cierre de
+  // pestaña o un reintento fallido. Se limpia solo cuando no queda nada
+  // pendiente.
+  useEffect(() => {
+    if (pendientes === 0) {
+      localStorage.removeItem(draftKey)
+    } else {
+      localStorage.setItem(draftKey, JSON.stringify(cambios))
     }
-
-    if (aBorrar.length) {
-      const { error } = await supabase.from('examen_fecha').delete().in('id', aBorrar)
-      if (error) {
-        setError(error.message)
-        setGuardando(false)
-        return
-      }
-    }
-
-    if (aInsertar.length) {
-      // El trigger de la base valida rango, día hábil y estado del
-      // llamado; si algo no cumple, falla todo el lote y se muestra el
-      // mensaje tal cual viene de Postgres.
-      const { error } = await supabase
-        .from('examen_fecha')
-        .upsert(aInsertar, { onConflict: 'llamado_id,catedra_id' })
-      if (error) {
-        setError(error.message)
-        setGuardando(false)
-        return
-      }
-    }
-
-    setCambios({})
-    setOk(`Se guardaron ${pendientes} fechas.`)
-    setGuardando(false)
-    cargar()
-  }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cambios, draftKey])
 
   const exportar = () => {
     descargarFilas(
@@ -242,7 +328,6 @@ export function PanelFechas() {
         <p className="muted-text">Tu rol es de auditoría: podés ver el estado pero no cargar fechas.</p>
       )}
       {error && <p className="error-text">{error}</p>}
-      {ok && <p className="muted-text">{ok}</p>}
 
       <div className="form-row" style={{ marginBottom: 16, alignItems: 'center' }}>
         <select value={filtro.sede_id} onChange={(e) => setFiltro({ ...filtro, sede_id: e.target.value })}>
@@ -355,13 +440,36 @@ export function PanelFechas() {
                 <td>
                   <CalendarioRango
                     value={fechaDe(f)}
-                    onChange={(v) => setCambios((c) => ({ ...c, [f.catedra_id]: v }))}
+                    onChange={(v) => elegirFecha(f.catedra_id, v)}
                     min={llamado.fecha_inicio}
                     max={llamado.fecha_fin}
                     excepciones={excepcionesDe(f)}
+                    avisos={avisosDe(f)}
                     carga={cargaDelCurso(f)}
-                    disabled={!editable}
+                    disabled={!editable || filaEstado[f.catedra_id] === 'guardando'}
                   />
+                  {filaEstado[f.catedra_id] === 'guardando' && (
+                    <div className="muted-text" style={{ fontSize: 12 }}>
+                      Guardando...
+                    </div>
+                  )}
+                  {filaEstado[f.catedra_id] === 'guardado' && (
+                    <div className="muted-text" style={{ fontSize: 12, color: 'var(--success)' }}>
+                      Guardado ✓
+                    </div>
+                  )}
+                  {filaEstado[f.catedra_id] === 'error' && (
+                    <div className="error-text" style={{ fontSize: 12 }}>
+                      {filaError[f.catedra_id]}{' '}
+                      <button
+                        type="button"
+                        className="chip"
+                        onClick={() => guardarFila(f.catedra_id, cambios[f.catedra_id])}
+                      >
+                        Reintentar
+                      </button>
+                    </div>
+                  )}
                 </td>
                 <td>{f.hora_inicio || '—'}</td>
                 <td>{f.aula || '—'}</td>
@@ -371,7 +479,7 @@ export function PanelFechas() {
         </tbody>
       </table>
 
-      <div className="form-actions" style={{ marginTop: 16, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+      <div className="form-actions form-actions-sticky">
         <button type="button" className="btn btn-secondary" onClick={exportar}>
           Descargar CSV
         </button>
@@ -379,15 +487,20 @@ export function PanelFechas() {
           Reporte para imprimir
         </Link>
         <div style={{ flex: 1 }} />
-        {pendientes > 0 && <span className="muted-text">{pendientes} cambio(s) sin guardar</span>}
-        <button
-          type="button"
-          className="btn btn-primary"
-          disabled={!editable || pendientes === 0 || guardando}
-          onClick={guardar}
-        >
-          {guardando ? 'Guardando...' : 'Guardar cambios'}
-        </button>
+        {pendientes === 0 && <span className="muted-text">Cada fecha se guarda sola al elegirla.</span>}
+        {conError > 0 && (
+          <span className="error-text">
+            {conError} fila(s) con error sin confirmar
+          </span>
+        )}
+        {pendientes > conError && pendientes > 0 && (
+          <span className="muted-text">{pendientes - conError} guardando...</span>
+        )}
+        {conError > 0 && (
+          <button type="button" className="btn btn-primary" disabled={!editable} onClick={reintentarPendientes}>
+            Reintentar {conError} pendiente(s)
+          </button>
+        )}
       </div>
     </div>
   )

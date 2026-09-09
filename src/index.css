@@ -760,6 +760,18 @@ select {
   margin-top: 1.25rem;
 }
 
+.form-actions-sticky {
+  flex-wrap: wrap;
+  align-items: center;
+  position: sticky;
+  bottom: 0;
+  background: var(--card);
+  border-top: 1px solid var(--border);
+  padding: 12px 0;
+  margin-top: 16px;
+  z-index: 5;
+}
+
 @media (max-width: 640px) {
   .form-grid {
     grid-template-columns: 1fr;
@@ -1184,6 +1196,20 @@ select {
   height: 2px;
   border-radius: 2px;
   background: var(--danger);
+}
+
+/* propuesta automática sin confirmar para ese profesor: se puede
+   elegir igual, cede el lugar a la carga real */
+.calendario-dia.propuesta::before {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--gold-deep);
 }
 
 .calendario-pie {

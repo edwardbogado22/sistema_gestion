@@ -110,6 +110,15 @@ export function Llamados() {
     cargar()
   }
 
+  const purgarPropuestas = async (id) => {
+    setError('')
+    setOk('')
+    const { data, error } = await supabase.rpc('examen_purgar_propuestas', { p_llamado: id })
+    if (error) return setError(error.message)
+    setOk(`Se quitaron ${data} propuesta(s) automática(s) sin confirmar.`)
+    cargar()
+  }
+
   const agregarExcepcion = async (llamadoId) => {
     const draft = nuevaExcepcion[llamadoId] || {}
     if (!draft.fecha) return setError('Elegí una fecha.')
@@ -284,6 +293,9 @@ export function Llamados() {
                   </button>
                   <button type="button" className="btn btn-secondary btn-sm" onClick={() => distribuir(l.id, true)}>
                     Redistribuir todo
+                  </button>
+                  <button type="button" className="btn btn-secondary btn-sm" onClick={() => purgarPropuestas(l.id)}>
+                    Purgar propuestas sin confirmar
                   </button>
                   <button type="button" className="btn btn-primary btn-sm" onClick={() => aprobar(l.id)}>
                     Aprobar llamado
