@@ -8,6 +8,7 @@ import { formatoLargo } from '../../lib/fechas'
 import { descargarFilas } from '../../lib/csv'
 
 const sinFiltro = {
+  carrera_id: '',
   sede_id: '',
   curso_nivel: '',
   seccion_grupo: '',
@@ -61,6 +62,26 @@ export function PanelFechas() {
     ])
     if (!con.error) setConflictos(con.data || [])
     if (!ocup.error) setOcupadoProfesor(ocup.data || [])
+  }
+
+  // El trigger puede borrar en silencio la propuesta AUTO de OTRA
+  // cátedra del mismo profesor al aceptar una carga manual en choque
+  // (ver migracion_origen_examen_fecha.sql). Esa otra fila sigue
+  // visible en esta pantalla con su fecha vieja hasta que se
+  // refresque puntualmente al profesor afectado.
+  const refrescarProfesor = async (profesorId) => {
+    const { data, error } = await supabase
+      .from('v_examen_agenda')
+      .select('catedra_id, fecha, examen_fecha_id')
+      .eq('llamado_id', llamadoId)
+      .eq('profesor_id', profesorId)
+    if (error || !data) return
+    setFilas((fs) =>
+      fs.map((f) => {
+        const actual = data.find((d) => d.catedra_id === f.catedra_id)
+        return actual ? { ...f, fecha: actual.fecha, examen_fecha_id: actual.examen_fecha_id } : f
+      }),
+    )
   }
 
   // Guarda una sola fila apenas se elige la fecha, en vez de acumular
@@ -130,6 +151,7 @@ export function PanelFechas() {
     }, 2000)
 
     refrescarAuxiliares()
+    if (fecha && fila?.profesor_id) refrescarProfesor(fila.profesor_id)
   }
 
   const elegirFecha = (catedraId, fecha) => {
@@ -169,6 +191,7 @@ export function PanelFechas() {
       return [...mapa].map(([value, label]) => ({ value, label })).sort((a, b) => a.label.localeCompare(b.label))
     }
     return {
+      carreras: unico('carrera_id', (f) => f.carrera),
       sedes: unico('sede_id', (f) => f.sede),
       asignaturas: unico('asignatura_id', (f) => f.materia),
       profesores: unico('profesor_id', (f) => f.profesor),
@@ -180,6 +203,7 @@ export function PanelFechas() {
   const visibles = useMemo(() => {
     return filas
       .filter((f) => {
+        if (filtro.carrera_id && f.carrera_id !== filtro.carrera_id) return false
         if (filtro.sede_id && f.sede_id !== filtro.sede_id) return false
         if (filtro.curso_nivel && String(f.curso_nivel) !== filtro.curso_nivel) return false
         if (filtro.seccion_grupo && f.seccion_grupo !== filtro.seccion_grupo) return false
@@ -330,6 +354,17 @@ export function PanelFechas() {
       {error && <p className="error-text">{error}</p>}
 
       <div className="form-row" style={{ marginBottom: 16, alignItems: 'center' }}>
+        {opciones.carreras.length > 1 && (
+          <select value={filtro.carrera_id} onChange={(e) => setFiltro({ ...filtro, carrera_id: e.target.value })}>
+            <option value="">Todas las carreras</option>
+            {opciones.carreras.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        )}
+
         <select value={filtro.sede_id} onChange={(e) => setFiltro({ ...filtro, sede_id: e.target.value })}>
           <option value="">Todas las sedes</option>
           {opciones.sedes.map((o) => (
