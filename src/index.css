@@ -1366,8 +1366,21 @@ select {
   }
 
   .foja-header,
-  .foja-datos,
-  .foja-tabla {
+  .foja-datos {
+    page-break-inside: avoid;
+  }
+
+  /* .foja-tabla puede tener pocas filas (Foja de Desempeño, entra
+     en una sola hoja) o muchas (Reporte de Carga, un llamado entero):
+     no se le puede pedir a la tabla completa que no se parta entre
+     páginas porque cuando no entra en una sola hoja el navegador la
+     desborda/corta en vez de paginar. Se evita partir una FILA a la
+     mitad en cambio, y se repite el encabezado en cada hoja nueva. */
+  .foja-tabla thead {
+    display: table-header-group;
+  }
+
+  .foja-tabla tr {
     page-break-inside: avoid;
   }
 }
