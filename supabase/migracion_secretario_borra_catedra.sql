@@ -60,3 +60,5 @@ revoke execute on function catedra_eliminar(uuid) from anon, public;
 grant execute on function catedra_eliminar(uuid) to authenticated;
 
 select registrar_migracion('migracion_secretario_borra_catedra.sql');
+
+notify pgrst, 'reload schema';
