@@ -56,7 +56,7 @@ async function sincronizarHorario(catedraId, dias) {
 }
 
 export function Catedras() {
-  const { esAdmin, alcance } = useAuth()
+  const { esAdmin, esSecretario, alcance } = useAuth()
   const [profesores, setProfesores] = useState([])
   const [carreras, setCarreras] = useState([])
   const [carrerasSedes, setCarrerasSedes] = useState([])
@@ -99,7 +99,7 @@ export function Catedras() {
     let query = supabase
       .from('catedras')
       .select(
-        'id, periodo_lectivo, seccion_grupo, activo, profesor_id, asignatura_id, sede_id, profesores(nombres, apellidos), asignaturas(nombre, curso_nivel, carrera_id, carreras(nombre)), sedes(nombre), catedra_horario(dia_semana)',
+        'id, periodo_lectivo, seccion_grupo, activo, profesor_id, asignatura_id, sede_id, exento_examen, exento_motivo, profesores(nombres, apellidos), asignaturas(nombre, curso_nivel, carrera_id, carreras(nombre)), sedes(nombre), catedra_horario(dia_semana)',
       )
       .order('periodo_lectivo', { ascending: false })
     if (filtroPeriodo) query = query.eq('periodo_lectivo', filtroPeriodo)
@@ -227,6 +227,8 @@ export function Catedras() {
       seccion_grupo: c.seccion_grupo,
       activo: c.activo,
       dias_semana: (c.catedra_horario || []).map((h) => h.dia_semana),
+      exento_examen: c.exento_examen || false,
+      exento_motivo: c.exento_motivo || '',
     })
   }
 
@@ -247,7 +249,7 @@ export function Catedras() {
 
   const eliminar = async (id) => {
     if (!confirm('¿Eliminar esta cátedra? También se pierden sus indicadores cargados.')) return
-    const { error } = await supabase.from('catedras').delete().eq('id', id)
+    const { error } = await supabase.rpc('catedra_eliminar', { p_catedra_id: id })
     if (error) {
       alert('Error: ' + error.message)
       return
@@ -510,6 +512,24 @@ export function Catedras() {
                             onChange={(dias) => setEditForm({ ...editForm, dias_semana: dias })}
                           />
                         </label>
+                        <label style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <input
+                            type="checkbox"
+                            checked={editForm.exento_examen || false}
+                            onChange={(e) => setEditForm({ ...editForm, exento_examen: e.target.checked })}
+                          />
+                          Exenta del período de exámenes
+                        </label>
+                        {editForm.exento_examen && (
+                          <label style={{ minWidth: 220, flex: '1 1 220px' }}>
+                            Motivo
+                            <input
+                              value={editForm.exento_motivo || ''}
+                              onChange={(e) => setEditForm({ ...editForm, exento_motivo: e.target.value })}
+                              placeholder="Ej: Trabajo Final de Grado, optativa sin alumnos..."
+                            />
+                          </label>
+                        )}
                       </div>
                     </td>
                   ) : (
@@ -527,7 +547,7 @@ export function Catedras() {
                           <Link to={`/foja/${c.id}`} className="btn btn-secondary btn-sm">
                             Foja
                           </Link>
-                          {esAdmin && (
+                          {(esAdmin || esSecretario) && (
                             <button type="button" className="btn btn-danger btn-sm" onClick={() => eliminar(c.id)}>
                               Eliminar
                             </button>
@@ -545,7 +565,14 @@ export function Catedras() {
                       <td>
                         {c.profesores?.apellidos}, {c.profesores?.nombres}
                       </td>
-                      <td>{c.asignaturas?.nombre}</td>
+                      <td>
+                        {c.asignaturas?.nombre}
+                        {c.exento_examen && (
+                          <span className="badge badge-muted" style={{ marginLeft: 6 }} title={c.exento_motivo || 'Exenta del período de exámenes'}>
+                            Exenta
+                          </span>
+                        )}
+                      </td>
                       <td>{c.asignaturas?.carreras?.nombre}</td>
                       <td>{c.sedes?.nombre}</td>
                       <td>{c.seccion_grupo}</td>
