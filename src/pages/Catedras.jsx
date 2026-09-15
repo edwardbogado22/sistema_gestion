@@ -234,10 +234,21 @@ export function Catedras() {
 
   const guardarEdicion = async (id) => {
     const { dias_semana, ...campos } = editForm
-    const { error } = await supabase.from('catedras').update(campos).eq('id', id)
-    if (error) {
-      alert(error.code === '23505' ? 'Ya existe esa combinación.' : error.message)
-      return
+    if (esAdmin) {
+      const { error } = await supabase.from('catedras').update(campos).eq('id', id)
+      if (error) {
+        alert(error.code === '23505' ? 'Ya existe esa combinación.' : error.message)
+        return
+      }
+    } else {
+      const { error } = await supabase.rpc('catedra_editar_profesor', {
+        p_catedra_id: id,
+        p_profesor_id: campos.profesor_id,
+      })
+      if (error) {
+        alert('Error: ' + error.message)
+        return
+      }
     }
     const eHorario = await sincronizarHorario(id, dias_semana || [])
     if (eHorario) {
@@ -476,6 +487,7 @@ export function Catedras() {
                             placeholder="Buscar profesor..."
                           />
                         </label>
+                        {esAdmin && (
                         <label style={{ minWidth: 220, flex: '1 1 220px' }}>
                           Asignatura
                           <BuscadorSelect
@@ -485,6 +497,8 @@ export function Catedras() {
                             placeholder="Buscar asignatura..."
                           />
                         </label>
+                        )}
+                        {esAdmin && (
                         <label style={{ maxWidth: 170 }}>
                           Sede
                           <select
@@ -498,6 +512,8 @@ export function Catedras() {
                             ))}
                           </select>
                         </label>
+                        )}
+                        {esAdmin && (
                         <label style={{ maxWidth: 90 }}>
                           Sección
                           <input
@@ -505,6 +521,7 @@ export function Catedras() {
                             onChange={(e) => setEditForm({ ...editForm, seccion_grupo: e.target.value })}
                           />
                         </label>
+                        )}
                         <label>
                           Días de clase
                           <SelectorDias
@@ -512,6 +529,7 @@ export function Catedras() {
                             onChange={(dias) => setEditForm({ ...editForm, dias_semana: dias })}
                           />
                         </label>
+                        {esAdmin && (
                         <label style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                           <input
                             type="checkbox"
@@ -520,7 +538,8 @@ export function Catedras() {
                           />
                           Exenta del período de exámenes
                         </label>
-                        {editForm.exento_examen && (
+                        )}
+                        {esAdmin && editForm.exento_examen && (
                           <label style={{ minWidth: 220, flex: '1 1 220px' }}>
                             Motivo
                             <input
@@ -536,7 +555,7 @@ export function Catedras() {
                     <>
                       <td style={{ whiteSpace: 'nowrap' }}>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                          {esAdmin && (
+                          {(esAdmin || esSecretario) && (
                             <button type="button" className="btn btn-secondary btn-sm" onClick={() => empezarEdicion(c)}>
                               Editar
                             </button>
