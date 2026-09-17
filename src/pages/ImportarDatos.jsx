@@ -8,6 +8,7 @@ const TABS = [
   { key: 'catedras', label: 'Cátedras' },
   { key: 'clases', label: 'Asistencia Clases' },
   { key: 'contenido', label: 'Cumplimiento Contenido' },
+  { key: 'temario', label: 'Temario (catálogo)' },
   { key: 'mesas', label: 'Mesas Examinadoras' },
   { key: 'reuniones', label: 'Asistencia Reuniones' },
   { key: 'manual', label: 'Criterios Manuales' },
@@ -446,6 +447,109 @@ function ImportarContenido() {
   )
 }
 
+function ImportarTemario() {
+  const [asignaturas, setAsignaturas] = useState([])
+  const [filas, setFilas] = useState([])
+  const [importando, setImportando] = useState(false)
+  const [resumen, setResumen] = useState(null)
+  const columnas = ['asignatura_codigo', 'unidad_numero', 'unidad_nombre', 'subtema_numero', 'subtema_descripcion']
+
+  useEffect(() => {
+    supabase
+      .from('asignaturas')
+      .select('id, codigo')
+      .then(({ data }) => setAsignaturas(data || []))
+  }, [])
+
+  const handleFile = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    const data = await parseArchivo(file)
+    setResumen(null)
+    setFilas(
+      data.map((row) => {
+        const asignatura = asignaturas.find((a) => normalizar(a.codigo) === normalizar(row.asignatura_codigo))
+        if (!asignatura) return { row, estado: 'error', mensaje: `Asignatura con código "${row.asignatura_codigo}" no existe` }
+        const unidadNumero = Number(row.unidad_numero)
+        const subtemaNumero = Number(row.subtema_numero)
+        if (!Number.isInteger(unidadNumero) || unidadNumero < 1) return { row, estado: 'error', mensaje: 'unidad_numero inválido' }
+        if (!Number.isInteger(subtemaNumero) || subtemaNumero < 1) return { row, estado: 'error', mensaje: 'subtema_numero inválido' }
+        if (!row.unidad_nombre?.trim()) return { row, estado: 'error', mensaje: 'Falta unidad_nombre' }
+        if (!row.subtema_descripcion?.trim()) return { row, estado: 'error', mensaje: 'Falta subtema_descripcion' }
+        return {
+          row,
+          estado: 'ok',
+          mensaje: '',
+          asignaturaId: asignatura.id,
+          unidadNumero,
+          subtemaNumero,
+        }
+      }),
+    )
+  }
+
+  const confirmar = async () => {
+    setImportando(true)
+    let ok = 0
+    let error = 0
+    for (const f of filas) {
+      if (f.estado !== 'ok') {
+        error++
+        continue
+      }
+      const { data: unidad, error: e1 } = await supabase
+        .from('contenido_unidad')
+        .upsert(
+          { asignatura_id: f.asignaturaId, numero: f.unidadNumero, nombre: f.row.unidad_nombre.trim() },
+          { onConflict: 'asignatura_id,numero' },
+        )
+        .select()
+        .single()
+      if (e1) {
+        error++
+        continue
+      }
+      const { error: e2 } = await supabase
+        .from('contenido_subtema')
+        .upsert(
+          { unidad_id: unidad.id, numero: f.subtemaNumero, descripcion: f.row.subtema_descripcion.trim() },
+          { onConflict: 'unidad_id,numero' },
+        )
+      if (e2) error++
+      else ok++
+    }
+    setImportando(false)
+    setResumen({ ok, error })
+  }
+
+  return (
+    <div>
+      <p className="muted-text" style={{ marginBottom: '0.5rem' }}>
+        Una fila por subtema. Las filas de la misma unidad repiten unidad_numero/unidad_nombre — se agrupan solas.
+      </p>
+      <AyudaPlantilla
+        columnas={columnas}
+        nombreArchivo="temario_plantilla.csv"
+        ejemplo={['ECO101', '1', 'Introducción a la macroeconomía', '1', 'Producto Interno Bruto y sus componentes']}
+      />
+      <input type="file" accept=".csv" onChange={handleFile} />
+      {filas.length > 0 && (
+        <>
+          <TablaPreview filas={filas} columnas={columnas} />
+          <div className="form-actions">
+            <button type="button" className="btn btn-primary" disabled={importando} onClick={confirmar}>
+              {importando
+                ? 'Importando...'
+                : `Confirmar importación (${filas.filter((f) => f.estado === 'ok').length} filas válidas)`}
+            </button>
+          </div>
+        </>
+      )}
+      <ResumenImportacion resumen={resumen} />
+    </div>
+  )
+}
+
 function ImportarMesas() {
   return (
     <ImportarIndicadorObjetivo
@@ -630,6 +734,7 @@ export function ImportarDatos() {
       {tab === 'catedras' && <ImportarCatedras />}
       {tab === 'clases' && <ImportarClases />}
       {tab === 'contenido' && <ImportarContenido />}
+      {tab === 'temario' && <ImportarTemario />}
       {tab === 'mesas' && <ImportarMesas />}
       {tab === 'reuniones' && <ImportarReuniones />}
       {tab === 'manual' && <ImportarManual />}

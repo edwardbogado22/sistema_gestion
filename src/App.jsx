@@ -59,6 +59,7 @@ const MisRegistrosEvento = lazy(() =>
   import('./pages/Eventos/MisRegistrosEvento').then((m) => ({ default: m.MisRegistrosEvento })),
 )
 const PlanAnual = lazy(() => import('./pages/PlanAnual').then((m) => ({ default: m.PlanAnual })))
+const ContenidoKiosco = lazy(() => import('./pages/ContenidoKiosco').then((m) => ({ default: m.ContenidoKiosco })))
 const ReportePlanAnual = lazy(() =>
   import('./pages/ReportePlanAnual').then((m) => ({ default: m.ReportePlanAnual })),
 )
@@ -151,6 +152,8 @@ function App() {
           path="/plan-anual/reporte"
           element={<PrivateRoute>{withLayout(<ReportePlanAnual />)}</PrivateRoute>}
         />
+
+        <Route path="/contenido/kiosco" element={<PrivateRoute>{withLayout(<ContenidoKiosco />)}</PrivateRoute>} />
 
         <Route
           path="/informes"

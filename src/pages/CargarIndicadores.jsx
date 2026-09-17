@@ -28,6 +28,8 @@ export function CargarIndicadores() {
 
   const [clases, setClases] = useState({ horas_programadas: '', horas_dictadas: '' })
   const [contenido, setContenido] = useState({ unidades_programadas: '', unidades_desarrolladas: '' })
+  const [contenidoPct, setContenidoPct] = useState(null)
+  const [tieneCatalogo, setTieneCatalogo] = useState(false)
   const [manualValores, setManualValores] = useState({})
   const [alumnosValores, setAlumnosValores] = useState({})
   const [totalEncuestados, setTotalEncuestados] = useState('')
@@ -38,7 +40,7 @@ export function CargarIndicadores() {
       setLoading(true)
       const { data: c, error: e1 } = await supabase
         .from('catedras')
-        .select('id, periodo_lectivo, seccion_grupo, profesores(nombres, apellidos), asignaturas(nombre, carreras(nombre)), sedes(nombre)')
+        .select('id, periodo_lectivo, seccion_grupo, profesores(nombres, apellidos), asignaturas(id, nombre, carreras(nombre)), sedes(nombre)')
         .eq('id', catedraId)
         .single()
       if (e1) {
@@ -48,17 +50,22 @@ export function CargarIndicadores() {
       }
       setCatedra(c)
 
-      const [{ data: cr }, { data: ac }, { data: cc }, { data: pae }, { data: ecc }] = await Promise.all([
+      const [{ data: cr }, { data: ac }, { data: cc }, { data: pae }, { data: ecc }, { data: unidadesCatalogo }] = await Promise.all([
         supabase.from('criterios_evaluacion').select('*').eq('periodo_lectivo', c.periodo_lectivo).eq('activo', true).order('orden'),
         supabase.from('asistencia_clases').select('*').eq('catedra_id', catedraId).maybeSingle(),
         supabase.from('cumplimiento_contenido').select('*').eq('catedra_id', catedraId).maybeSingle(),
         supabase.from('plan_anual_entrega').select('*').eq('catedra_id', catedraId).maybeSingle(),
         supabase.from('evaluacion_criterio_catedra').select('*').eq('catedra_id', catedraId),
+        supabase.from('contenido_unidad').select('id').eq('asignatura_id', c.asignaturas.id).limit(1),
       ])
 
       setCriterios(cr || [])
       if (ac) setClases({ horas_programadas: ac.horas_programadas, horas_dictadas: ac.horas_dictadas })
-      if (cc) setContenido({ unidades_programadas: cc.unidades_programadas, unidades_desarrolladas: cc.unidades_desarrolladas })
+      setTieneCatalogo((unidadesCatalogo || []).length > 0)
+      if (cc) {
+        setContenido({ unidades_programadas: cc.unidades_programadas, unidades_desarrolladas: cc.unidades_desarrolladas })
+        setContenidoPct(cc.porcentaje_cumplimiento)
+      }
       setPlanAnual(pae || null)
 
       const manual = {}
@@ -115,7 +122,7 @@ export function CargarIndicadores() {
       }
     }
 
-    if (contenido.unidades_programadas !== '' && contenido.unidades_desarrolladas !== '') {
+    if (!tieneCatalogo && contenido.unidades_programadas !== '' && contenido.unidades_desarrolladas !== '') {
       const { error } = await supabase.from('cumplimiento_contenido').upsert(
         {
           catedra_id: catedraId,
@@ -222,25 +229,35 @@ export function CargarIndicadores() {
               {criterioClases && <> · aporta a &quot;{criterioClases.nombre}&quot; ({criterioClases.peso_porcentaje}%)</>}
             </div>
 
-            <label>
-              Unidades programadas (contenido)
-              <input
-                type="number"
-                min="0"
-                value={contenido.unidades_programadas}
-                onChange={(e) => setContenido({ ...contenido, unidades_programadas: e.target.value })}
-              />
-            </label>
-            <label>
-              Unidades desarrolladas
-              <input
-                type="number"
-                min="0"
-                value={contenido.unidades_desarrolladas}
-                onChange={(e) => setContenido({ ...contenido, unidades_desarrolladas: e.target.value })}
-              />
-            </label>
-            <div className="muted-text full-width">% cumplimiento de contenido: {pctContenido ?? '—'}%</div>
+            {tieneCatalogo ? (
+              <div className="muted-text full-width">
+                Cumplimiento de contenido: {contenidoPct ?? 0}% ({contenido.unidades_desarrolladas || 0} de{' '}
+                {contenido.unidades_programadas || 0} unidades) · se calcula automáticamente desde el temario tildado
+                en el <Link to="/contenido/kiosco">kiosco de la sede</Link>.
+              </div>
+            ) : (
+              <>
+                <label>
+                  Unidades programadas (contenido)
+                  <input
+                    type="number"
+                    min="0"
+                    value={contenido.unidades_programadas}
+                    onChange={(e) => setContenido({ ...contenido, unidades_programadas: e.target.value })}
+                  />
+                </label>
+                <label>
+                  Unidades desarrolladas
+                  <input
+                    type="number"
+                    min="0"
+                    value={contenido.unidades_desarrolladas}
+                    onChange={(e) => setContenido({ ...contenido, unidades_desarrolladas: e.target.value })}
+                  />
+                </label>
+                <div className="muted-text full-width">% cumplimiento de contenido: {pctContenido ?? '—'}%</div>
+              </>
+            )}
 
             {criterioMesas && (
               <div className="muted-text full-width">
