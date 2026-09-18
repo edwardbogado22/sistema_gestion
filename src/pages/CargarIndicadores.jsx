@@ -111,7 +111,6 @@ export function CargarIndicadores() {
           catedra_id: catedraId,
           horas_programadas: Number(clases.horas_programadas),
           horas_dictadas: Number(clases.horas_dictadas),
-          porcentaje_asistencia: pctClases,
         },
         { onConflict: 'catedra_id' },
       )
@@ -128,7 +127,6 @@ export function CargarIndicadores() {
           catedra_id: catedraId,
           unidades_programadas: Number(contenido.unidades_programadas),
           unidades_desarrolladas: Number(contenido.unidades_desarrolladas),
-          porcentaje_cumplimiento: pctContenido,
         },
         { onConflict: 'catedra_id' },
       )

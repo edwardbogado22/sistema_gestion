@@ -351,7 +351,7 @@ function ImportarCatedras() {
   )
 }
 
-function ImportarIndicadorObjetivo({ tabla, columnasExtra, columnaPorcentaje, calcularPorcentaje, ejemploExtra, nombreArchivo }) {
+function ImportarIndicadorObjetivo({ tabla, columnasExtra, ejemploExtra, nombreArchivo }) {
   const catedras = useCatedrasLookup()
   const [filas, setFilas] = useState([])
   const [importando, setImportando] = useState(false)
@@ -389,7 +389,6 @@ function ImportarIndicadorObjetivo({ tabla, columnasExtra, columnaPorcentaje, ca
       columnasExtra.forEach((col) => {
         payload[col] = Number(f.row[col])
       })
-      payload[columnaPorcentaje] = calcularPorcentaje(f.row)
       const { error: err } = await supabase.from(tabla).upsert(payload, { onConflict: 'catedra_id' })
       if (err) error++
       else ok++
@@ -427,8 +426,6 @@ function ImportarClases() {
       tabla="asistencia_clases"
       nombreArchivo="asistencia_clases_plantilla.csv"
       columnasExtra={['horas_programadas', 'horas_dictadas']}
-      columnaPorcentaje="porcentaje_asistencia"
-      calcularPorcentaje={(row) => Math.round((Number(row.horas_dictadas) / Number(row.horas_programadas)) * 10000) / 100}
       ejemploExtra={['64', '60']}
     />
   )
@@ -440,8 +437,6 @@ function ImportarContenido() {
       tabla="cumplimiento_contenido"
       nombreArchivo="cumplimiento_contenido_plantilla.csv"
       columnasExtra={['unidades_programadas', 'unidades_desarrolladas']}
-      columnaPorcentaje="porcentaje_cumplimiento"
-      calcularPorcentaje={(row) => Math.round((Number(row.unidades_desarrolladas) / Number(row.unidades_programadas)) * 10000) / 100}
       ejemploExtra={['5', '5']}
     />
   )
@@ -556,8 +551,6 @@ function ImportarMesas() {
       tabla="asistencia_mesas_examinadoras"
       nombreArchivo="mesas_examinadoras_plantilla.csv"
       columnasExtra={['mesas_convocadas', 'mesas_asistidas']}
-      columnaPorcentaje="porcentaje_asistencia"
-      calcularPorcentaje={(row) => Math.round((Number(row.mesas_asistidas) / Number(row.mesas_convocadas)) * 10000) / 100}
       ejemploExtra={['3', '3']}
     />
   )
@@ -569,8 +562,6 @@ function ImportarReuniones() {
       tabla="asistencia_reuniones"
       nombreArchivo="asistencia_reuniones_plantilla.csv"
       columnasExtra={['reuniones_convocadas', 'reuniones_asistidas']}
-      columnaPorcentaje="porcentaje_asistencia"
-      calcularPorcentaje={(row) => Math.round((Number(row.reuniones_asistidas) / Number(row.reuniones_convocadas)) * 10000) / 100}
       ejemploExtra={['4', '4']}
     />
   )
