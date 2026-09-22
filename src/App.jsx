@@ -153,7 +153,7 @@ function App() {
           element={<PrivateRoute>{withLayout(<ReportePlanAnual />)}</PrivateRoute>}
         />
 
-        <Route path="/contenido/kiosco" element={<PrivateRoute>{withLayout(<ContenidoKiosco />)}</PrivateRoute>} />
+        <Route path="/contenido/kiosco" element={<PrivateRoute><ContenidoKiosco /></PrivateRoute>} />
 
         <Route
           path="/informes"
