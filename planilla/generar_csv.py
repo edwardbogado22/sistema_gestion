@@ -1,15 +1,20 @@
 import pandas as pd
 import csv
 import os
+import sys
 
-SRC = 'planilla/Docentes-2026-Abril v1.xlsx'
-OUT = 'planilla/salida'
-PERIODO = '2026'
+SRC = sys.argv[1] if len(sys.argv) > 1 else 'planilla/Docentes-2026-Abril v1.xlsx'
+OUT = sys.argv[2] if len(sys.argv) > 2 else 'planilla/salida'
+PERIODO = sys.argv[3] if len(sys.argv) > 3 else '2026'
 
 os.makedirs(OUT, exist_ok=True)
 
 df = pd.read_excel(SRC)
-df.columns = ['N', 'Monto', 'Categoria', 'CI', 'Apellido', 'Nombre', 'Sede', 'Carrera', 'Curso', 'Seccion', 'Materia', 'Plan']
+# La planilla de 2026 trae una columna "Monto" que las demás no tienen.
+COLUMNAS = ['N', 'Monto', 'Categoria', 'CI', 'Apellido', 'Nombre', 'Sede', 'Carrera', 'Curso', 'Seccion', 'Materia', 'Plan']
+if len(df.columns) == 11:
+    COLUMNAS = ['N', 'CI', 'Apellido', 'Nombre', 'Categoria', 'Sede', 'Carrera', 'Curso', 'Seccion', 'Materia', 'Plan']
+df.columns = COLUMNAS
 
 df['CI'] = df['CI'].astype(str).str.strip()
 for col in ['Apellido', 'Nombre', 'Sede', 'Carrera', 'Curso', 'Seccion', 'Materia']:
