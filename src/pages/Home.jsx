@@ -108,6 +108,13 @@ const CARDS = [
   },
   {
     section: 'Cátedras y evaluación',
+    to: '/contenido/kiosco',
+    icon: '🖥️',
+    titulo: 'Kiosco de Contenido Programático',
+    desc: 'El profesor se identifica por cédula y tilda los subtemas dictados. Alimenta el % de cumplimiento de contenido.',
+  },
+  {
+    section: 'Cátedras y evaluación',
     to: '/catedras',
     icon: '🧾',
     titulo: 'Foja de Desempeño',
