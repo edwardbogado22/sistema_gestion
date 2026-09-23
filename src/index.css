@@ -329,10 +329,17 @@ select {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
   gap: 16px;
+  padding-bottom: 4px;
+}
+
+/* Solo para cuando el stat-grid va pegado debajo del hero verde de la
+   Home: lo sube para que se superponga al borde inferior del hero. En
+   cualquier otra pantalla (sin hero arriba) tapa los controles de la
+   fila anterior, por eso es un modificador aparte y no el default. */
+.stat-grid-hero {
   margin-top: -38px;
   position: relative;
   z-index: 2;
-  padding-bottom: 4px;
 }
 
 .stat-card {

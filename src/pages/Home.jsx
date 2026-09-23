@@ -52,7 +52,7 @@ function PanelResumen() {
 
   return (
     <div className="container">
-      <div className="stat-grid">
+      <div className="stat-grid stat-grid-hero">
         <div className="stat-card">
           <div className="stat-value">{resumen ? resumen.profesores : '—'}</div>
           <div className="stat-label">Profesores</div>
