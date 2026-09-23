@@ -73,12 +73,6 @@ export function SeguimientoCarga() {
     [avanceLlamado, carreraId, sedeId],
   )
 
-  const totalPorCarreraSede = useMemo(() => {
-    const mapa = new Map()
-    for (const a of avanceLlamado) mapa.set(`${a.carrera_id}-${a.sede_id}`, Number(a.total))
-    return mapa
-  }, [avanceLlamado])
-
   const cargaLlamado = useMemo(
     () =>
       cargaLlamadoCompleta.filter(
@@ -86,6 +80,34 @@ export function SeguimientoCarga() {
       ),
     [cargaLlamadoCompleta, carreraId, sedeId],
   )
+
+  // Una sola fila por carrera+sede (antes había una por cada secretario
+  // que cargó ahí): suma lo cargado entre todos contra el total real de
+  // esa carrera+sede, que ya cuenta cada sección como cátedra aparte.
+  const cargaConsolidada = useMemo(() => {
+    const porCarreraSede = new Map()
+    for (const a of avanceFiltrado) {
+      porCarreraSede.set(`${a.carrera_id}-${a.sede_id}`, {
+        carrera_id: a.carrera_id,
+        carrera: a.carrera,
+        sede_id: a.sede_id,
+        sede: a.sede,
+        total: Number(a.total),
+        fechas_cargadas: 0,
+        secretarios: [],
+        ultima_carga: null,
+      })
+    }
+    for (const c of cargaLlamado) {
+      const clave = `${c.carrera_id}-${c.sede_id}`
+      const fila = porCarreraSede.get(clave)
+      if (!fila) continue
+      fila.fechas_cargadas += Number(c.fechas_cargadas)
+      if (!fila.secretarios.includes(c.cargado_por)) fila.secretarios.push(c.cargado_por)
+      if (!fila.ultima_carga || c.ultima_carga > fila.ultima_carga) fila.ultima_carga = c.ultima_carga
+    }
+    return [...porCarreraSede.values()].sort((a, b) => a.carrera.localeCompare(b.carrera) || a.sede.localeCompare(b.sede))
+  }, [avanceFiltrado, cargaLlamado])
 
   const totales = useMemo(
     () =>
@@ -100,15 +122,6 @@ export function SeguimientoCarga() {
     [avanceFiltrado],
   )
   const porcentaje = totales.total ? Math.round((1000 * totales.conFecha) / totales.total) / 10 : 0
-
-  // Carrera/sede de este llamado sin ninguna carga registrada todavía
-  const sinActividad = useMemo(
-    () =>
-      avanceFiltrado.filter(
-        (a) => Number(a.total) > 0 && !cargaLlamado.some((c) => c.carrera_id === a.carrera_id && c.sede_id === a.sede_id),
-      ),
-    [avanceFiltrado, cargaLlamado],
-  )
 
   if (loading) return <p className="page-padding muted-text">Cargando...</p>
   if (error) return <p className="page-padding error-text">{error}</p>
@@ -175,55 +188,35 @@ export function SeguimientoCarga() {
             </div>
           </div>
 
-          {sinActividad.length > 0 && (
-            <div className="stat-card" style={{ textAlign: 'left', marginBottom: 16 }}>
-              <div className="section-label">
-                <span>Sin ninguna carga todavía</span>
-              </div>
-              {sinActividad.map((a) => (
-                <div className="stat-breakdown-row" key={`${a.carrera_id}-${a.sede_id}`}>
-                  <span>
-                    {a.carrera} · {a.sede}
-                  </span>
-                  <span className="badge badge-muted">{a.total} materia(s) sin fecha</span>
-                </div>
-              ))}
-            </div>
-          )}
-
           <table className="data-table">
             <thead>
               <tr>
                 <th>Carrera</th>
                 <th>Sede</th>
-                <th>Secretario</th>
+                <th>Secretario(s)</th>
                 <th>Fechas cargadas</th>
                 <th>Última carga</th>
               </tr>
             </thead>
             <tbody>
-              {cargaLlamado.length === 0 && (
+              {cargaConsolidada.length === 0 && (
                 <tr>
                   <td colSpan={5} className="muted-text">
-                    Todavía no hay fechas cargadas en este llamado.
+                    No hay cátedras para este llamado con los filtros elegidos.
                   </td>
                 </tr>
               )}
-              {cargaLlamado.map((c) => {
-                const total = totalPorCarreraSede.get(`${c.carrera_id}-${c.sede_id}`)
-                return (
-                  <tr key={`${c.carrera_id}-${c.sede_id}-${c.asignado_por}`}>
-                    <td>{c.carrera}</td>
-                    <td>{c.sede}</td>
-                    <td>{c.cargado_por}</td>
-                    <td>
-                      {c.fechas_cargadas}
-                      {total != null ? ` de ${total}` : ''}
-                    </td>
-                    <td>{formatoFechaHora(c.ultima_carga)}</td>
-                  </tr>
-                )
-              })}
+              {cargaConsolidada.map((c) => (
+                <tr key={`${c.carrera_id}-${c.sede_id}`}>
+                  <td>{c.carrera}</td>
+                  <td>{c.sede}</td>
+                  <td>{c.secretarios.length > 0 ? c.secretarios.join(', ') : <span className="muted-text">Nadie cargó todavía</span>}</td>
+                  <td className={c.fechas_cargadas < c.total ? 'error-text' : undefined}>
+                    {c.fechas_cargadas} de {c.total}
+                  </td>
+                  <td>{formatoFechaHora(c.ultima_carga)}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </>
