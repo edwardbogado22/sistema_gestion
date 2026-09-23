@@ -12,6 +12,7 @@ const vacio = () => ({
   catedraSel: null,
   unidades: [],
   marcados: new Set(),
+  marcadosOriginal: new Set(),
   tope: null,
   guardando: false,
 })
@@ -104,10 +105,12 @@ export function ContenidoKiosco() {
 
     const { data: tope } = await supabase.rpc('contenido_tope_subtemas', { p_catedra_id: catedra.id })
 
+    const marcadosIniciales = new Set((avance || []).map((a) => a.subtema_id))
     setEstado((s) => ({
       ...s,
       unidades: unidadesOrdenadas,
-      marcados: new Set((avance || []).map((a) => a.subtema_id)),
+      marcados: marcadosIniciales,
+      marcadosOriginal: marcadosIniciales,
       tope: tope ?? null,
     }))
     setStep(unidadesOrdenadas.length === 0 ? 'sin-catalogo' : 'contenido')
@@ -131,15 +134,28 @@ export function ContenidoKiosco() {
     const catedraId = estado.catedraSel.id
     const ids = [...estado.marcados]
 
-    const { error: eDel } = await supabase.from('catedra_contenido_avance').delete().eq('catedra_id', catedraId)
-    if (eDel) {
-      setEstado((s) => ({ ...s, guardando: false, error: eDel.message }))
-      return
+    // Diff contra lo que ya estaba guardado (no borrar todo e insertar de
+    // nuevo): así el marcado_en de los subtemas que ya estaban tildados
+    // no se pisa, y queda el orden cronológico real de cuándo se marcó
+    // cada uno a lo largo de varias sesiones de carga.
+    const aQuitar = [...estado.marcadosOriginal].filter((id) => !estado.marcados.has(id))
+    const aAgregar = ids.filter((id) => !estado.marcadosOriginal.has(id))
+
+    if (aQuitar.length > 0) {
+      const { error: eDel } = await supabase
+        .from('catedra_contenido_avance')
+        .delete()
+        .eq('catedra_id', catedraId)
+        .in('subtema_id', aQuitar)
+      if (eDel) {
+        setEstado((s) => ({ ...s, guardando: false, error: eDel.message }))
+        return
+      }
     }
-    if (ids.length > 0) {
+    if (aAgregar.length > 0) {
       const { error: eIns } = await supabase
         .from('catedra_contenido_avance')
-        .insert(ids.map((subtema_id) => ({ catedra_id: catedraId, subtema_id })))
+        .insert(aAgregar.map((subtema_id) => ({ catedra_id: catedraId, subtema_id })))
       if (eIns) {
         setEstado((s) => ({ ...s, guardando: false, error: eIns.message }))
         return

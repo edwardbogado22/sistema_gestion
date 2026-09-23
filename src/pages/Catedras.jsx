@@ -566,6 +566,9 @@ export function Catedras() {
                           <Link to={`/foja/${c.id}`} className="btn btn-secondary btn-sm">
                             Foja
                           </Link>
+                          <Link to={`/contenido/reporte/${c.id}`} className="btn btn-secondary btn-sm">
+                            Reporte contenido
+                          </Link>
                           {(esAdmin || esSecretario) && (
                             <button type="button" className="btn btn-danger btn-sm" onClick={() => eliminar(c.id)}>
                               Eliminar
