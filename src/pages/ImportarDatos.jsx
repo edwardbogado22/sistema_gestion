@@ -351,7 +351,7 @@ function ImportarCatedras() {
   )
 }
 
-function ImportarIndicadorObjetivo({ tabla, columnasExtra, ejemploExtra, nombreArchivo }) {
+function ImportarIndicadorObjetivo({ tabla, columnasExtra, columnaPorcentaje, calcularPorcentaje, ejemploExtra, nombreArchivo }) {
   const catedras = useCatedrasLookup()
   const [filas, setFilas] = useState([])
   const [importando, setImportando] = useState(false)
@@ -389,6 +389,9 @@ function ImportarIndicadorObjetivo({ tabla, columnasExtra, ejemploExtra, nombreA
       columnasExtra.forEach((col) => {
         payload[col] = Number(f.row[col])
       })
+      if (columnaPorcentaje) {
+        payload[columnaPorcentaje] = calcularPorcentaje(f.row)
+      }
       const { error: err } = await supabase.from(tabla).upsert(payload, { onConflict: 'catedra_id' })
       if (err) error++
       else ok++
@@ -562,6 +565,10 @@ function ImportarReuniones() {
       tabla="asistencia_reuniones"
       nombreArchivo="asistencia_reuniones_plantilla.csv"
       columnasExtra={['reuniones_convocadas', 'reuniones_asistidas']}
+      // A diferencia de asistencia_clases/cumplimiento_contenido/asistencia_mesas_examinadoras,
+      // porcentaje_asistencia acá NO es una columna generada: hay que calcularla y mandarla.
+      columnaPorcentaje="porcentaje_asistencia"
+      calcularPorcentaje={(row) => Math.round((Number(row.reuniones_asistidas) / Number(row.reuniones_convocadas)) * 10000) / 100}
       ejemploExtra={['4', '4']}
     />
   )
