@@ -15,12 +15,24 @@ const vacio = () => ({
   marcadosOriginal: new Set(),
   tope: null,
   guardando: false,
+  actividadesExtra: [],
+  nuevaActividad: { tipo: 'examen_parcial', unidad_id: '', descripcion: '' },
+  guardandoActividad: false,
 })
 
 function pct(marcados, total) {
   if (!total) return 0
   return Math.round((marcados / total) * 10000) / 100
 }
+
+const TIPOS_ACTIVIDAD_EXTRA = [
+  { valor: 'examen_parcial', etiqueta: 'Examen parcial' },
+  { valor: 'retroalimentacion', etiqueta: 'Retroalimentación' },
+  { valor: 'otro', etiqueta: 'Otra (especificar)' },
+]
+
+const etiquetaTipoActividad = (tipo) =>
+  TIPOS_ACTIVIDAD_EXTRA.find((t) => t.valor === tipo)?.etiqueta || tipo
 
 export function ContenidoKiosco() {
   const { user, logout } = useAuth()
@@ -105,6 +117,12 @@ export function ContenidoKiosco() {
 
     const { data: tope } = await supabase.rpc('contenido_tope_subtemas', { p_catedra_id: catedra.id })
 
+    const { data: actividadesExtra } = await supabase
+      .from('catedra_contenido_actividad_extra')
+      .select('id, tipo, descripcion, marcado_en, unidad_id, contenido_unidad(numero, nombre)')
+      .eq('catedra_id', catedra.id)
+      .order('marcado_en')
+
     const marcadosIniciales = new Set((avance || []).map((a) => a.subtema_id))
     setEstado((s) => ({
       ...s,
@@ -112,8 +130,52 @@ export function ContenidoKiosco() {
       marcados: marcadosIniciales,
       marcadosOriginal: marcadosIniciales,
       tope: tope ?? null,
+      actividadesExtra: actividadesExtra || [],
     }))
     setStep(unidadesOrdenadas.length === 0 ? 'sin-catalogo' : 'contenido')
+  }
+
+  const agregarActividadExtra = async (e) => {
+    e.preventDefault()
+    const { tipo, unidad_id, descripcion } = estado.nuevaActividad
+    if (tipo === 'otro' && !descripcion.trim()) {
+      setEstado((s) => ({ ...s, error: 'Describí de qué se trata la actividad.' }))
+      return
+    }
+    setEstado((s) => ({ ...s, guardandoActividad: true, error: '' }))
+
+    const { data, error } = await supabase
+      .from('catedra_contenido_actividad_extra')
+      .insert({
+        catedra_id: estado.catedraSel.id,
+        unidad_id: unidad_id || null,
+        tipo,
+        descripcion: descripcion.trim() || null,
+        registrado_por: user?.id ?? null,
+      })
+      .select('id, tipo, descripcion, marcado_en, unidad_id, contenido_unidad(numero, nombre)')
+      .single()
+
+    if (error) {
+      setEstado((s) => ({ ...s, guardandoActividad: false, error: error.message }))
+      return
+    }
+
+    setEstado((s) => ({
+      ...s,
+      guardandoActividad: false,
+      actividadesExtra: [...s.actividadesExtra, data],
+      nuevaActividad: { tipo: 'examen_parcial', unidad_id: '', descripcion: '' },
+    }))
+  }
+
+  const quitarActividadExtra = async (id) => {
+    const { error } = await supabase.from('catedra_contenido_actividad_extra').delete().eq('id', id)
+    if (error) {
+      setEstado((s) => ({ ...s, error: error.message }))
+      return
+    }
+    setEstado((s) => ({ ...s, actividadesExtra: s.actividadesExtra.filter((a) => a.id !== id) }))
   }
 
   const toggleSubtema = (subtemaId) => {
@@ -321,6 +383,96 @@ export function ContenidoKiosco() {
                     })}
                   </div>
                 ))}
+
+                <hr style={{ margin: '1.5rem 0', border: 'none', borderTop: '1px solid var(--border-color, #ddd)' }} />
+
+                <h4 style={{ marginBottom: 4 }}>Actividades extraordinarias</h4>
+                <p className="muted-text">
+                  Examen parcial, retroalimentación de una unidad, u otra actividad puntual que no forma parte del
+                  temario. No afectan el % de cumplimiento ni el tope de ritmo, quedan registradas aparte.
+                </p>
+
+                {estado.actividadesExtra.length > 0 && (
+                  <ul style={{ listStyle: 'none', padding: 0, marginBottom: '0.75rem' }}>
+                    {estado.actividadesExtra.map((a) => (
+                      <li
+                        key={a.id}
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          padding: '4px 0',
+                        }}
+                      >
+                        <span>
+                          <strong>{etiquetaTipoActividad(a.tipo)}</strong>
+                          {a.contenido_unidad && ` · Unidad ${a.contenido_unidad.numero} — ${a.contenido_unidad.nombre}`}
+                          {a.descripcion && `: ${a.descripcion}`}
+                        </span>
+                        <button type="button" className="btn btn-secondary btn-sm" onClick={() => quitarActividadExtra(a.id)}>
+                          Quitar
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                <form onSubmit={agregarActividadExtra} className="form-grid" style={{ marginBottom: '0.5rem' }}>
+                  <label>
+                    Tipo
+                    <select
+                      value={estado.nuevaActividad.tipo}
+                      onChange={(e) =>
+                        setEstado((s) => ({ ...s, nuevaActividad: { ...s.nuevaActividad, tipo: e.target.value } }))
+                      }
+                    >
+                      {TIPOS_ACTIVIDAD_EXTRA.map((t) => (
+                        <option key={t.valor} value={t.valor}>
+                          {t.etiqueta}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    Unidad relacionada (opcional)
+                    <select
+                      value={estado.nuevaActividad.unidad_id}
+                      onChange={(e) =>
+                        setEstado((s) => ({
+                          ...s,
+                          nuevaActividad: { ...s.nuevaActividad, unidad_id: e.target.value },
+                        }))
+                      }
+                    >
+                      <option value="">Sin unidad específica</option>
+                      {estado.unidades.map((u) => (
+                        <option key={u.id} value={u.id}>
+                          Unidad {u.numero} — {u.nombre}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  {estado.nuevaActividad.tipo === 'otro' && (
+                    <label>
+                      Descripción
+                      <input
+                        type="text"
+                        value={estado.nuevaActividad.descripcion}
+                        onChange={(e) =>
+                          setEstado((s) => ({
+                            ...s,
+                            nuevaActividad: { ...s.nuevaActividad, descripcion: e.target.value },
+                          }))
+                        }
+                      />
+                    </label>
+                  )}
+                  <div className="form-actions">
+                    <button type="submit" className="btn btn-secondary" disabled={estado.guardandoActividad}>
+                      {estado.guardandoActividad ? 'Agregando...' : 'Agregar actividad'}
+                    </button>
+                  </div>
+                </form>
 
                 {estado.error && <p className="error-text">{estado.error}</p>}
                 <div className="form-actions">

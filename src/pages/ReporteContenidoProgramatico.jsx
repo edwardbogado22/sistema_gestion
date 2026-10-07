@@ -2,6 +2,12 @@ import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 
+const ETIQUETAS_TIPO_ACTIVIDAD_EXTRA = {
+  examen_parcial: 'Examen parcial',
+  retroalimentacion: 'Retroalimentación',
+  otro: 'Otra',
+}
+
 const formatoFechaHora = (iso) => {
   if (!iso) return ''
   const d = new Date(iso)
@@ -14,6 +20,7 @@ export function ReporteContenidoProgramatico() {
   const { catedraId } = useParams()
   const [catedra, setCatedra] = useState(null)
   const [linea, setLinea] = useState([])
+  const [actividadesExtra, setActividadesExtra] = useState([])
   const [guardados, setGuardados] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -46,6 +53,14 @@ export function ReporteContenidoProgramatico() {
         .order('marcado_en', { ascending: true })
       if (!activo) return
       setLinea(avance || [])
+
+      const { data: extra } = await supabase
+        .from('catedra_contenido_actividad_extra')
+        .select('id, tipo, descripcion, marcado_en, contenido_unidad(numero, nombre)')
+        .eq('catedra_id', catedraId)
+        .order('marcado_en', { ascending: true })
+      if (!activo) return
+      setActividadesExtra(extra || [])
 
       const { data: historial } = await supabase
         .from('catedra_contenido_avance_historial')
@@ -134,6 +149,40 @@ export function ReporteContenidoProgramatico() {
                     <td>
                       {l.contenido_subtema.numero}. {l.contenido_subtema.descripcion}
                     </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      <div className="form-card" style={{ marginBottom: '1.5rem' }}>
+        <h3>Actividades extraordinarias</h3>
+        <p className="muted-text">
+          Exámenes parciales, retroalimentaciones u otras actividades puntuales registradas desde el kiosco. No
+          forman parte del temario oficial y no afectan el % de cumplimiento.
+        </p>
+        {actividadesExtra.length === 0 ? (
+          <p className="muted-text">Todavía no se registró ninguna actividad extraordinaria para esta cátedra.</p>
+        ) : (
+          <div className="data-table-wrap">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Fecha y hora</th>
+                  <th>Tipo</th>
+                  <th>Unidad</th>
+                  <th>Descripción</th>
+                </tr>
+              </thead>
+              <tbody>
+                {actividadesExtra.map((a) => (
+                  <tr key={a.id}>
+                    <td style={{ whiteSpace: 'nowrap' }}>{formatoFechaHora(a.marcado_en)}</td>
+                    <td>{ETIQUETAS_TIPO_ACTIVIDAD_EXTRA[a.tipo] || a.tipo}</td>
+                    <td>{a.contenido_unidad ? `${a.contenido_unidad.numero} — ${a.contenido_unidad.nombre}` : '—'}</td>
+                    <td>{a.descripcion || '—'}</td>
                   </tr>
                 ))}
               </tbody>
