@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
+import { aISO } from '../lib/fechas'
 
 const vacio = () => ({
   cedula: '',
@@ -13,6 +14,9 @@ const vacio = () => ({
   unidades: [],
   marcados: new Set(),
   marcadosOriginal: new Set(),
+  fechaSeleccionada: aISO(new Date()),
+  fechas: new Map(), // subtema_id -> 'YYYY-MM-DD', el día que efectivamente se dictó
+  fechasOriginal: new Map(),
   tope: null,
   guardando: false,
   actividadesExtra: [],
@@ -112,7 +116,7 @@ export function ContenidoKiosco() {
 
     const { data: avance } = await supabase
       .from('catedra_contenido_avance')
-      .select('subtema_id')
+      .select('subtema_id, fecha_clase')
       .eq('catedra_id', catedra.id)
 
     const { data: tope } = await supabase.rpc('contenido_tope_subtemas', { p_catedra_id: catedra.id })
@@ -124,11 +128,14 @@ export function ContenidoKiosco() {
       .order('marcado_en')
 
     const marcadosIniciales = new Set((avance || []).map((a) => a.subtema_id))
+    const fechasIniciales = new Map((avance || []).map((a) => [a.subtema_id, a.fecha_clase]))
     setEstado((s) => ({
       ...s,
       unidades: unidadesOrdenadas,
       marcados: marcadosIniciales,
       marcadosOriginal: marcadosIniciales,
+      fechas: new Map(fechasIniciales),
+      fechasOriginal: fechasIniciales,
       tope: tope ?? null,
       actividadesExtra: actividadesExtra || [],
     }))
@@ -181,13 +188,24 @@ export function ContenidoKiosco() {
   const toggleSubtema = (subtemaId) => {
     setEstado((s) => {
       const marcados = new Set(s.marcados)
+      const fechas = new Map(s.fechas)
       if (marcados.has(subtemaId)) {
         marcados.delete(subtemaId)
+        fechas.delete(subtemaId)
       } else {
         if (s.tope != null && marcados.size >= s.tope) return s
         marcados.add(subtemaId)
+        fechas.set(subtemaId, s.fechaSeleccionada)
       }
-      return { ...s, marcados }
+      return { ...s, marcados, fechas }
+    })
+  }
+
+  const cambiarFechaSubtema = (subtemaId, fecha) => {
+    setEstado((s) => {
+      const fechas = new Map(s.fechas)
+      fechas.set(subtemaId, fecha)
+      return { ...s, fechas }
     })
   }
 
@@ -215,11 +233,33 @@ export function ContenidoKiosco() {
       }
     }
     if (aAgregar.length > 0) {
-      const { error: eIns } = await supabase
-        .from('catedra_contenido_avance')
-        .insert(aAgregar.map((subtema_id) => ({ catedra_id: catedraId, subtema_id })))
+      const { error: eIns } = await supabase.from('catedra_contenido_avance').insert(
+        aAgregar.map((subtema_id) => ({
+          catedra_id: catedraId,
+          subtema_id,
+          fecha_clase: estado.fechas.get(subtema_id) || aISO(new Date()),
+        })),
+      )
       if (eIns) {
         setEstado((s) => ({ ...s, guardando: false, error: eIns.message }))
+        return
+      }
+    }
+
+    // Subtemas que ya estaban marcados pero cuya fecha se corrigió ahora
+    // (p. ej. se había cargado con la fecha de hoy y en realidad fue una
+    // clase virtual de un día anterior).
+    const aCorregirFecha = [...estado.marcadosOriginal].filter(
+      (id) => estado.marcados.has(id) && estado.fechas.get(id) && estado.fechas.get(id) !== estado.fechasOriginal.get(id),
+    )
+    for (const subtemaId of aCorregirFecha) {
+      const { error: eUpd } = await supabase
+        .from('catedra_contenido_avance')
+        .update({ fecha_clase: estado.fechas.get(subtemaId) })
+        .eq('catedra_id', catedraId)
+        .eq('subtema_id', subtemaId)
+      if (eUpd) {
+        setEstado((s) => ({ ...s, guardando: false, error: eUpd.message }))
         return
       }
     }
@@ -351,6 +391,22 @@ export function ContenidoKiosco() {
                   </p>
                 )}
 
+                <label style={{ display: 'block', marginBottom: '1rem' }}>
+                  Fecha de la clase que estás cargando
+                  <input
+                    type="date"
+                    value={estado.fechaSeleccionada}
+                    max={aISO(new Date())}
+                    onChange={(e) => setEstado((s) => ({ ...s, fechaSeleccionada: e.target.value }))}
+                    style={{ display: 'block' }}
+                  />
+                  <span className="muted-text" style={{ fontSize: 12 }}>
+                    Si recuperaste una clase por un corte de luz o diste clase virtual otro día, cambiá esta fecha
+                    antes de tildar ese contenido. Podés tildar varios días en la misma visita: cambiá la fecha entre
+                    tanda y tanda.
+                  </span>
+                </label>
+
                 {estado.unidades.map((u) => (
                   <div key={u.id} style={{ marginBottom: '1.25rem' }}>
                     <h4 style={{ marginBottom: 6 }}>
@@ -360,7 +416,7 @@ export function ContenidoKiosco() {
                       const marcado = estado.marcados.has(st.id)
                       const bloqueado = !marcado && estado.tope != null && totalMarcados >= estado.tope
                       return (
-                        <label
+                        <div
                           key={st.id}
                           style={{
                             display: 'flex',
@@ -370,15 +426,26 @@ export function ContenidoKiosco() {
                             opacity: bloqueado ? 0.5 : 1,
                           }}
                         >
-                          <input
-                            type="checkbox"
-                            checked={marcado}
-                            disabled={bloqueado}
-                            onChange={() => toggleSubtema(st.id)}
-                            style={{ marginTop: 4 }}
-                          />
-                          {st.descripcion}
-                        </label>
+                          <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, flex: 1 }}>
+                            <input
+                              type="checkbox"
+                              checked={marcado}
+                              disabled={bloqueado}
+                              onChange={() => toggleSubtema(st.id)}
+                              style={{ marginTop: 4 }}
+                            />
+                            {st.descripcion}
+                          </label>
+                          {marcado && (
+                            <input
+                              type="date"
+                              value={estado.fechas.get(st.id) || estado.fechaSeleccionada}
+                              max={aISO(new Date())}
+                              onChange={(e) => cambiarFechaSubtema(st.id, e.target.value)}
+                              style={{ fontSize: 12 }}
+                            />
+                          )}
+                        </div>
                       )
                     })}
                   </div>

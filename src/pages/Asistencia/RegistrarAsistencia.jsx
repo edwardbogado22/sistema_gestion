@@ -26,13 +26,17 @@ export function RegistrarAsistencia() {
   const [bloqueoMotivo, setBloqueoMotivo] = useState('')
   const [registros, setRegistros] = useState({}) // profesor_id -> { estado, profesor_suplente_id }
   const [cambios, setCambios] = useState({})
+  const [extras, setExtras] = useState([]) // profesor_id[] agregados a mano, fuera de horario
   const [guardando, setGuardando] = useState(false)
   const [ok, setOk] = useState('')
 
   const cargarBase = async () => {
     setLoading(true)
     const [c, h, p, per] = await Promise.all([
-      supabase.from('catedras').select('sede_id, sedes(nombre), asignaturas(carrera_id, carreras(nombre))').eq('activo', true),
+      supabase
+        .from('catedras')
+        .select('profesor_id, sede_id, sedes(nombre), asignaturas(nombre, carrera_id, carreras(nombre))')
+        .eq('activo', true),
       supabase.from('v_catedra_horario').select('*'),
       supabase.from('profesores').select('id, documento_identidad, nombres, apellidos').eq('confirmado', true).order('apellidos'),
       supabase.from('periodo_academico').select('*').eq('activo', true).maybeSingle(),
@@ -94,6 +98,7 @@ export function RegistrarAsistencia() {
     setOk('')
     setConsultado(false)
     setBloqueoMotivo('')
+    setExtras([])
 
     const { data: motivo, error: eBloqueo } = await supabase.rpc('dia_bloqueado', {
       p_fecha: fecha,
@@ -146,6 +151,72 @@ export function RegistrarAsistencia() {
     return [...mapa.values()].sort((a, b) => a.profesor.localeCompare(b.profesor))
   }, [horario, combo, fecha])
 
+  // Profesores con cátedra activa en esta carrera/sede, sin importar el
+  // horario semanal — es la base para poder sumar a alguien que recupera
+  // una clase o dio una clase virtual un día distinto al habitual.
+  const materiasPorProfesor = useMemo(() => {
+    if (!combo) return new Map()
+    const mapa = new Map()
+    for (const c of catedras) {
+      if (c.profesor_id == null) continue
+      if (c.asignaturas?.carrera_id !== combo.carrera_id || c.sede_id !== combo.sede_id) continue
+      if (!mapa.has(c.profesor_id)) mapa.set(c.profesor_id, new Set())
+      if (c.asignaturas?.nombre) mapa.get(c.profesor_id).add(c.asignaturas.nombre)
+    }
+    const porProfesor = new Map()
+    for (const [profesorId, materias] of mapa) porProfesor.set(profesorId, [...materias])
+    return porProfesor
+  }, [catedras, combo])
+
+  const nombreProfesor = (profesorId) => {
+    const p = profesores.find((x) => x.id === profesorId)
+    return p ? `${p.apellidos}, ${p.nombres}` : '(profesor no encontrado)'
+  }
+
+  // Lista final a mostrar: lo que marca el horario para ese día, más
+  // cualquier profesor que ya tenga un registro guardado ese día aunque
+  // no le toque por horario (clase recuperada), más lo que se está
+  // agregando a mano en esta misma consulta.
+  const idsDelDia = useMemo(() => new Set(profesoresDelDia.map((p) => p.profesor_id)), [profesoresDelDia])
+
+  const filas = useMemo(() => {
+    const extra = []
+    for (const profesorId of Object.keys(registros)) {
+      if (!idsDelDia.has(profesorId) && !extra.some((f) => f.profesor_id === profesorId)) {
+        extra.push({ profesor_id: profesorId, profesor: nombreProfesor(profesorId), materias: materiasPorProfesor.get(profesorId) || [], fueraDeHorario: true })
+      }
+    }
+    for (const profesorId of extras) {
+      if (!idsDelDia.has(profesorId) && !extra.some((f) => f.profesor_id === profesorId)) {
+        extra.push({ profesor_id: profesorId, profesor: nombreProfesor(profesorId), materias: materiasPorProfesor.get(profesorId) || [], fueraDeHorario: true })
+      }
+    }
+    return [...profesoresDelDia, ...extra].sort((a, b) => a.profesor.localeCompare(b.profesor))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profesoresDelDia, idsDelDia, registros, extras, materiasPorProfesor, profesores])
+
+  const opcionesAgregarManual = useMemo(() => {
+    const yaListados = new Set(filas.map((f) => f.profesor_id))
+    return [...materiasPorProfesor.keys()]
+      .filter((profesorId) => !yaListados.has(profesorId))
+      .map((profesorId) => ({ value: profesorId, label: nombreProfesor(profesorId) }))
+      .sort((a, b) => a.label.localeCompare(b.label))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [materiasPorProfesor, filas])
+
+  const agregarManual = (profesorId) => {
+    if (!profesorId) return
+    setExtras((e) => (e.includes(profesorId) ? e : [...e, profesorId]))
+  }
+
+  const quitarManual = (profesorId) => {
+    setExtras((e) => e.filter((id) => id !== profesorId))
+    setCambios((c) => {
+      const { [profesorId]: _omit, ...resto } = c
+      return resto
+    })
+  }
+
   const estadoDe = (profesorId) => (profesorId in cambios ? cambios[profesorId].estado : registros[profesorId]?.estado || '')
   const suplenteDe = (profesorId) =>
     profesorId in cambios ? cambios[profesorId].profesor_suplente_id : registros[profesorId]?.profesor_suplente_id || ''
@@ -159,7 +230,7 @@ export function RegistrarAsistencia() {
 
   const marcarTodos = (estado) => {
     const nuevos = {}
-    for (const p of profesoresDelDia) nuevos[p.profesor_id] = { estado, profesor_suplente_id: suplenteDe(p.profesor_id) }
+    for (const p of filas) nuevos[p.profesor_id] = { estado, profesor_suplente_id: suplenteDe(p.profesor_id) }
     setCambios((c) => ({ ...c, ...nuevos }))
   }
 
@@ -271,11 +342,25 @@ export function RegistrarAsistencia() {
         </p>
       )}
 
-      {consultado && !bloqueoMotivo && profesoresDelDia.length === 0 && (
+      {consultado && !bloqueoMotivo && filas.length === 0 && (
         <p className="muted-text">Ningún profesor tiene clase este día en esa carrera/sede (según el horario cargado).</p>
       )}
 
-      {consultado && !bloqueoMotivo && profesoresDelDia.length > 0 && (
+      {consultado && !bloqueoMotivo && puedeEscribir && (
+        <div className="form-row" style={{ marginBottom: 12, alignItems: 'flex-end' }}>
+          <label style={{ minWidth: 280 }}>
+            Agregar profesor fuera de horario (recuperó una clase o dio clase virtual este día)
+            <BuscadorSelect
+              opciones={opcionesAgregarManual}
+              value=""
+              onChange={agregarManual}
+              placeholder="Buscar profesor..."
+            />
+          </label>
+        </div>
+      )}
+
+      {consultado && !bloqueoMotivo && filas.length > 0 && (
         <>
           {puedeEscribir && (
             <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
@@ -295,15 +380,23 @@ export function RegistrarAsistencia() {
                   <th>Materia(s)</th>
                   <th>Estado</th>
                   <th>Suplente / cobertura</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
-                {profesoresDelDia.map((p) => {
+                {filas.map((p) => {
                   const estado = estadoDe(p.profesor_id)
                   const esAusencia = estado === 'AUSENTE' || estado === 'AUSENTE_JUSTIFICADO'
                   return (
                     <tr key={p.profesor_id}>
-                      <td>{p.profesor}</td>
+                      <td>
+                        {p.profesor}
+                        {p.fueraDeHorario && (
+                          <span className="badge badge-muted" style={{ marginLeft: 6 }}>
+                            Fuera de horario
+                          </span>
+                        )}
+                      </td>
                       <td className="muted-text" style={{ fontSize: 12 }}>
                         {p.materias.join(' · ')}
                       </td>
@@ -329,6 +422,13 @@ export function RegistrarAsistencia() {
                             placeholder="¿Quién cubrió?"
                             disabled={!puedeEscribir}
                           />
+                        )}
+                      </td>
+                      <td>
+                        {puedeEscribir && extras.includes(p.profesor_id) && (
+                          <button type="button" className="btn btn-secondary btn-sm" onClick={() => quitarManual(p.profesor_id)}>
+                            Quitar
+                          </button>
                         )}
                       </td>
                     </tr>

@@ -3,11 +3,20 @@ import { supabase } from '../lib/supabase'
 
 const AuthContext = createContext(null)
 
+// A veces supabase-js se queda esperando para siempre en getSession() (ver
+// el comentario en lib/supabase.js) incluso con el lock desactivado — sin
+// este timeout, eso deja al usuario viendo "Cargando..." sin salida posible
+// más que cerrar la pestaña. Con el timeout, en vez de colgarse se muestra
+// un botón para reintentar.
+const conTimeout = (promesa, ms = 10000) =>
+  Promise.race([promesa, new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), ms))])
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [perfil, setPerfil] = useState(null)
   const [alcance, setAlcance] = useState([])
   const [loading, setLoading] = useState(true)
+  const [sessionError, setSessionError] = useState(false)
 
   // El perfil define el rol y, si es secretario, las carreras/sedes que
   // puede ver. Las policies de RLS ya lo restringen del lado de la base;
@@ -28,18 +37,25 @@ export function AuthProvider({ children }) {
     setAlcance(a.data || [])
   }, [])
 
-  useEffect(() => {
+  const cargarSesionInicial = useCallback(() => {
+    setLoading(true)
+    setSessionError(false)
     let activo = true
 
-    supabase.auth
-      .getSession()
+    conTimeout(supabase.auth.getSession())
       .then(async ({ data: { session } }) => {
         if (!activo) return
         setUser(session?.user ?? null)
-        await cargarPerfil(session?.user ?? null)
+        await conTimeout(cargarPerfil(session?.user ?? null))
       })
-      .catch(() => {
-        if (activo) {
+      .catch((err) => {
+        if (!activo) return
+        if (err?.message === 'TIMEOUT') {
+          // No sabemos si hay sesión o no — mejor no asumir que el usuario
+          // se deslogueó y perder lo que tenía cargado; se le ofrece
+          // reintentar en vez de mandarlo a "Sin rol asignado" o /login.
+          setSessionError(true)
+        } else {
           setUser(null)
           setPerfil(null)
           setAlcance([])
@@ -48,6 +64,14 @@ export function AuthProvider({ children }) {
       .finally(() => {
         if (activo) setLoading(false)
       })
+
+    return () => {
+      activo = false
+    }
+  }, [cargarPerfil])
+
+  useEffect(() => {
+    const limpiar = cargarSesionInicial()
 
     const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setUser(session?.user ?? null)
@@ -60,10 +84,10 @@ export function AuthProvider({ children }) {
     })
 
     return () => {
-      activo = false
+      limpiar()
       listener?.subscription.unsubscribe()
     }
-  }, [cargarPerfil])
+  }, [cargarSesionInicial, cargarPerfil])
 
   const login = async (email, password) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password })
@@ -85,7 +109,22 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, perfil, rol, esAdmin, esSecretario, esDirector, esAsistente, puedeEscribir, alcance, loading, login, logout }}
+      value={{
+        user,
+        perfil,
+        rol,
+        esAdmin,
+        esSecretario,
+        esDirector,
+        esAsistente,
+        puedeEscribir,
+        alcance,
+        loading,
+        sessionError,
+        reintentar: cargarSesionInicial,
+        login,
+        logout,
+      }}
     >
       {children}
     </AuthContext.Provider>

@@ -2,9 +2,24 @@ import { Navigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 
 export function PrivateRoute({ children, roles }) {
-  const { user, perfil, rol, loading } = useAuth()
+  const { user, perfil, rol, loading, sessionError, reintentar } = useAuth()
 
   if (loading) return <div className="page-padding">Cargando...</div>
+
+  if (sessionError) {
+    return (
+      <div className="page-padding">
+        <div className="page-header">
+          <h1>No se pudo confirmar la sesión</h1>
+          <p>El sistema tardó demasiado en responder. Puede ser algo pasajero de la conexión.</p>
+        </div>
+        <button type="button" className="btn btn-primary" onClick={reintentar}>
+          Reintentar
+        </button>
+      </div>
+    )
+  }
+
   if (!user) return <Navigate to="/login" />
 
   // Autenticado pero sin perfil: el usuario existe en Supabase Auth y
