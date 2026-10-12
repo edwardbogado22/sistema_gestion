@@ -12,10 +12,6 @@ const TIPOS = {
   REGULARIZACION: 'Regularización',
 }
 
-// mismo orden que extract(dow) de Postgres / Date#getDay(), igual que
-// catedra_horario.dia_semana — así se puede convertir directo a texto.
-const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
-
 const hora = (h) => (h ? h.slice(0, 5) : '—')
 
 const hoy = () => {
@@ -67,22 +63,6 @@ export function ReporteMesas() {
         return
       }
 
-      // Día habitual de clase de cada cátedra (catedra_horario, vía la
-      // vista), para que secretaría pueda chequear a simple vista que la
-      // fecha de examen no se confundió de día.
-      const { data: horario, error: eHor } = await supabase.from('v_catedra_horario').select('catedra_id, dia_semana')
-      if (eHor) {
-        setError(eHor.message)
-        setLoading(false)
-        return
-      }
-
-      const diasPorCatedra = new Map()
-      for (const h of horario || []) {
-        if (!diasPorCatedra.has(h.catedra_id)) diasPorCatedra.set(h.catedra_id, new Set())
-        diasPorCatedra.get(h.catedra_id).add(h.dia_semana)
-      }
-
       const vocalesPorFecha = new Map()
       for (const it of integrantes || []) {
         if (!vocalesPorFecha.has(it.examen_fecha_id)) vocalesPorFecha.set(it.examen_fecha_id, [])
@@ -95,10 +75,6 @@ export function ReporteMesas() {
           vocal1: vocalesPorFecha.get(a.examen_fecha_id)?.[0] || '',
           vocal2: vocalesPorFecha.get(a.examen_fecha_id)?.[1] || '',
           diaExamen: a.fecha ? diaSemana(a.fecha) : '',
-          diaHabitual: [...(diasPorCatedra.get(a.catedra_id) || [])]
-            .sort((x, y) => x - y)
-            .map((n) => DIAS[n])
-            .join('/'),
         })),
       )
       setLoading(false)
@@ -139,7 +115,10 @@ export function ReporteMesas() {
           que comparten .foja-card pero no esta hoja. */}
       <style>{`
         @media print {
-          @page { size: A4 landscape; margin: 1cm; }
+          @page { size: A4 landscape; margin: 0.8cm; }
+          .rm-card { max-width: none !important; }
+          .rm-tabla th, .rm-tabla td { padding: 3px 4px !important; font-size: 8.5px !important; }
+          .rm-tabla th { font-size: 8px !important; }
         }
         .rm-card { max-width: 1050px; }
         .rm-titulo { margin: 0; line-height: 1.25; }
@@ -207,20 +186,19 @@ export function ReporteMesas() {
             </tbody>
           </table>
 
-          <table className="data-table foja-tabla">
+          <table className="data-table foja-tabla rm-tabla">
             <thead>
               <tr>
-                <th style={{ width: 36 }}>N°</th>
-                <th style={{ width: 90 }}>DÍA</th>
-                <th style={{ width: 90 }}>Horario</th>
-                <th style={{ width: 90 }}>FECHA</th>
-                <th style={{ width: 60 }}>Curso</th>
-                <th style={{ width: 50 }}>Secc.</th>
-                <th style={{ width: 55 }}>hora</th>
+                <th style={{ width: 28 }}>N°</th>
+                <th style={{ width: 75 }}>DÍA</th>
+                <th style={{ width: 75 }}>FECHA</th>
+                <th style={{ width: 45 }}>Curso</th>
+                <th style={{ width: 40 }}>Secc.</th>
+                <th style={{ width: 45 }}>hora</th>
                 <th>MATERIA</th>
-                <th>PRESIDENTE</th>
-                <th>EXAMINADOR N° 1</th>
-                <th>EXAMINADOR N° 2</th>
+                <th style={{ whiteSpace: 'nowrap' }}>PRESIDENTE</th>
+                <th style={{ whiteSpace: 'nowrap' }}>EXAMINADOR N° 1</th>
+                <th style={{ whiteSpace: 'nowrap' }}>EXAMINADOR N° 2</th>
               </tr>
             </thead>
             <tbody>
@@ -228,12 +206,11 @@ export function ReporteMesas() {
                 <tr key={f.catedra_id}>
                   <td>{i + 1}</td>
                   <td>{f.diaExamen}</td>
-                  <td>{f.diaHabitual || '—'}</td>
-                  <td>{formatoLargo(f.fecha)}</td>
+                  <td style={{ whiteSpace: 'nowrap' }}>{formatoLargo(f.fecha)}</td>
                   <td>{f.curso_nivel}º</td>
                   <td>{f.seccion_grupo}</td>
                   <td>{hora(f.hora_inicio)}</td>
-                  <td style={{ whiteSpace: 'nowrap' }}>
+                  <td>
                     {f.materia}
                     {f.optativa ? ' (Opt.)' : ''}
                   </td>

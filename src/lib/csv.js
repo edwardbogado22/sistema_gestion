@@ -17,7 +17,11 @@ export function parseArchivo(file) {
 }
 
 function descargar(nombreArchivo, csv) {
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+  // BOM al inicio: sin esto Excel en Windows no detecta UTF-8 y muestra
+  // las tildes/ñ como caracteres sueltos — el charset del Blob solo lo
+  // respetan los navegadores, no Excel leyendo el archivo del disco.
+  const BOM = '﻿'
+  const blob = new Blob([BOM + csv], { type: 'text/csv;charset=utf-8;' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
