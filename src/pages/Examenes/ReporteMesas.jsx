@@ -81,11 +81,15 @@ export function ReporteMesas() {
     })()
   }, [llamadoId])
 
+  // La publicación es por sede → carrera → período lectivo (así se arma
+  // cada bloque/hoja), no por carrera primero.
   const bloques = useMemo(() => {
     const mapa = new Map()
     for (const f of filas) {
-      const clave = `${f.carrera}||${f.sede}`
-      if (!mapa.has(clave)) mapa.set(clave, { carrera: f.carrera, sede: f.sede, filas: [] })
+      const clave = `${f.sede}||${f.carrera}||${f.periodo_lectivo}`
+      if (!mapa.has(clave)) {
+        mapa.set(clave, { sede: f.sede, carrera: f.carrera, periodo_lectivo: f.periodo_lectivo, filas: [] })
+      }
       mapa.get(clave).filas.push(f)
     }
     for (const b of mapa.values()) {
@@ -97,7 +101,12 @@ export function ReporteMesas() {
           a.materia.localeCompare(c.materia),
       )
     }
-    return [...mapa.values()].sort((a, b) => a.carrera.localeCompare(b.carrera) || a.sede.localeCompare(b.sede))
+    return [...mapa.values()].sort(
+      (a, b) =>
+        a.sede.localeCompare(b.sede) ||
+        a.carrera.localeCompare(b.carrera) ||
+        a.periodo_lectivo.localeCompare(b.periodo_lectivo),
+    )
   }, [filas])
 
   if (loading) return <p className="page-padding muted-text">Cargando...</p>
@@ -133,7 +142,7 @@ export function ReporteMesas() {
       </div>
 
       {bloques.map((b) => (
-        <div className="foja-card rm-card" key={`${b.carrera}-${b.sede}`} style={{ marginBottom: 24 }}>
+        <div className="foja-card rm-card" key={`${b.sede}-${b.carrera}-${b.periodo_lectivo}`} style={{ marginBottom: 24 }}>
           <div className="foja-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
             <img src="/escudo-une.png" alt="Escudo UNE" className="foja-escudo" />
             <div>
@@ -157,29 +166,32 @@ export function ReporteMesas() {
             Mesas Examinadoras — Llamado {TIPOS[enc.llamado_tipo] || enc.llamado_tipo}
           </h3>
           <p style={{ textAlign: 'center', margin: '0 0 18px' }} className="muted-text">
-            {enc.llamado} · Periodo Lectivo {enc.periodo_lectivo}
+            {enc.llamado}
           </p>
 
           <table className="foja-datos">
             <tbody>
               <tr>
                 <td>
+                  <strong>Sede:</strong> {b.sede}
+                </td>
+                <td>
                   <strong>Carrera:</strong> {b.carrera}
                 </td>
                 <td>
-                  <strong>Sede:</strong> {b.sede}
+                  <strong>Período Lectivo:</strong> {b.periodo_lectivo}
                 </td>
               </tr>
               <tr>
                 <td>
                   <strong>Total de mesas:</strong> {b.filas.length}
                 </td>
-                <td>
+                <td colSpan={2}>
                   <strong>Emitido:</strong> {hoy()}
                 </td>
               </tr>
               <tr className="no-print">
-                <td colSpan={2}>
+                <td colSpan={3}>
                   <strong>Responsable:</strong> {perfil?.nombre_completo || '—'}
                 </td>
               </tr>
