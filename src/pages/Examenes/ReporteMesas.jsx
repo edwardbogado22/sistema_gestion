@@ -3,12 +3,19 @@ import { useParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../contexts/AuthContext'
 import { formatoLargo } from '../../lib/fechas'
+import { diaSemana } from '../../lib/vocalesExamen'
 
 const TIPOS = {
   ORDINARIO: 'Ordinario',
   COMPLEMENTARIO: 'Complementario',
   REGULARIZACION: 'Regularización',
 }
+
+// mismo orden que extract(dow) de Postgres / Date#getDay(), igual que
+// catedra_horario.dia_semana — así se puede convertir directo a texto.
+const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
+
+const hora = (h) => (h ? h.slice(0, 5) : '—')
 
 const hoy = () => {
   const d = new Date()
@@ -53,6 +60,22 @@ export function ReporteMesas() {
         return
       }
 
+      // Día habitual de clase de cada cátedra (catedra_horario, vía la
+      // vista), para que secretaría pueda chequear a simple vista que la
+      // fecha de examen no se confundió de día.
+      const { data: horario, error: eHor } = await supabase.from('v_catedra_horario').select('catedra_id, dia_semana')
+      if (eHor) {
+        setError(eHor.message)
+        setLoading(false)
+        return
+      }
+
+      const diasPorCatedra = new Map()
+      for (const h of horario || []) {
+        if (!diasPorCatedra.has(h.catedra_id)) diasPorCatedra.set(h.catedra_id, new Set())
+        diasPorCatedra.get(h.catedra_id).add(h.dia_semana)
+      }
+
       const vocalesPorFecha = new Map()
       for (const it of integrantes || []) {
         if (!vocalesPorFecha.has(it.examen_fecha_id)) vocalesPorFecha.set(it.examen_fecha_id, [])
@@ -64,6 +87,11 @@ export function ReporteMesas() {
           ...a,
           vocal1: vocalesPorFecha.get(a.examen_fecha_id)?.[0] || '',
           vocal2: vocalesPorFecha.get(a.examen_fecha_id)?.[1] || '',
+          diaExamen: a.fecha ? diaSemana(a.fecha) : '',
+          diaHabitual: [...(diasPorCatedra.get(a.catedra_id) || [])]
+            .sort((x, y) => x - y)
+            .map((n) => DIAS[n])
+            .join('/'),
         })),
       )
       setLoading(false)
@@ -99,6 +127,19 @@ export function ReporteMesas() {
 
   return (
     <div className="page-padding foja-desempeno">
+      {/* Este reporte se imprime aparte (ruta propia), así que el @page de
+          acá abajo no afecta a Foja de Desempeño ni a Reporte de Carga,
+          que comparten .foja-card pero no esta hoja. */}
+      <style>{`
+        @media print {
+          @page { size: A4 landscape; margin: 1cm; }
+        }
+        .rm-card { max-width: 1050px; }
+        .rm-titulo { margin: 0; line-height: 1.25; }
+        .rm-titulo .uni { font-size: 1.05em; }
+        .rm-titulo .fac { font-size: 1.05em; }
+      `}</style>
+
       <div className="form-actions no-print" style={{ marginBottom: '1rem' }}>
         <button type="button" className="btn btn-primary" onClick={() => window.print()}>
           Imprimir
@@ -106,15 +147,17 @@ export function ReporteMesas() {
       </div>
 
       {bloques.map((b) => (
-        <div className="foja-card" key={`${b.carrera}-${b.sede}`} style={{ marginBottom: 24 }}>
+        <div className="foja-card rm-card" key={`${b.carrera}-${b.sede}`} style={{ marginBottom: 24 }}>
           <div className="foja-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
             <img src="/escudo-une.png" alt="Escudo UNE" className="foja-escudo" />
             <div>
-              <p className="eyebrow" style={{ color: 'var(--gold)' }}>
+              <p className="rm-titulo uni" style={{ fontWeight: 700 }}>
                 Universidad Nacional del Este
               </p>
-              <h2 style={{ margin: '2px 0' }}>Facultad de Ciencias Económicas</h2>
-              <p className="muted-text" style={{ margin: 0 }}>
+              <h2 className="rm-titulo fac" style={{ margin: 0, fontWeight: 700 }}>
+                Facultad de Ciencias Económicas
+              </h2>
+              <p className="muted-text" style={{ margin: '4px 0 0' }}>
                 Dirección Académica
               </p>
               <p className="muted-text" style={{ fontSize: 12, margin: '4px 0 0' }}>
@@ -160,30 +203,40 @@ export function ReporteMesas() {
           <table className="data-table foja-tabla">
             <thead>
               <tr>
-                <th style={{ width: 40 }}>N°</th>
-                <th style={{ width: 70 }}>CURSO</th>
-                <th style={{ width: 60 }}>SEC.</th>
-                <th>MATERIA</th>
+                <th style={{ width: 36 }}>N°</th>
+                <th style={{ width: 90 }}>DÍA</th>
+                <th style={{ width: 90 }}>Horario</th>
                 <th style={{ width: 90 }}>FECHA</th>
+                <th style={{ width: 60 }}>Curso</th>
+                <th style={{ width: 50 }}>Secc.</th>
+                <th style={{ width: 55 }}>hora</th>
+                <th>MATERIA</th>
                 <th>PRESIDENTE</th>
-                <th>VOCAL 1</th>
-                <th>VOCAL 2</th>
+                <th>EXAMINADOR N° 1</th>
+                <th>EXAMINADOR N° 2</th>
               </tr>
             </thead>
             <tbody>
               {b.filas.map((f, i) => (
                 <tr key={f.catedra_id}>
                   <td>{i + 1}</td>
+                  <td>{f.diaExamen}</td>
+                  <td>{f.diaHabitual || '—'}</td>
+                  <td>{formatoLargo(f.fecha)}</td>
                   <td>{f.curso_nivel}º</td>
                   <td>{f.seccion_grupo}</td>
-                  <td>
+                  <td>{hora(f.hora_inicio)}</td>
+                  <td style={{ whiteSpace: 'nowrap' }}>
                     {f.materia}
                     {f.optativa ? ' (Opt.)' : ''}
                   </td>
-                  <td>{formatoLargo(f.fecha)}</td>
-                  <td>{f.profesor}</td>
-                  <td className={f.vocal1 ? '' : 'error-text'}>{f.vocal1 || '— sin asignar —'}</td>
-                  <td className={f.vocal2 ? '' : 'error-text'}>{f.vocal2 || '— sin asignar —'}</td>
+                  <td style={{ whiteSpace: 'nowrap' }}>{f.profesor}</td>
+                  <td className={f.vocal1 ? '' : 'error-text'} style={{ whiteSpace: 'nowrap' }}>
+                    {f.vocal1 || '— sin asignar —'}
+                  </td>
+                  <td className={f.vocal2 ? '' : 'error-text'} style={{ whiteSpace: 'nowrap' }}>
+                    {f.vocal2 || '— sin asignar —'}
+                  </td>
                 </tr>
               ))}
             </tbody>

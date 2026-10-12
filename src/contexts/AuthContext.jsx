@@ -121,7 +121,13 @@ export function AuthProvider({ children }) {
         alcance,
         loading,
         sessionError,
-        reintentar: cargarSesionInicial,
+        // Reintentar en el lugar no sirve: una vez que getSession() cuelga,
+        // el cliente de supabase-js queda con su promesa interna de
+        // inicialización rota para siempre (initializePromise nunca se
+        // resuelve), así que cualquier llamada posterior en esa misma
+        // pestaña vuelve a colgarse. Confirmado probando ambos caminos:
+        // solo una recarga completa (nuevo cliente) se recupera.
+        reintentar: () => window.location.reload(),
         login,
         logout,
       }}
