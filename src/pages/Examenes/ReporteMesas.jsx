@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../contexts/AuthContext'
 import { formatoLargo } from '../../lib/fechas'
 import { diaSemana } from '../../lib/vocalesExamen'
+import { fetchTodo } from '../../lib/paginar'
 
 const TIPOS = {
   ORDINARIO: 'Ordinario',
@@ -49,11 +50,17 @@ export function ReporteMesas() {
         return
       }
 
-      const { data: integrantes, error: eInt } = await supabase
-        .from('mesa_integrante')
-        .select('examen_fecha_id, rol_mesa, profesores(nombres, apellidos), examen_fecha!inner(llamado_id)')
-        .eq('examen_fecha.llamado_id', llamadoId)
-        .eq('rol_mesa', 'VOCAL')
+      // mesa_integrante puede superar las 1000 filas que PostgREST devuelve
+      // por defecto — sin paginar, el reporte mostraría "sin asignar" en
+      // vocales que en realidad sí están cargados.
+      const { data: integrantes, error: eInt } = await fetchTodo((desde, hasta) =>
+        supabase
+          .from('mesa_integrante')
+          .select('examen_fecha_id, rol_mesa, profesores(nombres, apellidos), examen_fecha!inner(llamado_id)')
+          .eq('examen_fecha.llamado_id', llamadoId)
+          .eq('rol_mesa', 'VOCAL')
+          .range(desde, hasta),
+      )
       if (eInt) {
         setError(eInt.message)
         setLoading(false)

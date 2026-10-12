@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
+import { fetchTodo } from '../../lib/paginar'
 import { aISO, deISO, formatoLargo } from '../../lib/fechas'
 import { descargarFilas } from '../../lib/csv'
 import { construirContexto, candidatos, estado, asignarAuto, calcularRebalanceo, diaSemana } from '../../lib/vocalesExamen'
@@ -59,11 +60,18 @@ export function AsignacionVocales() {
     }
     setPresencia(presenciaMapa)
 
-    const { data: integrantes, error: eInt } = await supabase
-      .from('mesa_integrante')
-      .select('examen_fecha_id, profesor_id, rol_mesa, profesores(nombres, apellidos), examen_fecha!inner(llamado_id)')
-      .eq('examen_fecha.llamado_id', llamadoId)
-      .eq('rol_mesa', 'VOCAL')
+    // mesa_integrante puede superar las 1000 filas que PostgREST devuelve
+    // por defecto (2 vocales × cientos de mesas) — sin paginar, esto
+    // "olvida" vocales ya asignados y Asignar automáticamente intenta
+    // duplicarlos.
+    const { data: integrantes, error: eInt } = await fetchTodo((desde, hasta) =>
+      supabase
+        .from('mesa_integrante')
+        .select('examen_fecha_id, profesor_id, rol_mesa, profesores(nombres, apellidos), examen_fecha!inner(llamado_id)')
+        .eq('examen_fecha.llamado_id', llamadoId)
+        .eq('rol_mesa', 'VOCAL')
+        .range(desde, hasta),
+    )
     if (eInt) {
       setError(eInt.message)
       setLoading(false)
