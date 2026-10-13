@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useSearchParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../contexts/AuthContext'
 import { formatoLargo } from '../../lib/fechas'
@@ -31,6 +31,22 @@ export function ReporteMesas() {
   const [filas, setFilas] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+
+  // El filtro viaja por la URL para poder llegar ya aplicado desde
+  // Asignación de Vocales ("Reporte para imprimir" ahí abajo manda el
+  // mismo sede/carrera/curso que se tenía filtrado) — así se imprime
+  // solo esa sede sin tener que recortar el PDF después.
+  const [params, setParams] = useSearchParams()
+  const sedeFiltro = params.get('sede') || ''
+  const carreraFiltro = params.get('carrera') || ''
+  const cursoFiltro = params.get('curso') || ''
+
+  const setFiltro = (clave, valor) => {
+    const next = new URLSearchParams(params)
+    if (valor) next.set(clave, valor)
+    else next.delete(clave)
+    setParams(next, { replace: true })
+  }
 
   useEffect(() => {
     ;(async () => {
@@ -81,11 +97,33 @@ export function ReporteMesas() {
     })()
   }, [llamadoId])
 
+  const opciones = useMemo(() => {
+    const unico = (clave, etiqueta) => {
+      const mapa = new Map()
+      for (const f of filas) if (f[clave]) mapa.set(f[clave], etiqueta(f))
+      return [...mapa].map(([value, label]) => ({ value, label })).sort((a, b) => a.label.localeCompare(b.label))
+    }
+    return {
+      sedes: unico('sede_id', (f) => f.sede),
+      carreras: unico('carrera_id', (f) => f.carrera),
+      cursos: [...new Set(filas.map((f) => f.curso_nivel))].sort((a, b) => a - b),
+    }
+  }, [filas])
+
+  const filasFiltradas = useMemo(() => {
+    return filas.filter((f) => {
+      if (sedeFiltro && f.sede_id !== sedeFiltro) return false
+      if (carreraFiltro && f.carrera_id !== carreraFiltro) return false
+      if (cursoFiltro && String(f.curso_nivel) !== cursoFiltro) return false
+      return true
+    })
+  }, [filas, sedeFiltro, carreraFiltro, cursoFiltro])
+
   // La publicación es por sede → carrera → período lectivo (así se arma
   // cada bloque/hoja), no por carrera primero.
   const bloques = useMemo(() => {
     const mapa = new Map()
-    for (const f of filas) {
+    for (const f of filasFiltradas) {
       const clave = `${f.sede}||${f.carrera}||${f.periodo_lectivo}`
       if (!mapa.has(clave)) {
         mapa.set(clave, { sede: f.sede, carrera: f.carrera, periodo_lectivo: f.periodo_lectivo, filas: [] })
@@ -107,7 +145,7 @@ export function ReporteMesas() {
         a.carrera.localeCompare(b.carrera) ||
         a.periodo_lectivo.localeCompare(b.periodo_lectivo),
     )
-  }, [filas])
+  }, [filasFiltradas])
 
   if (loading) return <p className="page-padding muted-text">Cargando...</p>
   if (error) return <p className="page-padding error-text">{error}</p>
@@ -116,6 +154,7 @@ export function ReporteMesas() {
   }
 
   const enc = filas[0]
+  const hayFiltro = sedeFiltro || carreraFiltro || cursoFiltro
 
   return (
     <div className="page-padding foja-desempeno rm-page">
@@ -152,11 +191,54 @@ export function ReporteMesas() {
         .rm-titulo .fac { font-size: 1.05em; }
       `}</style>
 
-      <div className="form-actions no-print" style={{ marginBottom: '1rem' }}>
+      <div className="form-row no-print" style={{ marginBottom: '1rem', alignItems: 'flex-end' }}>
+        <label>
+          Sede
+          <select value={sedeFiltro} onChange={(e) => setFiltro('sede', e.target.value)} style={{ display: 'block', minWidth: 200 }}>
+            <option value="">Todas las sedes</option>
+            {opciones.sedes.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Carrera
+          <select value={carreraFiltro} onChange={(e) => setFiltro('carrera', e.target.value)} style={{ display: 'block', minWidth: 180 }}>
+            <option value="">Todas las carreras</option>
+            {opciones.carreras.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Curso
+          <select value={cursoFiltro} onChange={(e) => setFiltro('curso', e.target.value)} style={{ display: 'block', minWidth: 120 }}>
+            <option value="">Todos los cursos</option>
+            {opciones.cursos.map((c) => (
+              <option key={c} value={String(c)}>
+                {c}º
+              </option>
+            ))}
+          </select>
+        </label>
+        {hayFiltro && (
+          <button type="button" className="chip" onClick={() => setParams(new URLSearchParams(), { replace: true })}>
+            Quitar filtros
+          </button>
+        )}
+        <div style={{ flex: 1 }} />
         <button type="button" className="btn btn-primary" onClick={() => window.print()}>
           Imprimir
         </button>
       </div>
+
+      {hayFiltro && bloques.length === 0 && (
+        <p className="no-print muted-text">Ninguna mesa coincide con el filtro elegido.</p>
+      )}
 
       {bloques.map((b) => (
         <div className="foja-card rm-card" key={`${b.sede}-${b.carrera}-${b.periodo_lectivo}`} style={{ marginBottom: 24 }}>

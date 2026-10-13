@@ -180,6 +180,18 @@ export function AsignacionVocales() {
     return { total: filas.length, ok: ok_, warn, err }
   }, [filas, ctx])
 
+  // Le pasa el mismo sede/carrera/curso que se tiene filtrado acá al
+  // reporte para imprimir, para no tener que repetirlo ni recortar el
+  // PDF después con otro programa.
+  const reporteQuery = useMemo(() => {
+    const q = new URLSearchParams()
+    if (filtro.sede_id) q.set('sede', filtro.sede_id)
+    if (filtro.carrera_id) q.set('carrera', filtro.carrera_id)
+    if (filtro.curso_nivel) q.set('curso', filtro.curso_nivel)
+    const s = q.toString()
+    return s ? `?${s}` : ''
+  }, [filtro])
+
   const asignar = () => {
     setFilas(asignarAuto(filas, presencia))
     setOk('')
@@ -371,7 +383,7 @@ export function AsignacionVocales() {
         <button type="button" className="btn btn-secondary" onClick={exportarCSV}>
           Descargar CSV
         </button>
-        <Link to={`/examenes/${llamadoId}/mesas-reporte`} className="btn btn-secondary">
+        <Link to={`/examenes/${llamadoId}/mesas-reporte${reporteQuery}`} className="btn btn-secondary">
           Reporte para imprimir
         </Link>
         <button
