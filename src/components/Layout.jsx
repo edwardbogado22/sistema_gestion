@@ -1,38 +1,113 @@
+import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { areaActiva, areasVisibles, itemActivo } from '../lib/navegacion'
 
 export function Layout({ children }) {
-  const { user, perfil, esSecretario, esDirector, alcance, logout } = useAuth()
+  const { user, perfil, rol, esSecretario, esDirector, esAsistente, alcance, logout } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
+  // Id del área desplegada (escritorio) y panel completo abierto (celular).
+  const [abierta, setAbierta] = useState(null)
+  const [panelAbierto, setPanelAbierto] = useState(false)
+  const navRef = useRef(null)
+
+  const areas = areasVisibles(rol)
+  const areaActual = areaActiva(location.pathname)
+  const itemActual = itemActivo(location.pathname)
+
+  const cerrarMenu = () => {
+    setAbierta(null)
+    setPanelAbierto(false)
+  }
+
+  useEffect(() => {
+    function onClickFuera(e) {
+      if (navRef.current && !navRef.current.contains(e.target)) cerrarMenu()
+    }
+    function onTecla(e) {
+      if (e.key === 'Escape') cerrarMenu()
+    }
+    document.addEventListener('mousedown', onClickFuera)
+    document.addEventListener('keydown', onTecla)
+    return () => {
+      document.removeEventListener('mousedown', onClickFuera)
+      document.removeEventListener('keydown', onTecla)
+    }
+  }, [])
 
   const handleLogout = async () => {
     await logout()
     navigate('/login')
   }
 
+  const textoAlcance =
+    alcance.length === 0
+      ? 'Sin alcance asignado'
+      : alcance.map((a) => `${a.carreras?.nombre ?? '—'} · ${a.sedes?.nombre ?? 'todas las sedes'}`).join('  |  ')
+
   return (
     <div className="app-layout">
       <div className="topbar" />
-      <nav className="nav-bar">
-        <Link to="/" className="nav-title" style={{ color: '#fff', textDecoration: 'none' }}>
+      <nav className="nav-bar" ref={navRef}>
+        <Link to="/" className="nav-title" style={{ color: '#fff', textDecoration: 'none' }} onClick={cerrarMenu}>
           Sistema de Evaluación Docente
         </Link>
-        {location.pathname !== '/' && (
-          <Link to="/" className="nav-link nav-home">
-            ← Inicio
-          </Link>
+        {areas.length > 0 && (
+          <>
+            <button
+              type="button"
+              className="nav-toggle"
+              aria-expanded={panelAbierto}
+              aria-controls="nav-menu"
+              onClick={() => setPanelAbierto((v) => !v)}
+            >
+              ☰ Menú
+            </button>
+            <div id="nav-menu" className={`nav-menu${panelAbierto ? ' abierto' : ''}`}>
+              {/* Para el asistente el inicio redirige al check-in, que ya tiene en su menú. */}
+              {!esAsistente && (
+                <Link to="/" className={`nav-link${location.pathname === '/' ? ' active' : ''}`} onClick={cerrarMenu}>
+                  Inicio
+                </Link>
+              )}
+              {areas.map((area) => (
+                <div key={area.id} className={`nav-area${abierta === area.id ? ' abierta' : ''}`}>
+                  <button
+                    type="button"
+                    className={`nav-link nav-area-boton${areaActual === area.id ? ' active' : ''}`}
+                    aria-expanded={abierta === area.id}
+                    onClick={() => setAbierta((actual) => (actual === area.id ? null : area.id))}
+                  >
+                    {area.corto}
+                    <span className="nav-area-flecha" aria-hidden="true">
+                      ▾
+                    </span>
+                  </button>
+                  <div className="nav-area-lista">
+                    {area.items.map((item) => (
+                      <Link
+                        key={item.to}
+                        to={item.to}
+                        className={`nav-area-item${itemActual === item ? ' active' : ''}`}
+                        onClick={cerrarMenu}
+                      >
+                        <span aria-hidden="true">{item.icon}</span>
+                        {item.titulo}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         )}
         <div className="nav-spacer" />
         {user && (
           <>
             {(esSecretario || esDirector) && (
-              <span className="nav-user" title="Carreras y sedes a tu cargo">
-                {alcance.length === 0
-                  ? 'Sin alcance asignado'
-                  : alcance
-                      .map((a) => `${a.carreras?.nombre ?? '—'} · ${a.sedes?.nombre ?? 'todas las sedes'}`)
-                      .join('  |  ')}
+              <span className="nav-user nav-alcance" title={`Carreras y sedes a tu cargo: ${textoAlcance}`}>
+                {textoAlcance}
               </span>
             )}
             <span className="nav-user">{perfil?.nombre_completo || user.email}</span>

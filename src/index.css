@@ -148,10 +148,9 @@ select {
   align-items: center;
   gap: 6px;
   padding: 0 24px;
-  height: 60px;
+  min-height: 60px;
   background: linear-gradient(160deg, var(--green-950) 0%, var(--green-800) 100%);
   color: #fff;
-  flex-wrap: wrap;
   position: sticky;
   top: 0;
   z-index: 30;
@@ -212,8 +211,201 @@ select {
   white-space: nowrap;
 }
 
-.nav-home {
+.nav-user {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.nav-alcance {
+  max-width: 240px;
+}
+
+.nav-bar > .btn,
+.nav-menu,
+.nav-toggle {
+  flex-shrink: 0;
+}
+
+/* ---- menu por areas ---- */
+.nav-menu {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.nav-toggle {
+  display: none;
+  color: #fff;
+  background: transparent;
   border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+  padding: 7px 14px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.nav-area {
+  position: relative;
+}
+
+.nav-area-boton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.nav-area-boton:focus-visible,
+.nav-toggle:focus-visible,
+.nav-area-item:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+
+.nav-area-flecha {
+  font-size: 10px;
+  opacity: 0.7;
+  transition: transform 0.18s var(--ease);
+}
+
+.nav-area.abierta .nav-area-flecha {
+  transform: rotate(180deg);
+}
+
+.nav-area-lista {
+  display: none;
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 0;
+  min-width: 270px;
+  padding: 6px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-lg);
+}
+
+.nav-area.abierta .nav-area-lista {
+  display: block;
+}
+
+.nav-area-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: var(--radius-sm);
+  color: var(--ink);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.nav-area-item:hover {
+  background: var(--canvas);
+  color: var(--green-800);
+}
+
+.nav-area-item.active {
+  background: var(--gold-soft-bg);
+  color: var(--green-900);
+  font-weight: 600;
+}
+
+/* En pantallas angostas el menu pasa a un panel unico con todas las
+   areas a la vista, sin desplegables anidados. */
+@media (max-width: 1100px) {
+  .nav-toggle {
+    display: inline-flex;
+  }
+
+  .nav-menu {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    max-height: calc(100vh - 64px);
+    overflow-y: auto;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+    padding: 12px 16px 18px;
+    background: var(--green-950);
+    box-shadow: 0 16px 28px -16px rgba(6, 35, 26, 0.7);
+  }
+
+  .nav-menu.abierto {
+    display: flex;
+  }
+
+  .nav-area-boton {
+    width: 100%;
+    padding: 12px 6px 4px;
+    border-radius: 0;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--gold-soft);
+    background: transparent;
+    cursor: default;
+    pointer-events: none;
+  }
+
+  .nav-area-flecha {
+    display: none;
+  }
+
+  .nav-area-lista,
+  .nav-area.abierta .nav-area-lista {
+    display: block;
+    position: static;
+    min-width: 0;
+    padding: 0;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+  }
+
+  .nav-area-item {
+    color: rgba(255, 255, 255, 0.86);
+  }
+
+  .nav-area-item:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+  }
+
+  .nav-area-item.active {
+    color: var(--gold-soft);
+  }
+
+  .nav-alcance {
+    display: none;
+  }
+}
+
+/* Con seis areas en la barra, el nombre largo del sistema no entra en un
+   monitor de 1366px: queda solo el distintivo FCE. */
+@media (max-width: 1400px) {
+  .nav-title {
+    font-size: 0;
+    gap: 0;
+    margin-right: 8px;
+  }
+}
+
+@media (max-width: 640px) {
+  .nav-bar > .nav-user {
+    display: none;
+  }
 }
 
 .app-main {

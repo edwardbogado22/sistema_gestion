@@ -2,6 +2,7 @@ import { Link, Navigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
+import { areasVisibles } from '../lib/navegacion'
 
 function useResumen() {
   const [resumen, setResumen] = useState(null)
@@ -90,171 +91,15 @@ function PanelResumen() {
   )
 }
 
-const CARDS = [
-  {
-    section: 'Cátedras y evaluación',
-    to: '/catedras',
-    icon: '📋',
-    titulo: 'Cátedras',
-    desc: 'Alta, edición y listado de cátedras (profesor + asignatura + sede + periodo).',
-  },
-  {
-    section: 'Cátedras y evaluación',
-    to: '/catedras',
-    icon: '📊',
-    titulo: 'Cargar Indicadores',
-    desc: 'Asistencia, cumplimiento de contenido, criterios institucionales y encuesta de alumnos por cátedra.',
-    destacada: true,
-  },
-  {
-    section: 'Cátedras y evaluación',
-    to: '/contenido/kiosco',
-    icon: '🖥️',
-    titulo: 'Kiosco de Contenido Programático',
-    desc: 'El profesor se identifica por cédula y tilda los subtemas dictados. Alimenta el % de cumplimiento de contenido.',
-  },
-  {
-    section: 'Cátedras y evaluación',
-    to: '/catedras',
-    icon: '🧾',
-    titulo: 'Foja de Desempeño',
-    desc: 'Generar e imprimir la foja de desempeño oficial de una cátedra.',
-  },
-  {
-    section: 'Mesas examinadoras',
-    to: '/examenes',
-    icon: '🗓️',
-    titulo: 'Fechas de Exámenes',
-    desc: 'Llamados, rango de fechas habilitado y asignación de la fecha de examen por materia.',
-    destacada: true,
-  },
-  {
-    section: 'Mesas examinadoras',
-    to: '/examenes/seguimiento',
-    icon: '📈',
-    titulo: 'Seguimiento de Carga',
-    desc: 'Progreso de carga de fechas por secretario, carrera y sede, para revisar cómo va Secretaría.',
-    soloAdmin: true,
-  },
-  {
-    section: 'Asistencia a Clases',
-    to: '/asistencia',
-    icon: '🗓️',
-    titulo: 'Registrar Asistencia',
-    desc: 'Carga diaria de asistencia a clases por carrera y sede, con suplencias.',
-    destacada: true,
-  },
-  {
-    section: 'Asistencia a Clases',
-    to: '/asistencia/reporte',
-    icon: '📊',
-    titulo: 'Reporte de Asistencia',
-    desc: 'Efectividad por docente en un rango de fechas, exportable e imprimible.',
-  },
-  {
-    section: 'Asistencia a Clases',
-    to: '/asistencia/reemplazos',
-    icon: '🔄',
-    titulo: 'Reemplazos',
-    desc: 'Clases donde el titular faltó y otro profesor cubrió su lugar.',
-  },
-  {
-    section: 'Asistencia a Eventos',
-    to: '/eventos',
-    icon: '🪪',
-    titulo: 'Registrar Asistencia',
-    desc: 'Check-in por documento de identidad a reuniones docentes y capacitaciones.',
-    destacada: true,
-    soloAdmin: true,
-  },
-  {
-    section: 'Asistencia a Eventos',
-    to: '/eventos/gestion',
-    icon: '📅',
-    titulo: 'Gestión de Eventos',
-    desc: 'Crear, editar y activar/desactivar eventos. Agrupalos para que contar asistencia a cualquiera cuente como presente.',
-    soloAdmin: true,
-  },
-  {
-    section: 'Asistencia a Eventos',
-    to: '/eventos/busqueda',
-    icon: '🔍',
-    titulo: 'Búsqueda',
-    desc: 'Buscar un docente por documento o nombre y ver su historial de asistencia a eventos.',
-    soloAdmin: true,
-  },
-  {
-    section: 'Asistencia a Eventos',
-    to: '/eventos/reporte',
-    icon: '📊',
-    titulo: 'Reporte de Asistencia',
-    desc: 'Matriz de asistencia por evento o grupo de eventos, exportable e imprimible.',
-    soloAdmin: true,
-  },
-  {
-    section: 'Asistencia a Eventos',
-    to: '/eventos/capacitaciones',
-    icon: '🎓',
-    titulo: 'Cargar Resultados de Capacitación',
-    desc: 'Aprobado o participación parcial por profesor, una vez sale la resolución del examen.',
-    soloAdmin: true,
-  },
-  {
-    section: 'Plan Anual de Clases',
-    to: '/plan-anual',
-    icon: '📘',
-    titulo: 'Registrar Entregas',
-    desc: 'Registro por cátedra de la entrega del plan anual. Aporta al 20% de "Planificación y documentación" en la Foja de Desempeño.',
-    destacada: true,
-  },
-  {
-    section: 'Plan Anual de Clases',
-    to: '/plan-anual/reporte',
-    icon: '📄',
-    titulo: 'Constancia Imprimible',
-    desc: 'Entregas registradas por carrera y sede, con formato institucional para evidenciar el trabajo de Secretaría.',
-  },
-  {
-    section: 'Análisis',
-    to: '/informes',
-    icon: '📈',
-    titulo: 'Informes Consolidados',
-    desc: 'Rendimiento promedio por carrera, por sede y ranking de profesores.',
-    soloAdminODirector: true,
-  },
-  {
-    section: 'Gestión',
-    to: '/importar',
-    icon: '📥',
-    titulo: 'Importar Datos',
-    desc: 'Carga masiva por CSV de asignaturas, profesores, cátedras e indicadores.',
-    soloAdmin: true,
-  },
-  {
-    section: 'Gestión',
-    to: '/configuracion',
-    icon: '⚙️',
-    titulo: 'Configuración',
-    desc: 'Sedes, carreras, asignaturas, profesores, criterios de evaluación y usuarios.',
-    soloAdmin: true,
-  },
-]
-
 export function Home() {
-  const { esAdmin, esAsistente, esDirector } = useAuth()
+  const { rol, esAsistente } = useAuth()
 
   // El asistente solo hace check-in de eventos, normalmente desde el
   // celular en la puerta: directo a la pantalla que necesita, sin
   // pasar por un menú que no puede usar para nada más.
   if (esAsistente) return <Navigate to="/eventos" replace />
 
-  const visibles = CARDS.filter(
-    (c) => (esAdmin || !c.soloAdmin) && (!c.soloAdminODirector || esAdmin || esDirector),
-  )
-  const secciones = [...new Set(visibles.map((c) => c.section))].map((section) => ({
-    section,
-    cards: visibles.filter((c) => c.section === section),
-  }))
+  const secciones = areasVisibles(rol)
 
   return (
     <>
@@ -268,14 +113,14 @@ export function Home() {
       <PanelResumen />
 
       <div className="container">
-        {secciones.map(({ section, cards }) => (
-          <div key={section}>
+        {secciones.map(({ id, titulo, items }) => (
+          <div key={id}>
             <div className="section-label">
-              <span>{section}</span>
+              <span>{titulo}</span>
             </div>
             <div className="menu-grid">
-              {cards.map((c) => (
-                <Link key={c.titulo} to={c.to} className={`menu-card${c.destacada ? ' destacada' : ''}`}>
+              {items.map((c) => (
+                <Link key={c.to} to={c.to} className={`menu-card${c.destacada ? ' destacada' : ''}`}>
                   <div className="icon">{c.icon}</div>
                   <h3>{c.titulo}</h3>
                   <p>{c.desc}</p>
