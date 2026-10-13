@@ -150,9 +150,14 @@ export function Llamados() {
             : 'Elegí el llamado sobre el que vas a cargar las fechas de tus materias.'}
         </p>
         {esAdmin && (
-          <Link to="/examenes/seguimiento" className="btn btn-secondary btn-sm">
-            Ver seguimiento de carga por secretario
-          </Link>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <Link to="/examenes/seguimiento" className="btn btn-secondary btn-sm">
+              Ver seguimiento de carga por secretario
+            </Link>
+            <Link to="/examenes/consulta-profesor" className="btn btn-secondary btn-sm">
+              Consultar mesas por profesor
+            </Link>
+          </div>
         )}
       </div>
 

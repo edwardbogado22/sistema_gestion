@@ -36,6 +36,9 @@ const ReporteMesas = lazy(() => import('./pages/Examenes/ReporteMesas').then((m)
 const AsistenciaMesas = lazy(() =>
   import('./pages/Examenes/AsistenciaMesas').then((m) => ({ default: m.AsistenciaMesas })),
 )
+const ConsultaProfesor = lazy(() =>
+  import('./pages/Examenes/ConsultaProfesor').then((m) => ({ default: m.ConsultaProfesor })),
+)
 const Periodos = lazy(() => import('./pages/Configuracion/Periodos').then((m) => ({ default: m.Periodos })))
 const RegistrarAsistencia = lazy(() =>
   import('./pages/Asistencia/RegistrarAsistencia').then((m) => ({ default: m.RegistrarAsistencia })),
@@ -99,6 +102,10 @@ function App() {
         <Route
           path="/examenes/seguimiento"
           element={<PrivateRoute roles={ADMIN}>{withLayout(<SeguimientoCarga />)}</PrivateRoute>}
+        />
+        <Route
+          path="/examenes/consulta-profesor"
+          element={<PrivateRoute roles={ADMIN}>{withLayout(<ConsultaProfesor />)}</PrivateRoute>}
         />
         <Route path="/examenes/:llamadoId" element={<PrivateRoute>{withLayout(<PanelFechas />)}</PrivateRoute>} />
         <Route
