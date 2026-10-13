@@ -118,7 +118,7 @@ export function ReporteMesas() {
   const enc = filas[0]
 
   return (
-    <div className="page-padding foja-desempeno">
+    <div className="page-padding foja-desempeno rm-page">
       {/* Este reporte se imprime aparte (ruta propia), así que el @page de
           acá abajo no afecta a Foja de Desempeño ni a Reporte de Carga,
           que comparten .foja-card pero no esta hoja. */}
@@ -133,8 +133,20 @@ export function ReporteMesas() {
              que recortar nada. La primera no lleva salto, para no dejar
              una hoja en blanco adelante. */
           .rm-card + .rm-card { break-before: page; page-break-before: always; }
+          .rm-tabla-wrap { overflow: visible !important; }
         }
-        .rm-card { max-width: 1050px; }
+        /* En pantalla esta tabla tiene más columnas que el resto de los
+           reportes (incluye los dos examinadores): el ancho angosto
+           estándar (.page-padding, 1100px) la obligaba a scrollear casi
+           siempre. Se ensancha solo esta pantalla, no afecta a Foja de
+           Desempeño ni a Reporte de Carga que comparten .page-padding. */
+        .rm-page { max-width: 1450px; }
+        .rm-card { max-width: 1400px; }
+        /* en pantalla (no al imprimir) la tabla es más ancha que la
+           tarjeta — nombres largos de presidente/examinadores en una sola
+           línea — así que entra en scroll horizontal acá en vez de
+           salirse del borde sin forma de leerla. */
+        .rm-tabla-wrap { overflow-x: auto; }
         .rm-titulo { margin: 0; line-height: 1.25; }
         .rm-titulo .uni { font-size: 1.05em; }
         .rm-titulo .fac { font-size: 1.05em; }
@@ -203,45 +215,47 @@ export function ReporteMesas() {
             </tbody>
           </table>
 
-          <table className="data-table foja-tabla rm-tabla">
-            <thead>
-              <tr>
-                <th style={{ width: 28 }}>N°</th>
-                <th style={{ width: 75 }}>DÍA</th>
-                <th style={{ width: 75 }}>FECHA</th>
-                <th style={{ width: 45 }}>Curso</th>
-                <th style={{ width: 40 }}>Secc.</th>
-                <th style={{ width: 45 }}>hora</th>
-                <th>MATERIA</th>
-                <th style={{ whiteSpace: 'nowrap' }}>PRESIDENTE</th>
-                <th style={{ whiteSpace: 'nowrap' }}>EXAMINADOR N° 1</th>
-                <th style={{ whiteSpace: 'nowrap' }}>EXAMINADOR N° 2</th>
-              </tr>
-            </thead>
-            <tbody>
-              {b.filas.map((f, i) => (
-                <tr key={f.catedra_id}>
-                  <td>{i + 1}</td>
-                  <td>{f.diaExamen}</td>
-                  <td style={{ whiteSpace: 'nowrap' }}>{formatoLargo(f.fecha)}</td>
-                  <td>{f.curso_nivel}º</td>
-                  <td>{f.seccion_grupo}</td>
-                  <td>{hora(f.hora_inicio)}</td>
-                  <td>
-                    {f.materia}
-                    {f.optativa ? ' (Opt.)' : ''}
-                  </td>
-                  <td style={{ whiteSpace: 'nowrap' }}>{f.profesor}</td>
-                  <td className={f.vocal1 ? '' : 'error-text'} style={{ whiteSpace: 'nowrap' }}>
-                    {f.vocal1 || '— sin asignar —'}
-                  </td>
-                  <td className={f.vocal2 ? '' : 'error-text'} style={{ whiteSpace: 'nowrap' }}>
-                    {f.vocal2 || '— sin asignar —'}
-                  </td>
+          <div className="rm-tabla-wrap">
+            <table className="data-table foja-tabla rm-tabla">
+              <thead>
+                <tr>
+                  <th style={{ width: 28 }}>N°</th>
+                  <th style={{ width: 75 }}>DÍA</th>
+                  <th style={{ width: 75 }}>FECHA</th>
+                  <th style={{ width: 45 }}>Curso</th>
+                  <th style={{ width: 40 }}>Secc.</th>
+                  <th style={{ width: 45 }}>hora</th>
+                  <th>MATERIA</th>
+                  <th style={{ whiteSpace: 'nowrap' }}>PRESIDENTE</th>
+                  <th style={{ whiteSpace: 'nowrap' }}>EXAMINADOR N° 1</th>
+                  <th style={{ whiteSpace: 'nowrap' }}>EXAMINADOR N° 2</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {b.filas.map((f, i) => (
+                  <tr key={f.catedra_id}>
+                    <td>{i + 1}</td>
+                    <td>{f.diaExamen}</td>
+                    <td style={{ whiteSpace: 'nowrap' }}>{formatoLargo(f.fecha)}</td>
+                    <td>{f.curso_nivel}º</td>
+                    <td>{f.seccion_grupo}</td>
+                    <td>{hora(f.hora_inicio)}</td>
+                    <td>
+                      {f.materia}
+                      {f.optativa ? ' (Opt.)' : ''}
+                    </td>
+                    <td style={{ whiteSpace: 'nowrap' }}>{f.profesor}</td>
+                    <td className={f.vocal1 ? '' : 'error-text'} style={{ whiteSpace: 'nowrap' }}>
+                      {f.vocal1 || '— sin asignar —'}
+                    </td>
+                    <td className={f.vocal2 ? '' : 'error-text'} style={{ whiteSpace: 'nowrap' }}>
+                      {f.vocal2 || '— sin asignar —'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
           <table className="foja-datos" style={{ marginTop: 48 }}>
             <tbody>
