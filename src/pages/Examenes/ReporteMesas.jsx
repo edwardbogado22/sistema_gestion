@@ -128,6 +128,11 @@ export function ReporteMesas() {
           .rm-card { max-width: none !important; }
           .rm-tabla th, .rm-tabla td { padding: 3px 4px !important; font-size: 8.5px !important; }
           .rm-tabla th { font-size: 8px !important; }
+          /* cada sede/carrera arranca en hoja aparte — así no quedan
+             pegadas entre sí y se puede imprimir una sola sede sin tener
+             que recortar nada. La primera no lleva salto, para no dejar
+             una hoja en blanco adelante. */
+          .rm-card + .rm-card { break-before: page; page-break-before: always; }
         }
         .rm-card { max-width: 1050px; }
         .rm-titulo { margin: 0; line-height: 1.25; }
