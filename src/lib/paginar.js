@@ -9,6 +9,12 @@
 // puede reusar un query builder de supabase-js ya resuelto) con `.range()`
 // aplicado; se seguimos pidiendo páginas de `pageSize` hasta que vuelva una
 // más corta.
+//
+// La query TIENE que llevar un .order() sobre una columna única (el id):
+// cada página es un select aparte y, sin orden explícito, Postgres puede
+// devolver las filas en otro orden en cada uno. Ahí una misma fila sale en
+// dos páginas y otra no sale en ninguna — mesas completas que aparecen sin
+// vocales, o con el mismo vocal dos veces.
 export async function fetchTodo(construir, pageSize = 1000) {
   let desde = 0
   let todas = []

@@ -71,6 +71,7 @@ export function ReporteMesas() {
           .select('examen_fecha_id, rol_mesa, profesores(nombres, apellidos), examen_fecha!inner(llamado_id)')
           .eq('examen_fecha.llamado_id', llamadoId)
           .eq('rol_mesa', 'VOCAL')
+          .order('id')
           .range(desde, hasta),
       )
       if (eInt) {

@@ -99,6 +99,7 @@ export function ConsultaProfesor() {
         .select('examen_fecha_id, profesor_id, rol_mesa, profesores(nombres, apellidos), examen_fecha!inner(llamado_id)')
         .in('examen_fecha.llamado_id', llamadoIds)
         .eq('rol_mesa', 'VOCAL')
+        .order('id')
         .range(desde, hasta),
     )
     if (eInt) {
