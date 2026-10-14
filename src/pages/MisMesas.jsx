@@ -99,6 +99,16 @@ export function MisMesas() {
         </p>
       )}
 
+      {/* Solo le llega a Dirección Académica con la sesión abierta: la
+          función incluye los llamados sin aprobar para poder revisar
+          cómo va a quedar antes de publicarlos. */}
+      {resultado?.vista_previa && (
+        <p className="mis-mesas-aviso no-print">
+          <strong>Vista previa de Dirección Académica.</strong> Estás viendo también los llamados que todavía no están
+          aprobados. Los profesores solo ven los aprobados.
+        </p>
+      )}
+
       {resultado?.encontrado && (
         <section>
           <div className="mis-mesas-profesor">
