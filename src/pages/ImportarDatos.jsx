@@ -109,7 +109,8 @@ function ImportarAsignaturas() {
   const [filas, setFilas] = useState([])
   const [importando, setImportando] = useState(false)
   const [resumen, setResumen] = useState(null)
-  const columnas = ['codigo', 'nombre', 'carrera', 'curso_nivel', 'horas_totales_programadas']
+  // optativa es opcional: vacía o ausente = obligatoria. Acepta SI/S/X/1/TRUE.
+  const columnas = ['codigo', 'nombre', 'carrera', 'curso_nivel', 'horas_totales_programadas', 'optativa']
 
   useEffect(() => {
     supabase
@@ -148,6 +149,7 @@ function ImportarAsignaturas() {
         carrera_id: f.carreraId,
         curso_nivel: Number(f.row.curso_nivel) || 1,
         horas_totales_programadas: f.row.horas_totales_programadas ? Number(f.row.horas_totales_programadas) : 0,
+        optativa: ['si', 'sí', 's', 'x', '1', 'true'].includes(normalizar(f.row.optativa)),
       })
       if (err) error++
       else ok++
@@ -161,7 +163,7 @@ function ImportarAsignaturas() {
       <AyudaPlantilla
         columnas={columnas}
         nombreArchivo="asignaturas_plantilla.csv"
-        ejemplo={['ECO101', 'Cuentas Nacionales', 'Economía', '4', '64']}
+        ejemplo={['ECO101', 'Cuentas Nacionales', 'Economía', '4', '64', 'NO']}
       />
       <input type="file" accept=".csv" onChange={handleFile} />
       {filas.length > 0 && (

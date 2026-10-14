@@ -57,9 +57,10 @@ asign['codigo'] = codigos
 
 with open(f'{OUT}/asignaturas_plantilla.csv', 'w', newline='', encoding='utf-8') as f:
     w = csv.writer(f)
-    w.writerow(['codigo', 'nombre', 'carrera', 'curso_nivel', 'horas_totales_programadas'])
+    # optativa: la planilla de docentes no lo dice; completar a mano (SI) según el plan de estudios.
+    w.writerow(['codigo', 'nombre', 'carrera', 'curso_nivel', 'horas_totales_programadas', 'optativa'])
     for _, row in asign.iterrows():
-        w.writerow([row['codigo'], row['Materia'], row['Carrera'], row['curso_nivel'], ''])
+        w.writerow([row['codigo'], row['Materia'], row['Carrera'], row['curso_nivel'], '', ''])
 
 # ---------- profesores ----------
 prof = df[['CI', 'Nombre', 'Apellido']].drop_duplicates(subset=['CI']).sort_values('CI')
