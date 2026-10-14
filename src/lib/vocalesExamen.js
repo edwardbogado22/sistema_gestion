@@ -7,7 +7,8 @@ import { deISO } from './fechas'
 // llamado: { catedra_id, examen_fecha_id, fecha, sede_id, sede,
 // carrera_id, carrera, curso_nivel, seccion_grupo, materia, optativa,
 // titular_id, titular_nombre, vocal1_id, vocal1_nombre, vocal2_id,
-// vocal2_nombre }.
+// vocal2_nombre, extras }. `extras` son los vocales guardados de más
+// ({ id, nombre }): una mesa lleva dos, pero la base no lo impide.
 //
 // Los candidatos a vocal salen de los TITULARES de otras filas del mismo
 // llamado (no de cualquier profesor del sistema) — mismo criterio que el
@@ -55,6 +56,7 @@ export function construirContexto(filas, presencia) {
     }
     if (f.vocal1_id) nombrePorId.set(f.vocal1_id, f.vocal1_nombre)
     if (f.vocal2_id) nombrePorId.set(f.vocal2_id, f.vocal2_nombre)
+    for (const v of f.extras || []) nombrePorId.set(v.id, v.nombre)
   }
   return { ocupado, clusterOpt, nombrePorId, presencia: presencia || new Map() }
 }
@@ -110,6 +112,7 @@ export function candidatos(filas, i, excluir, ctx) {
 // 'ok' | 'warn' | 'err' para la fila i.
 export function estado(filas, i, ctx) {
   const f = filas[i]
+  if (f.extras?.length) return 'err' // más de dos vocales guardados
   const nombres = [f.titular_id, f.vocal1_id, f.vocal2_id].filter(Boolean)
   const vistos = new Set()
   for (const n of nombres) {
@@ -154,6 +157,7 @@ export function asignarAuto(filas, presencia) {
   for (const f of filas) {
     if (f.vocal1_id) conteo.set(f.vocal1_id, (conteo.get(f.vocal1_id) || 0) + 1)
     if (f.vocal2_id) conteo.set(f.vocal2_id, (conteo.get(f.vocal2_id) || 0) + 1)
+    for (const v of f.extras || []) conteo.set(v.id, (conteo.get(v.id) || 0) + 1)
   }
 
   const nuevas = filas.map((f) => ({ ...f }))

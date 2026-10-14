@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { fetchTodo } from '../../lib/paginar'
@@ -6,9 +6,18 @@ import { aISO, deISO, formatoLargo } from '../../lib/fechas'
 import { descargarFilas } from '../../lib/csv'
 import { construirContexto, candidatos, estado, asignarAuto, calcularRebalanceo, diaSemana } from '../../lib/vocalesExamen'
 
-const sinFiltro = { sede_id: '', carrera_id: '', curso_nivel: '', busqueda: '' }
+const sinFiltro = { sede_id: '', carrera_id: '', curso_nivel: '', estado: '', busqueda: '' }
 
 const nombreProfesor = (p) => (p ? `${p.apellidos}, ${p.nombres}` : null)
+
+// Todos los vocales de una mesa, en orden: los dos de las columnas y, si
+// los hay, los que sobran.
+const vocalesDe = (f) =>
+  [
+    f.vocal1_id && { id: f.vocal1_id, nombre: f.vocal1_nombre },
+    f.vocal2_id && { id: f.vocal2_id, nombre: f.vocal2_nombre },
+    ...(f.extras || []),
+  ].filter(Boolean)
 
 export function AsignacionVocales() {
   const { llamadoId } = useParams()
@@ -105,6 +114,10 @@ export function AsignacionVocales() {
         vocal1_nombre: vocales[0] ? nombreProfesor(vocales[0].profesores) : null,
         vocal2_id: vocales[1]?.profesor_id || null,
         vocal2_nombre: vocales[1] ? nombreProfesor(vocales[1].profesores) : null,
+        // Una mesa lleva dos vocales, pero la base no lo impide. Si hay
+        // más se cargan igual: esconderlos dejaría vocales designados que
+        // nadie ve acá y sí aparecen en el reporte y en /mis-mesas.
+        extras: vocales.slice(2).map((v) => ({ id: v.profesor_id, nombre: nombreProfesor(v.profesores) })),
       }
     })
     nuevasFilas.sort(
@@ -148,22 +161,28 @@ export function AsignacionVocales() {
     const q = filtro.busqueda.trim().toLowerCase()
     return filas
       .map((f, idx) => ({ f, idx }))
-      .filter(({ f }) => {
+      .filter(({ f, idx }) => {
         if (filtro.sede_id && f.sede_id !== filtro.sede_id) return false
         if (filtro.carrera_id && f.carrera_id !== filtro.carrera_id) return false
         if (filtro.curso_nivel && String(f.curso_nivel) !== filtro.curso_nivel) return false
+        if (filtro.estado && estado(filas, idx, ctx) !== filtro.estado) return false
         if (q) {
           const blob = [f.materia, f.titular_nombre, f.vocal1_nombre, f.vocal2_nombre].join(' ').toLowerCase()
           if (!blob.includes(q)) return false
         }
         return true
       })
-  }, [filas, filtro])
+  }, [filas, filtro, ctx])
 
   const pendientes = useMemo(() => {
     let n = 0
     for (let i = 0; i < filas.length; i++) {
-      if (filas[i].vocal1_id !== filasOriginales[i]?.vocal1_id || filas[i].vocal2_id !== filasOriginales[i]?.vocal2_id) n++
+      if (
+        filas[i].vocal1_id !== filasOriginales[i]?.vocal1_id ||
+        filas[i].vocal2_id !== filasOriginales[i]?.vocal2_id ||
+        filas[i].extras.length !== filasOriginales[i]?.extras.length
+      )
+        n++
     }
     return n
   }, [filas, filasOriginales])
@@ -213,6 +232,27 @@ export function AsignacionVocales() {
     setEditando(null)
   }
 
+  // Saca un vocal de una mesa que tiene de más. Los que quedan se
+  // reacomodan: los dos primeros pasan a ser Vocal 1 y Vocal 2, así se
+  // puede quitar cualquiera y no solo los que cayeron como sobrantes.
+  const quitarVocal = (idx, profesorId) => {
+    setFilas((fs) => {
+      const f = fs[idx]
+      const quedan = vocalesDe(f).filter((v) => v.id !== profesorId)
+      const nuevas = [...fs]
+      nuevas[idx] = {
+        ...f,
+        vocal1_id: quedan[0]?.id || null,
+        vocal1_nombre: quedan[0]?.nombre || null,
+        vocal2_id: quedan[1]?.id || null,
+        vocal2_nombre: quedan[1]?.nombre || null,
+        extras: quedan.slice(2),
+      }
+      return nuevas
+    })
+    setEditando(null)
+  }
+
   const guardar = async () => {
     setGuardando(true)
     setError('')
@@ -221,8 +261,8 @@ export function AsignacionVocales() {
     const inserts = []
     const deletes = []
     for (let i = 0; i < filas.length; i++) {
-      const actual = new Set([filas[i].vocal1_id, filas[i].vocal2_id].filter(Boolean))
-      const original = new Set([filasOriginales[i]?.vocal1_id, filasOriginales[i]?.vocal2_id].filter(Boolean))
+      const actual = new Set(vocalesDe(filas[i]).map((v) => v.id))
+      const original = new Set(filasOriginales[i] ? vocalesDe(filasOriginales[i]).map((v) => v.id) : [])
       for (const id of actual) if (!original.has(id)) inserts.push({ examen_fecha_id: filas[i].examen_fecha_id, profesor_id: id, rol_mesa: 'VOCAL' })
       for (const id of original) if (!actual.has(id)) deletes.push({ examen_fecha_id: filas[i].examen_fecha_id, profesor_id: id })
     }
@@ -268,6 +308,7 @@ export function AsignacionVocales() {
         presidente: f.titular_nombre,
         vocal1: f.vocal1_nombre || '',
         vocal2: f.vocal2_nombre || '',
+        vocales_de_mas: f.extras.map((v) => v.nombre).join(' / '),
         estado: estado(filas, idx, ctx),
       })),
     )
@@ -363,6 +404,12 @@ export function AsignacionVocales() {
             </option>
           ))}
         </select>
+        <select value={filtro.estado} onChange={(e) => setFiltro({ ...filtro, estado: e.target.value })}>
+          <option value="">Todos los estados</option>
+          <option value="err">Con conflicto</option>
+          <option value="warn">Incompletas</option>
+          <option value="ok">Completas</option>
+        </select>
         <input
           value={filtro.busqueda}
           onChange={(e) => setFiltro({ ...filtro, busqueda: e.target.value })}
@@ -429,7 +476,8 @@ export function AsignacionVocales() {
           {visibles.map(({ f, idx }) => {
             const e = estado(filas, idx, ctx)
             return (
-              <tr key={f.catedra_id}>
+              <Fragment key={f.catedra_id}>
+              <tr>
                 <td>{formatoLargo(f.fecha)}</td>
                 <td>{diaSemana(f.fecha)}</td>
                 <td>{f.sede}</td>
@@ -467,11 +515,31 @@ export function AsignacionVocales() {
                   {e === 'warn' && <span className="badge badge-gold">Incompleta</span>}
                   {e === 'err' && (
                     <span className="badge" style={{ background: 'var(--danger-soft)', color: 'var(--danger)' }}>
-                      Conflicto
+                      {f.extras.length > 0 ? 'Sobran vocales' : 'Conflicto'}
                     </span>
                   )}
                 </td>
               </tr>
+              {f.extras.length > 0 && (
+                <tr>
+                  <td colSpan={10} style={{ background: 'var(--danger-soft)' }}>
+                    Esta mesa tiene {vocalesDe(f).length} vocales guardados y lleva 2. Quitá {f.extras.length === 1 ? 'el que sobra' : `los ${f.extras.length} que sobran`} y guardá:{' '}
+                    {vocalesDe(f).map((v) => (
+                      <button
+                        key={v.id}
+                        type="button"
+                        className="chip"
+                        style={{ marginLeft: 6 }}
+                        onClick={() => quitarVocal(idx, v.id)}
+                        title="Quitar de esta mesa"
+                      >
+                        {v.nombre} ✕
+                      </button>
+                    ))}
+                  </td>
+                </tr>
+              )}
+              </Fragment>
             )
           })}
         </tbody>
