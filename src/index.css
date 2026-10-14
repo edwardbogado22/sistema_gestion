@@ -1120,6 +1120,120 @@ select {
 }
 
 /* ---- login ---- */
+/* ---- consulta publica de mesas por cedula (/mis-mesas) ---- */
+.mis-mesas {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 28px 16px 48px;
+}
+
+.mis-mesas-encabezado {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.mis-mesas-encabezado h1 {
+  margin: 6px 0;
+  color: var(--green-800);
+}
+
+.mis-mesas-form {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  padding: 16px;
+  margin-bottom: 18px;
+}
+
+.mis-mesas-form label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.mis-mesas-form-fila {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.mis-mesas-form-fila input {
+  flex: 1 1 180px;
+  font-size: 18px;
+}
+
+.mis-mesas-aviso {
+  background: var(--gold-soft-bg);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  margin: 0 0 16px;
+}
+
+.mis-mesas-profesor {
+  margin-bottom: 16px;
+}
+
+.mis-mesas-profesor h2 {
+  margin: 0 0 4px;
+}
+
+.mis-mesas-dia {
+  margin-bottom: 18px;
+}
+
+.mis-mesas-dia h3 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 8px;
+  font-size: 16px;
+  color: var(--green-800);
+}
+
+.mis-mesas-item {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-bottom: 8px;
+  break-inside: avoid;
+}
+
+.mis-mesas-item-titulo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.mis-mesas-item dl {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px 16px;
+  margin: 0;
+}
+
+.mis-mesas-item dt {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--muted);
+}
+
+.mis-mesas-item dd {
+  margin: 0;
+}
+
+.mis-mesas-integrantes {
+  margin: 10px 0 0;
+  font-size: 13px;
+}
+
 .login-container {
   max-width: 400px;
   margin: 9vh auto;

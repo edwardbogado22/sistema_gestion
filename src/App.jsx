@@ -66,6 +66,7 @@ const ContenidoKiosco = lazy(() => import('./pages/ContenidoKiosco').then((m) =>
 const ReporteContenidoProgramatico = lazy(() =>
   import('./pages/ReporteContenidoProgramatico').then((m) => ({ default: m.ReporteContenidoProgramatico })),
 )
+const MisMesas = lazy(() => import('./pages/MisMesas').then((m) => ({ default: m.MisMesas })))
 const ReportePlanAnual = lazy(() =>
   import('./pages/ReportePlanAnual').then((m) => ({ default: m.ReportePlanAnual })),
 )
@@ -85,6 +86,8 @@ function App() {
     <Suspense fallback={<div className="page-padding">Cargando...</div>}>
       <Routes>
         <Route path="/login" element={<Login />} />
+        {/* Pública a propósito: los profesores entran sin usuario desde el enlace del canal. */}
+        <Route path="/mis-mesas" element={<MisMesas />} />
 
         <Route path="/" element={<PrivateRoute>{withLayout(<Home />)}</PrivateRoute>} />
 
