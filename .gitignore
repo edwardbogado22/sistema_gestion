@@ -31,3 +31,6 @@ planilla/salida/catedras_plantilla.csv
 *.njsproj
 *.sln
 *.sw?
+
+# Configuración local de Claude Code
+.claude/
