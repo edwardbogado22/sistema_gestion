@@ -39,6 +39,10 @@ const AsistenciaMesas = lazy(() =>
 const ConsultaProfesor = lazy(() =>
   import('./pages/Examenes/ConsultaProfesor').then((m) => ({ default: m.ConsultaProfesor })),
 )
+const NumeracionActas = lazy(() =>
+  import('./pages/Examenes/NumeracionActas').then((m) => ({ default: m.NumeracionActas })),
+)
+const ActasFirmas = lazy(() => import('./pages/Examenes/ActasFirmas').then((m) => ({ default: m.ActasFirmas })))
 const Periodos = lazy(() => import('./pages/Configuracion/Periodos').then((m) => ({ default: m.Periodos })))
 const RegistrarAsistencia = lazy(() =>
   import('./pages/Asistencia/RegistrarAsistencia').then((m) => ({ default: m.RegistrarAsistencia })),
@@ -76,6 +80,7 @@ const ReportePlanAnual = lazy(() =>
 const ADMIN = ['ADMIN']
 const ADMIN_ASISTENTE = ['ADMIN', 'ASISTENTE']
 const ADMIN_DIRECTOR = ['ADMIN', 'DIRECTOR']
+const GESTION = ['ADMIN', 'SECRETARIO', 'DIRECTOR']
 
 function withLayout(element) {
   return <Layout>{element}</Layout>
@@ -110,6 +115,10 @@ function App() {
           path="/examenes/consulta-profesor"
           element={<PrivateRoute roles={ADMIN}>{withLayout(<ConsultaProfesor />)}</PrivateRoute>}
         />
+        <Route
+          path="/examenes/actas-firmas"
+          element={<PrivateRoute roles={GESTION}>{withLayout(<ActasFirmas />)}</PrivateRoute>}
+        />
         <Route path="/examenes/:llamadoId" element={<PrivateRoute>{withLayout(<PanelFechas />)}</PrivateRoute>} />
         <Route
           path="/examenes/:llamadoId/reporte"
@@ -122,6 +131,10 @@ function App() {
         <Route
           path="/examenes/:llamadoId/mesas-reporte"
           element={<PrivateRoute roles={ADMIN}>{withLayout(<ReporteMesas />)}</PrivateRoute>}
+        />
+        <Route
+          path="/examenes/:llamadoId/actas"
+          element={<PrivateRoute roles={ADMIN}>{withLayout(<NumeracionActas />)}</PrivateRoute>}
         />
         <Route
           path="/examenes/:llamadoId/asistencia-mesas"

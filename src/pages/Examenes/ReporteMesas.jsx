@@ -86,11 +86,29 @@ export function ReporteMesas() {
         vocalesPorFecha.get(it.examen_fecha_id).push(nombreProfesor(it.profesores))
       }
 
+      // Número de acta (Numeración de actas). Si el llamado todavía no se
+      // numeró, la columna N° sigue siendo el orden dentro de la hoja.
+      const { data: actas, error: eActas } = await fetchTodo((desde, hasta) =>
+        supabase
+          .from('examen_acta')
+          .select('examen_fecha_id, numero')
+          .eq('llamado_id', llamadoId)
+          .order('examen_fecha_id')
+          .range(desde, hasta),
+      )
+      if (eActas) {
+        setError(eActas.message)
+        setLoading(false)
+        return
+      }
+      const actaPorFecha = new Map((actas || []).map((a) => [a.examen_fecha_id, a.numero]))
+
       setFilas(
         (agenda || []).map((a) => ({
           ...a,
           vocal1: vocalesPorFecha.get(a.examen_fecha_id)?.[0] || '',
           vocal2: vocalesPorFecha.get(a.examen_fecha_id)?.[1] || '',
+          numeroActa: actaPorFecha.get(a.examen_fecha_id) ?? null,
           diaExamen: a.fecha ? diaSemana(a.fecha) : '',
         })),
       )
@@ -134,6 +152,7 @@ export function ReporteMesas() {
     for (const b of mapa.values()) {
       b.filas.sort(
         (a, c) =>
+          (a.numeroActa ?? Infinity) - (c.numeroActa ?? Infinity) ||
           a.curso_nivel - c.curso_nivel ||
           a.seccion_grupo.localeCompare(c.seccion_grupo) ||
           (a.fecha || '9999').localeCompare(c.fecha || '9999') ||
@@ -155,6 +174,7 @@ export function ReporteMesas() {
   }
 
   const enc = filas[0]
+  const hayActas = filas.some((f) => f.numeroActa != null)
   const hayFiltro = sedeFiltro || carreraFiltro || cursoFiltro
 
   return (
@@ -302,7 +322,7 @@ export function ReporteMesas() {
             <table className="data-table foja-tabla rm-tabla">
               <thead>
                 <tr>
-                  <th style={{ width: 28 }}>N°</th>
+                  <th style={{ width: hayActas ? 48 : 28 }}>{hayActas ? 'N° Acta' : 'N°'}</th>
                   <th style={{ width: 75 }}>DÍA</th>
                   <th style={{ width: 75 }}>FECHA</th>
                   <th style={{ width: 45 }}>Curso</th>
@@ -317,7 +337,7 @@ export function ReporteMesas() {
               <tbody>
                 {b.filas.map((f, i) => (
                   <tr key={f.catedra_id}>
-                    <td>{i + 1}</td>
+                    <td>{hayActas ? (f.numeroActa ?? <span className="error-text">—</span>) : i + 1}</td>
                     <td>{f.diaExamen}</td>
                     <td style={{ whiteSpace: 'nowrap' }}>{formatoLargo(f.fecha)}</td>
                     <td>{f.curso_nivel}º</td>

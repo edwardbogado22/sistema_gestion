@@ -150,6 +150,13 @@ export const AREAS = [
         roles: ADMIN,
       },
       {
+        to: '/examenes/actas-firmas',
+        icon: '✍️',
+        titulo: 'Actas a firmar',
+        desc: 'Buscar un profesor por nombre o cédula y ver cada acta de examen que tiene que firmar, con número y fecha. Se marca la firma y se imprime el listado.',
+        roles: GESTION,
+      },
+      {
         to: '/eventos/busqueda',
         icon: '🔍',
         titulo: 'Eventos por profesor',

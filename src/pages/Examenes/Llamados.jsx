@@ -199,6 +199,9 @@ export function Llamados() {
             <Link to="/examenes/consulta-profesor" className="btn btn-secondary btn-sm">
               Consultar mesas por profesor
             </Link>
+            <Link to="/examenes/actas-firmas" className="btn btn-secondary btn-sm">
+              Actas a firmar
+            </Link>
           </div>
         )}
       </div>
@@ -320,6 +323,9 @@ export function Llamados() {
                   </Link>
                   <Link to={`/examenes/${l.id}/mesas-reporte`} className="btn btn-secondary btn-sm">
                     Reporte de mesas
+                  </Link>
+                  <Link to={`/examenes/${l.id}/actas`} className="btn btn-secondary btn-sm">
+                    Numerar actas
                   </Link>
                   <Link to={`/examenes/${l.id}/asistencia-mesas`} className="btn btn-secondary btn-sm">
                     Asistencia a mesas
