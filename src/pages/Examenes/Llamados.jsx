@@ -98,9 +98,48 @@ export function Llamados() {
     cargar()
   }
 
+  // Redistribuir y Purgar borran cada fecha AUTO en estado ASIGNADA
+  // (aunque ya esté impresa o publicada) y con ella sus vocales, que se
+  // van en cascada. El 13/10/2026 un Redistribuir corrió 68 mesas del
+  // Ordinario ya repartidas: se cuenta lo que se pierde para avisarlo
+  // antes. Devuelve null si el conteo falló (el error ya quedó a la vista).
+  const contarPropuestas = async (id) => {
+    const [{ count: mesas, error: eMesas }, { count: vocales, error: eVoc }] = await Promise.all([
+      supabase
+        .from('examen_fecha')
+        .select('id', { count: 'exact', head: true })
+        .eq('llamado_id', id)
+        .eq('estado', 'ASIGNADA')
+        .eq('origen', 'AUTO'),
+      supabase
+        .from('mesa_integrante')
+        .select('id, examen_fecha!inner(llamado_id, estado, origen)', { count: 'exact', head: true })
+        .eq('examen_fecha.llamado_id', id)
+        .eq('examen_fecha.estado', 'ASIGNADA')
+        .eq('examen_fecha.origen', 'AUTO')
+        .eq('rol_mesa', 'VOCAL'),
+    ])
+    if (eMesas || eVoc) {
+      setError((eMesas || eVoc).message)
+      return null
+    }
+    return { mesas, vocales }
+  }
+
+  const avisoPropuestas = (accion, { mesas, vocales }) =>
+    `${accion} ${mesas} mesa(s) con fecha automática` +
+    (vocales > 0 ? ` y borrar sus ${vocales} vocal(es) asignado(s)` : '') +
+    '.\n\nSi esas fechas ya se imprimieron o publicaron, van a dejar de coincidir. ' +
+    'Las fechas cargadas a mano no se tocan.\n\n¿Continuar?'
+
   const distribuir = async (id, sobrescribir) => {
     setError('')
     setOk('')
+    if (sobrescribir) {
+      const c = await contarPropuestas(id)
+      if (!c) return
+      if (c.mesas > 0 && !confirm(avisoPropuestas('Redistribuir todo va a mover a días nuevos', c))) return
+    }
     const { data, error } = await supabase.rpc('examen_distribuir', {
       p_llamado: id,
       p_sobrescribir: sobrescribir,
@@ -113,6 +152,9 @@ export function Llamados() {
   const purgarPropuestas = async (id) => {
     setError('')
     setOk('')
+    const c = await contarPropuestas(id)
+    if (!c) return
+    if (c.mesas > 0 && !confirm(avisoPropuestas('Purgar va a dejar sin fecha', c))) return
     const { data, error } = await supabase.rpc('examen_purgar_propuestas', { p_llamado: id })
     if (error) return setError(error.message)
     setOk(`Se quitaron ${data} propuesta(s) automática(s) sin confirmar.`)
