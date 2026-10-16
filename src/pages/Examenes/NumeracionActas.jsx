@@ -20,13 +20,19 @@ export function NumeracionActas() {
   const [secuencia, setSecuencia] = useState([])
   const [agregar, setAgregar] = useState('')
   const [inicio, setInicio] = useState('')
+  const [ultimoGlobal, setUltimoGlobal] = useState(0)
   const [loading, setLoading] = useState(true)
   const [trabajando, setTrabajando] = useState(false)
   const [error, setError] = useState('')
   const [ok, setOk] = useState('')
 
   const cargar = useCallback(async () => {
-    const [{ data: ll, error: eLl }, { data: agenda, error: eAg }, { data: nums, error: eNum }] = await Promise.all([
+    const [
+      { data: ll, error: eLl },
+      { data: agenda, error: eAg },
+      { data: nums, error: eNum },
+      { data: ultima, error: eUlt },
+    ] = await Promise.all([
       supabase.from('examen_llamado').select('id, nombre, estado').eq('id', llamadoId).single(),
       fetchTodo((desde, hasta) =>
         supabase
@@ -45,8 +51,11 @@ export function NumeracionActas() {
           .order('examen_fecha_id')
           .range(desde, hasta),
       ),
+      // La numeración de actas sigue de un llamado al otro: el último
+      // número usado en cualquier llamado es el punto de partida.
+      supabase.from('examen_acta').select('numero').order('numero', { ascending: false }).limit(1),
     ])
-    const err = eLl || eAg || eNum
+    const err = eLl || eAg || eNum || eUlt
     if (err) {
       setError(err.message)
       return
@@ -54,6 +63,7 @@ export function NumeracionActas() {
     setLlamado(ll)
     setMesas((agenda || []).filter((m) => m.fecha_estado !== 'ANULADA'))
     setActas(new Map((nums || []).map((n) => [n.examen_fecha_id, n.numero])))
+    setUltimoGlobal(ultima?.[0]?.numero || 0)
   }, [llamadoId])
 
   useEffect(() => {
@@ -90,11 +100,14 @@ export function NumeracionActas() {
 
   const maxNumero = useMemo(() => Math.max(0, ...actas.values()), [actas])
 
-  // Sugerir el número siguiente al último asignado, sin pisar lo que el
-  // usuario ya haya escrito.
+  // Sugerir el número siguiente al último asignado (en este llamado o, si
+  // todavía no tiene, en cualquier otro), sin pisar lo que el usuario ya
+  // haya escrito. Sin actas previas en el sistema queda vacío: el primer
+  // número del año lo indica Dirección Académica.
+  const sugerido = maxNumero || ultimoGlobal
   useEffect(() => {
-    if (!loading && inicio === '') setInicio(String(maxNumero + 1))
-  }, [loading, maxNumero, inicio])
+    if (!loading && inicio === '' && sugerido > 0) setInicio(String(sugerido + 1))
+  }, [loading, sugerido, inicio])
 
   const enSecuencia = new Set(secuencia.map(claveBloque))
   const disponibles = bloques.filter((b) => !enSecuencia.has(claveBloque(b)))
@@ -218,6 +231,7 @@ export function NumeracionActas() {
               min={1}
               value={inicio}
               onChange={(e) => setInicio(e.target.value)}
+              placeholder="Ej.: 30835"
               style={{ display: 'block', width: 120 }}
             />
           </label>
@@ -255,7 +269,7 @@ export function NumeracionActas() {
                     <td>{b.carrera}</td>
                     <td>{b.mesas}</td>
                     <td>
-                      N° {b.desde} a N° {b.hasta}
+                      {Number(inicio) > 0 ? `N° ${b.desde} a N° ${b.hasta}` : 'Indicá el primer número'}
                       {b.numeradas > 0 && <div className="muted-text" style={{ fontSize: 12 }}>Se renumera</div>}
                     </td>
                     <td style={{ whiteSpace: 'nowrap' }}>
