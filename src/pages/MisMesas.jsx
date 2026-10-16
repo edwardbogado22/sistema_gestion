@@ -182,10 +182,6 @@ export function MisMesas() {
                           <dd>{m.hora_inicio ? `${m.hora_inicio.slice(0, 5)} h` : 'A confirmar'}</dd>
                         </div>
                         <div>
-                          <dt>Aula</dt>
-                          <dd>{m.aula || 'A confirmar'}</dd>
-                        </div>
-                        <div>
                           <dt>Carrera</dt>
                           <dd>{m.carrera}</dd>
                         </div>
