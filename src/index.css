@@ -96,6 +96,8 @@
     line-height: 1.55;
     color: var(--ink);
     -webkit-font-smoothing: antialiased;
+    /* se hereda: checkboxes y radios toman el verde sin repetirlo */
+    accent-color: var(--green-700);
   }
 }
 
@@ -158,7 +160,6 @@
 
   input[type='checkbox'],
   input[type='radio'] {
-    accent-color: var(--green-700);
     width: 16px;
     height: 16px;
     cursor: pointer;
@@ -353,10 +354,33 @@
     border: 1px solid var(--border);
     border-radius: 12px;
     box-shadow: var(--shadow-lg);
+
+    /* aparece y se va con un fundido corto. Solo en desktop: en el panel
+       mobile las listas están siempre a la vista. allow-discrete deja
+       animar el display:none; sin @starting-style (Safari < 17.5,
+       Firefox < 129) simplemente aparece de golpe, como antes */
+    @media (width > 1100px) {
+      opacity: 0;
+      transform: translateY(-4px);
+      transition:
+        opacity 0.16s var(--ease),
+        transform 0.16s var(--ease),
+        display 0.16s allow-discrete;
+    }
   }
 
   .nav-area.abierta .nav-area-lista {
     display: block;
+
+    @media (width > 1100px) {
+      opacity: 1;
+      transform: none;
+
+      @starting-style {
+        opacity: 0;
+        transform: translateY(-4px);
+      }
+    }
   }
 
   .nav-area-item {
@@ -630,6 +654,7 @@
     color: var(--green-800);
     line-height: 1.1;
     letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
   }
 
   .stat-label {
@@ -954,6 +979,11 @@
       font-size: 14px;
     }
 
+    /* cifras de igual ancho: los números de una columna quedan alineados */
+    td {
+      font-variant-numeric: tabular-nums;
+    }
+
     th {
       background: color-mix(in oklab, var(--green-700) 6%, transparent);
       color: var(--green-800);
@@ -1179,6 +1209,13 @@
     box-shadow: var(--shadow-md);
     z-index: 20;
     padding: 4px;
+    /* el JSX la monta al abrir: @starting-style anima esa aparición */
+    transition: opacity 0.16s var(--ease), transform 0.16s var(--ease);
+
+    @starting-style {
+      opacity: 0;
+      transform: translateY(-4px);
+    }
   }
 
   .buscador-select-opcion {
