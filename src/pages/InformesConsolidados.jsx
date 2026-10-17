@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { fetchTodo } from '../lib/paginar'
 
 const ESCALA_MAX = 102
 
@@ -55,9 +56,7 @@ export function InformesConsolidados() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    supabase
-      .from('catedras')
-      .select('periodo_lectivo')
+    fetchTodo((desde, hasta) => supabase.from('catedras').select('id, periodo_lectivo').order('id').range(desde, hasta))
       .then(({ data }) => {
         const distintos = [...new Set((data || []).map((c) => c.periodo_lectivo))].sort().reverse()
         setPeriodos(distintos)
@@ -72,13 +71,30 @@ export function InformesConsolidados() {
       return
     }
     setLoadingDatos(true)
-    supabase
-      .rpc('v_evaluacion_docente_ver', { p_periodo_lectivo: periodo })
-      .then(({ data, error }) => {
-        if (error) setError(error.message)
-        else setDetalle(data || [])
-        setLoadingDatos(false)
-      })
+    // Un período completo son ~17 filas por cátedra (más de 11.000): sin
+    // paginar, PostgREST cortaba en 1000 y el consolidado salía de ~60
+    // cátedras. Las cátedras desactivadas (p. ej. duplicadas unificadas)
+    // siguen en la vista y no tienen que pesar en los promedios.
+    Promise.all([
+      fetchTodo((desde, hasta) =>
+        supabase
+          .rpc('v_evaluacion_docente_ver', { p_periodo_lectivo: periodo })
+          .order('catedra_id')
+          .order('criterio_id')
+          .range(desde, hasta),
+      ),
+      fetchTodo((desde, hasta) =>
+        supabase.from('catedras').select('id').eq('periodo_lectivo', periodo).eq('activo', true).order('id').range(desde, hasta),
+      ),
+    ]).then(([{ data, error: e1 }, { data: activas, error: e2 }]) => {
+      const err = e1 || e2
+      if (err) setError(err.message)
+      else {
+        const ids = new Set((activas || []).map((c) => c.id))
+        setDetalle((data || []).filter((f) => ids.has(f.catedra_id)))
+      }
+      setLoadingDatos(false)
+    })
   }, [periodo])
 
   const porCatedra = useMemo(() => {
