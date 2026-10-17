@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { formatoLargo } from '../lib/fechas'
+import { NIVEL_MIN, NIVEL_MAX, obtenidoEncuesta } from '../lib/encuestaAlumnos'
 
 function pct(dividendo, divisor) {
   const d = Number(dividendo)
@@ -154,7 +155,7 @@ export function CargarIndicadores() {
         criterio_id: c.id,
         valor_ingresado: Number(alumnosValores[c.id]),
         total_encuestados: totalEncuestados ? Number(totalEncuestados) : null,
-        obtenido_porcentaje: Math.round((Number(alumnosValores[c.id]) / 5) * Number(c.peso_porcentaje) * 100) / 100,
+        obtenido_porcentaje: obtenidoEncuesta(alumnosValores[c.id], c.peso_porcentaje),
       }))
 
     const filas = [...filasManual, ...filasAlumnos]
@@ -329,11 +330,13 @@ export function CargarIndicadores() {
           <div className="form-grid">
             {alumnosItems.map((c) => (
               <label key={c.id}>
-                {c.nombre} <span className="muted-text">(1–5, pesa {c.peso_porcentaje}%)</span>
+                {c.nombre} <span className="muted-text">
+                  (nivel promedio {NIVEL_MIN}–{NIVEL_MAX}, pesa {c.peso_porcentaje}%)
+                </span>
                 <input
                   type="number"
-                  min="1"
-                  max="5"
+                  min={NIVEL_MIN}
+                  max={NIVEL_MAX}
                   step="0.01"
                   value={alumnosValores[c.id] ?? ''}
                   onChange={(e) => setAlumnosValores({ ...alumnosValores, [c.id]: e.target.value })}

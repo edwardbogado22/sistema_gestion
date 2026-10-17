@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { normalizar, parseArchivo, descargarCSV } from '../lib/csv'
+import { NIVEL_MIN, NIVEL_MAX, obtenidoEncuesta } from '../lib/encuestaAlumnos'
 
 const TABS = [
   { key: 'asignaturas', label: 'Asignaturas' },
@@ -657,7 +658,7 @@ function ImportarCriterioCatedra({ origenEsperado, columnaValor, labelValor, min
         nombreArchivo={nombreArchivo}
         ejemplo={
           origenEsperado === 'ENCUESTA_ALUMNOS'
-            ? ['1234567', 'Cuentas Nacionales', 'Economía', 'Sede Central', '2026', 'ALU_PUNTUALIDAD', '4.5', '30']
+            ? ['1234567', 'Cuentas Nacionales', 'Economía', 'Sede Central', '2026', 'ALU_PUNTUALIDAD', '2.85', '30']
             : ['1234567', 'Cuentas Nacionales', 'Economía', 'Sede Central', '2026', 'PLANIFICACION_DOCUMENTACION', '18']
         }
       />
@@ -698,11 +699,11 @@ function ImportarAlumnos() {
     <ImportarCriterioCatedra
       origenEsperado="ENCUESTA_ALUMNOS"
       columnaValor="calificacion"
-      labelValor="Calificación"
-      min={1}
-      max={5}
+      labelValor="Nivel promedio"
+      min={NIVEL_MIN}
+      max={NIVEL_MAX}
       nombreArchivo="encuesta_alumnos_plantilla.csv"
-      calcularObtenido={(valor, criterio) => Math.round((valor / 5) * Number(criterio.peso_porcentaje) * 100) / 100}
+      calcularObtenido={(valor, criterio) => obtenidoEncuesta(valor, criterio.peso_porcentaje)}
     />
   )
 }
