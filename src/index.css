@@ -73,8 +73,10 @@ a {
 
 /* ---- inputs/selects: base global, para que ningún campo del
    sistema dependa de estar adentro de .form-grid/.form-row para
-   verse bien ---- */
-input:not([type='checkbox']):not([type='radio']):not([type='file']),
+   verse bien. El :where() deja la especificidad en la de un "input"
+   pelado: antes los tres :not() sumaban (0,3,1) y pisaban reglas
+   como .mis-mesas-form-fila input o .buscador-select input ---- */
+input:where(:not([type='checkbox'], [type='radio'], [type='file'])),
 select,
 textarea {
   font-family: inherit;
@@ -89,13 +91,13 @@ textarea {
   transition: border-color 0.16s var(--ease), box-shadow 0.16s var(--ease), background 0.16s var(--ease);
 }
 
-input:not([type='checkbox']):not([type='radio']):not([type='file']):hover,
+input:where(:not([type='checkbox'], [type='radio'], [type='file'])):hover,
 select:hover,
 textarea:hover {
   border-color: #c9d4cc;
 }
 
-input:not([type='checkbox']):not([type='radio']):not([type='file']):focus,
+input:where(:not([type='checkbox'], [type='radio'], [type='file'])):focus,
 select:focus,
 textarea:focus {
   outline: none;
@@ -104,7 +106,7 @@ textarea:focus {
   background: #fffdf6;
 }
 
-input:not([type='checkbox']):not([type='radio']):not([type='file']):disabled,
+input:where(:not([type='checkbox'], [type='radio'], [type='file'])):disabled,
 select:disabled {
   background: var(--canvas);
   color: var(--muted);
@@ -114,7 +116,7 @@ select:disabled {
 /* en pantallas táctiles iOS hace zoom al enfocar un campo con letra
    menor a 16px: se sube solo ahí, con mouse queda en 14px */
 @media (pointer: coarse) {
-  input:not([type='checkbox']):not([type='radio']):not([type='file']),
+  input:where(:not([type='checkbox'], [type='radio'], [type='file'])),
   select,
   textarea {
     font-size: 16px;
