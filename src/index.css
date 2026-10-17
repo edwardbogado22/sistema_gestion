@@ -10,24 +10,35 @@
   --gold: #c9a227;
   --gold-soft: #e6cd74;
   --gold-deep: #a8861b;
+  /* oro del calendario: es un tono distinto a --gold (más apagado) que
+     ya estaba aprobado así; queda aparte para no cambiar su color */
+  --gold-calendario: #c5a047;
+  --white: #ffffff;
+  --black: #000000;
   --canvas: #f4f6f3;
   --card: #ffffff;
   --ink: #14211b;
   --muted: #64756d;
-  --line: rgba(17, 94, 65, 0.14);
+  --line: color-mix(in oklab, var(--green-700) 14%, transparent);
   --border: #e4e9e3;
   --danger: #d64545;
-  --danger-soft: rgba(214, 69, 69, 0.1);
+  --danger-soft: color-mix(in oklab, var(--danger) 10%, transparent);
   --success: #1f8a5b;
-  --success-soft: rgba(31, 138, 91, 0.12);
-  --gold-soft-bg: rgba(201, 162, 39, 0.13);
+  --success-soft: color-mix(in oklab, var(--success) 12%, transparent);
+  /* tintes derivados: se recalculan solos si cambia el color base.
+     Los que aparecen una sola vez se escriben con color-mix() en el
+     componente, sin token propio */
+  --gold-tint: color-mix(in oklab, var(--gold) 13%, transparent);
+  --gold-tint-06: color-mix(in oklab, var(--gold) 6%, transparent);
+  --gold-tint-55: color-mix(in oklab, var(--gold) 55%, transparent);
+  --white-tint-08: color-mix(in oklab, var(--white) 8%, transparent);
   --radius-sm: 8px;
   --radius: 14px;
   --radius-lg: 18px;
-  --shadow-sm: 0 1px 2px rgba(6, 35, 26, 0.05), 0 2px 8px -2px rgba(6, 35, 26, 0.06);
-  --shadow-md: 0 2px 4px rgba(6, 35, 26, 0.04), 0 10px 28px -14px rgba(6, 35, 26, 0.18);
-  --shadow-lg: 0 4px 12px rgba(6, 35, 26, 0.06), 0 24px 48px -20px rgba(6, 35, 26, 0.28);
-  --ring: 0 0 0 3px rgba(201, 162, 39, 0.22);
+  --shadow-sm: 0 1px 2px color-mix(in oklab, var(--green-950) 5%, transparent), 0 2px 8px -2px color-mix(in oklab, var(--green-950) 6%, transparent);
+  --shadow-md: 0 2px 4px color-mix(in oklab, var(--green-950) 4%, transparent), 0 10px 28px -14px color-mix(in oklab, var(--green-950) 18%, transparent);
+  --shadow-lg: 0 4px 12px color-mix(in oklab, var(--green-950) 6%, transparent), 0 24px 48px -20px color-mix(in oklab, var(--green-950) 28%, transparent);
+  --ring: 0 0 0 3px color-mix(in oklab, var(--gold) 22%, transparent);
   --ease: cubic-bezier(0.2, 0.8, 0.25, 1);
 
   font-family: 'Inter', Arial, sans-serif;
@@ -48,8 +59,8 @@ html {
 body {
   margin: 0;
   background:
-    radial-gradient(1000px 500px at 85% -10%, rgba(35, 150, 100, 0.07) 0%, transparent 60%),
-    radial-gradient(800px 420px at -10% 0%, rgba(201, 162, 39, 0.06) 0%, transparent 55%),
+    radial-gradient(1000px 500px at 85% -10%, color-mix(in oklab, var(--green-500) 7%, transparent) 0%, transparent 60%),
+    radial-gradient(800px 420px at -10% 0%, var(--gold-tint-06) 0%, transparent 55%),
     var(--canvas);
 }
 
@@ -142,7 +153,7 @@ select {
 }
 
 ::selection {
-  background: var(--gold-soft-bg);
+  background: var(--gold-tint);
   color: var(--green-950);
 }
 
@@ -166,7 +177,7 @@ select {
   position: sticky;
   top: 0;
   z-index: 30;
-  box-shadow: 0 8px 24px -16px rgba(6, 35, 26, 0.6);
+  box-shadow: 0 8px 24px -16px color-mix(in oklab, var(--green-950) 60%, transparent);
 }
 
 .nav-title {
@@ -193,7 +204,7 @@ select {
 }
 
 .nav-link {
-  color: rgba(255, 255, 255, 0.72);
+  color: color-mix(in oklab, var(--white) 72%, transparent);
   text-decoration: none;
   padding: 7px 14px;
   border-radius: 999px;
@@ -209,12 +220,12 @@ select {
 @media (hover: hover) {
   .nav-link:hover {
     color: #fff;
-    background: rgba(255, 255, 255, 0.08);
+    background: var(--white-tint-08);
   }
 }
 
 .nav-link.active {
-  background: var(--gold-soft-bg);
+  background: var(--gold-tint);
   color: var(--gold-soft);
 }
 
@@ -223,7 +234,7 @@ select {
 }
 
 .nav-user {
-  color: rgba(255, 255, 255, 0.6);
+  color: color-mix(in oklab, var(--white) 60%, transparent);
   font-size: 13px;
   white-space: nowrap;
   min-width: 0;
@@ -252,7 +263,7 @@ select {
   display: none;
   color: #fff;
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.28);
+  border: 1px solid color-mix(in oklab, var(--white) 28%, transparent);
   border-radius: 999px;
   padding: 7px 14px;
   font: inherit;
@@ -329,7 +340,7 @@ select {
 }
 
 .nav-area-item.active {
-  background: var(--gold-soft-bg);
+  background: var(--gold-tint);
   color: var(--green-900);
   font-weight: 600;
 }
@@ -354,7 +365,7 @@ select {
     gap: 4px;
     padding: 12px 16px 18px;
     background: var(--green-950);
-    box-shadow: 0 16px 28px -16px rgba(6, 35, 26, 0.7);
+    box-shadow: 0 16px 28px -16px color-mix(in oklab, var(--green-950) 70%, transparent);
   }
 
   .nav-menu.abierto {
@@ -391,12 +402,12 @@ select {
   }
 
   .nav-area-item {
-    color: rgba(255, 255, 255, 0.86);
+    color: color-mix(in oklab, var(--white) 86%, transparent);
   }
 
   @media (hover: hover) {
     .nav-area-item:hover {
-      background: rgba(255, 255, 255, 0.08);
+      background: var(--white-tint-08);
       color: #fff;
     }
   }
@@ -434,8 +445,8 @@ select {
 .hero {
   position: relative;
   background:
-    radial-gradient(110% 130% at 88% -20%, rgba(201, 162, 39, 0.22) 0%, transparent 48%),
-    radial-gradient(90% 120% at 8% 120%, rgba(35, 150, 100, 0.28) 0%, transparent 55%),
+    radial-gradient(110% 130% at 88% -20%, color-mix(in oklab, var(--gold) 22%, transparent) 0%, transparent 48%),
+    radial-gradient(90% 120% at 8% 120%, color-mix(in oklab, var(--green-500) 28%, transparent) 0%, transparent 55%),
     linear-gradient(160deg, var(--green-950) 0%, var(--green-800) 60%, var(--green-700) 130%);
   color: #fff;
   padding: 52px 24px 62px;
@@ -447,9 +458,9 @@ select {
   content: '';
   position: absolute;
   inset: 0;
-  background-image: radial-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px);
+  background-image: radial-gradient(color-mix(in oklab, var(--white) 7%, transparent) 1px, transparent 1px);
   background-size: 26px 26px;
-  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.5), transparent 70%);
+  mask-image: linear-gradient(180deg, color-mix(in oklab, var(--black) 50%, transparent), transparent 70%);
   pointer-events: none;
 }
 
@@ -471,8 +482,9 @@ select {
   font-size: 19px;
   letter-spacing: 1px;
   color: var(--gold-soft);
-  background: rgba(255, 255, 255, 0.06);
-  box-shadow: 0 0 0 6px rgba(201, 162, 39, 0.14), 0 0 0 8px rgba(201, 162, 39, 0.06);
+  background: color-mix(in oklab, var(--white) 6%, transparent);
+  box-shadow: 0 0 0 6px color-mix(in oklab, var(--gold) 14%, transparent), 0 0 0 8px var(--gold-tint-06);
+  -webkit-backdrop-filter: blur(4px);
   backdrop-filter: blur(4px);
 }
 
@@ -490,13 +502,13 @@ select {
   font-size: clamp(26px, 4.2vw, 38px);
   line-height: 1.12;
   letter-spacing: -0.02em;
-  text-shadow: 0 2px 24px rgba(0, 0, 0, 0.25);
+  text-shadow: 0 2px 24px color-mix(in oklab, var(--black) 25%, transparent);
 }
 
 .hero .sub {
   margin: 12px 0 0;
   font-size: 15px;
-  color: rgba(255, 255, 255, 0.8);
+  color: color-mix(in oklab, var(--white) 80%, transparent);
   font-weight: 400;
 }
 
@@ -506,15 +518,16 @@ select {
   gap: 8px;
   margin-top: 20px;
   padding: 7px 18px;
-  border: 1px solid rgba(201, 162, 39, 0.55);
+  border: 1px solid var(--gold-tint-55);
   border-radius: 999px;
   font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.4px;
   color: var(--gold-soft);
-  background: rgba(201, 162, 39, 0.12);
+  background: color-mix(in oklab, var(--gold) 12%, transparent);
+  -webkit-backdrop-filter: blur(4px);
   backdrop-filter: blur(4px);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 1px 0 var(--white-tint-08);
 }
 
 .badge-periodo::before {
@@ -564,7 +577,7 @@ select {
 @media (hover: hover) {
   .stat-card:hover {
     transform: translateY(-3px);
-    box-shadow: 0 6px 16px rgba(6, 35, 26, 0.08), 0 28px 54px -22px rgba(6, 35, 26, 0.3);
+    box-shadow: 0 6px 16px color-mix(in oklab, var(--green-950) 8%, transparent), 0 28px 54px -22px color-mix(in oklab, var(--green-950) 30%, transparent);
     border-color: var(--line);
   }
 }
@@ -663,7 +676,7 @@ select {
   .menu-card:hover {
     transform: translateY(-5px);
     box-shadow: var(--shadow-lg);
-    border-color: rgba(201, 162, 39, 0.55);
+    border-color: var(--gold-tint-55);
   }
 
   .menu-card:hover::before {
@@ -687,7 +700,7 @@ select {
   background: linear-gradient(155deg, var(--green-700), var(--green-600));
   color: #fff;
   margin-bottom: 16px;
-  box-shadow: 0 8px 16px -8px rgba(17, 94, 65, 0.6);
+  box-shadow: 0 8px 16px -8px color-mix(in oklab, var(--green-700) 60%, transparent);
   transition: transform 0.22s var(--ease);
 }
 
@@ -733,20 +746,20 @@ select {
 
 .menu-card.destacada {
   background: linear-gradient(165deg, #ffffff 0%, #fdfaf0 100%);
-  border-color: rgba(201, 162, 39, 0.5);
+  border-color: color-mix(in oklab, var(--gold) 50%, transparent);
 }
 
 .menu-card.destacada .icon {
   background: linear-gradient(155deg, var(--gold), var(--gold-deep));
   color: var(--green-950);
-  box-shadow: 0 8px 16px -8px rgba(168, 134, 27, 0.7);
+  box-shadow: 0 8px 16px -8px color-mix(in oklab, var(--gold-deep) 70%, transparent);
 }
 
 /* ---- pie institucional ---- */
 .footer {
   margin-top: 48px;
   background: linear-gradient(180deg, var(--green-950), var(--green-900));
-  color: rgba(255, 255, 255, 0.68);
+  color: color-mix(in oklab, var(--white) 68%, transparent);
   text-align: center;
   padding: 28px 24px;
   font-size: 13px;
@@ -820,14 +833,14 @@ select {
   color: #fff;
   font-family: inherit;
   transition: transform 0.16s var(--ease), box-shadow 0.16s var(--ease), filter 0.16s var(--ease), background 0.16s var(--ease);
-  box-shadow: 0 6px 14px -8px rgba(17, 94, 65, 0.55);
+  box-shadow: 0 6px 14px -8px color-mix(in oklab, var(--green-700) 55%, transparent);
 }
 
 @media (hover: hover) {
   .btn:hover {
     filter: brightness(1.08);
     transform: translateY(-1px);
-    box-shadow: 0 10px 20px -10px rgba(17, 94, 65, 0.6);
+    box-shadow: 0 10px 20px -10px color-mix(in oklab, var(--green-700) 60%, transparent);
   }
 }
 
@@ -846,12 +859,12 @@ select {
 .btn-primary {
   background: linear-gradient(160deg, var(--gold), var(--gold-deep));
   color: var(--green-950);
-  box-shadow: 0 6px 16px -8px rgba(168, 134, 27, 0.65);
+  box-shadow: 0 6px 16px -8px color-mix(in oklab, var(--gold-deep) 65%, transparent);
 }
 
 @media (hover: hover) {
   .btn-primary:hover {
-    box-shadow: 0 10px 22px -10px rgba(168, 134, 27, 0.75);
+    box-shadow: 0 10px 22px -10px color-mix(in oklab, var(--gold-deep) 75%, transparent);
   }
 }
 
@@ -872,7 +885,7 @@ select {
 .btn-danger {
   background: var(--danger);
   color: #fff;
-  box-shadow: 0 6px 14px -8px rgba(214, 69, 69, 0.6);
+  box-shadow: 0 6px 14px -8px color-mix(in oklab, var(--danger) 60%, transparent);
 }
 
 @media (hover: hover) {
@@ -912,7 +925,7 @@ select {
 }
 
 .data-table th {
-  background: rgba(17, 94, 65, 0.06);
+  background: color-mix(in oklab, var(--green-700) 6%, transparent);
   color: var(--green-800);
   font-size: 11.5px;
   text-transform: uppercase;
@@ -931,7 +944,7 @@ select {
 
 @media (hover: hover) {
   .data-table tbody tr:hover {
-    background: rgba(17, 94, 65, 0.035);
+    background: color-mix(in oklab, var(--green-700) 3.5%, transparent);
   }
 }
 
@@ -1059,8 +1072,8 @@ select {
   gap: 5px;
   padding: 5px 13px;
   border-radius: 999px;
-  border: 1px solid rgba(201, 162, 39, 0.4);
-  background: var(--gold-soft-bg);
+  border: 1px solid color-mix(in oklab, var(--gold) 40%, transparent);
+  background: var(--gold-tint);
   color: var(--gold-deep);
   font-size: 12.5px;
   font-weight: 600;
@@ -1072,20 +1085,20 @@ select {
 
 @media (hover: hover) {
   .chip:hover {
-    background: rgba(201, 162, 39, 0.24);
+    background: color-mix(in oklab, var(--gold) 24%, transparent);
     border-color: var(--gold);
   }
 }
 
 .chip.activo {
   background: var(--success-soft);
-  border-color: rgba(31, 138, 91, 0.4);
+  border-color: color-mix(in oklab, var(--success) 40%, transparent);
   color: var(--success);
 }
 
 @media (hover: hover) {
   .chip.activo:hover {
-    background: rgba(31, 138, 91, 0.22);
+    background: color-mix(in oklab, var(--success) 22%, transparent);
   }
 }
 
@@ -1151,7 +1164,7 @@ select {
 }
 
 .buscador-select-opcion.seleccionada {
-  background: var(--gold-soft-bg);
+  background: var(--gold-tint);
   font-weight: 600;
 }
 
@@ -1207,7 +1220,7 @@ select {
 }
 
 .mis-mesas-aviso {
-  background: var(--gold-soft-bg);
+  background: var(--gold-tint);
   border-radius: var(--radius-sm);
   padding: 12px 14px;
   margin: 0 0 16px;
@@ -1335,7 +1348,7 @@ select {
 @media (hover: hover) {
   .tab:hover {
     color: var(--green-700);
-    background: rgba(17, 94, 65, 0.05);
+    background: color-mix(in oklab, var(--green-700) 5%, transparent);
   }
 }
 
@@ -1343,7 +1356,7 @@ select {
   color: var(--green-800);
   border-bottom-color: var(--gold);
   font-weight: 600;
-  background: rgba(201, 162, 39, 0.06);
+  background: var(--gold-tint-06);
 }
 
 /* ---- insignias de estado ---- */
@@ -1363,12 +1376,12 @@ select {
 }
 
 .badge-muted {
-  background: rgba(17, 94, 65, 0.07);
+  background: color-mix(in oklab, var(--green-700) 7%, transparent);
   color: var(--muted);
 }
 
 .badge-gold {
-  background: var(--gold-soft-bg);
+  background: var(--gold-tint);
   color: var(--gold-deep);
 }
 
@@ -1383,7 +1396,7 @@ select {
   flex: 1;
   height: 9px;
   border-radius: 999px;
-  background: rgba(17, 94, 65, 0.08);
+  background: color-mix(in oklab, var(--green-700) 8%, transparent);
   overflow: hidden;
 }
 
@@ -1391,7 +1404,7 @@ select {
   height: 100%;
   border-radius: 999px;
   background: linear-gradient(90deg, var(--green-600), var(--green-500) 60%, var(--gold));
-  box-shadow: 0 0 10px rgba(35, 150, 100, 0.35);
+  box-shadow: 0 0 10px color-mix(in oklab, var(--green-500) 35%, transparent);
 }
 
 .score-bar-value {
@@ -1456,7 +1469,7 @@ select {
   background: #fff;
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.16);
+  box-shadow: 0 10px 30px color-mix(in oklab, var(--black) 16%, transparent);
 }
 
 .calendario-encabezado {
@@ -1511,12 +1524,12 @@ select {
 }
 
 .calendario-dia.habil {
-  background: rgba(197, 160, 71, 0.14);
+  background: color-mix(in oklab, var(--gold-calendario) 14%, transparent);
 }
 
 @media (hover: hover) {
   .calendario-dia.habil:hover {
-    background: rgba(197, 160, 71, 0.32);
+    background: color-mix(in oklab, var(--gold-calendario) 32%, transparent);
   }
 }
 
