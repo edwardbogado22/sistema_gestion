@@ -111,6 +111,16 @@ select:disabled {
   cursor: not-allowed;
 }
 
+/* en pantallas táctiles iOS hace zoom al enfocar un campo con letra
+   menor a 16px: se sube solo ahí, con mouse queda en 14px */
+@media (pointer: coarse) {
+  input:not([type='checkbox']):not([type='radio']):not([type='file']),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
 input[type='checkbox'],
 input[type='radio'] {
   accent-color: var(--green-700);
@@ -142,7 +152,7 @@ select {
   z-index: 40;
 }
 
-/* ---- navegaciÃ³n interna ---- */
+/* ---- navegación interna ---- */
 .nav-bar {
   display: flex;
   align-items: center;
@@ -191,9 +201,14 @@ select {
   transition: background 0.18s var(--ease), color 0.18s var(--ease);
 }
 
-.nav-link:hover {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.08);
+/* los :hover van dentro de (hover: hover): en pantallas táctiles el
+   hover queda "pegado" después de tocar y la tarjeta/botón sigue
+   levantado o resaltado */
+@media (hover: hover) {
+  .nav-link:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.08);
+  }
 }
 
 .nav-link.active {
@@ -209,9 +224,6 @@ select {
   color: rgba(255, 255, 255, 0.6);
   font-size: 13px;
   white-space: nowrap;
-}
-
-.nav-user {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -307,9 +319,11 @@ select {
   font-weight: 500;
 }
 
-.nav-area-item:hover {
-  background: var(--canvas);
-  color: var(--green-800);
+@media (hover: hover) {
+  .nav-area-item:hover {
+    background: var(--canvas);
+    color: var(--green-800);
+  }
 }
 
 .nav-area-item.active {
@@ -378,9 +392,11 @@ select {
     color: rgba(255, 255, 255, 0.86);
   }
 
-  .nav-area-item:hover {
-    background: rgba(255, 255, 255, 0.08);
-    color: #fff;
+  @media (hover: hover) {
+    .nav-area-item:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
+    }
   }
 
   .nav-area-item.active {
@@ -508,7 +524,7 @@ select {
   box-shadow: 0 0 8px var(--gold);
 }
 
-/* ---- contenedor y grilla de mÃ³dulos ---- */
+/* ---- contenedor y grilla de módulos ---- */
 .container {
   max-width: 1100px;
   margin: 0 auto;
@@ -543,10 +559,12 @@ select {
   transition: transform 0.22s var(--ease), box-shadow 0.22s var(--ease), border-color 0.22s var(--ease);
 }
 
-.stat-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 6px 16px rgba(6, 35, 26, 0.08), 0 28px 54px -22px rgba(6, 35, 26, 0.3);
-  border-color: var(--line);
+@media (hover: hover) {
+  .stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 16px rgba(6, 35, 26, 0.08), 0 28px 54px -22px rgba(6, 35, 26, 0.3);
+    border-color: var(--line);
+  }
 }
 
 .stat-value {
@@ -639,14 +657,16 @@ select {
   transition: opacity 0.22s var(--ease);
 }
 
-.menu-card:hover {
-  transform: translateY(-5px);
-  box-shadow: var(--shadow-lg);
-  border-color: rgba(201, 162, 39, 0.55);
-}
+@media (hover: hover) {
+  .menu-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-lg);
+    border-color: rgba(201, 162, 39, 0.55);
+  }
 
-.menu-card:hover::before {
-  opacity: 1;
+  .menu-card:hover::before {
+    opacity: 1;
+  }
 }
 
 .menu-card:focus-visible {
@@ -669,8 +689,10 @@ select {
   transition: transform 0.22s var(--ease);
 }
 
-.menu-card:hover .icon {
-  transform: scale(1.06) rotate(-3deg);
+@media (hover: hover) {
+  .menu-card:hover .icon {
+    transform: scale(1.06) rotate(-3deg);
+  }
 }
 
 .menu-card h3 {
@@ -697,12 +719,14 @@ select {
 }
 
 .menu-card .accent::after {
-  content: 'â†’';
+  content: '→';
 }
 
-.menu-card:hover .accent {
-  opacity: 1;
-  transform: translateX(0);
+@media (hover: hover) {
+  .menu-card:hover .accent {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 .menu-card.destacada {
@@ -737,7 +761,7 @@ select {
   margin-top: 4px;
 }
 
-/* ---- layout general de pÃ¡ginas ---- */
+/* ---- layout general de páginas ---- */
 .page-padding {
   padding: 1.75rem;
   max-width: 1100px;
@@ -797,10 +821,12 @@ select {
   box-shadow: 0 6px 14px -8px rgba(17, 94, 65, 0.55);
 }
 
-.btn:hover {
-  filter: brightness(1.08);
-  transform: translateY(-1px);
-  box-shadow: 0 10px 20px -10px rgba(17, 94, 65, 0.6);
+@media (hover: hover) {
+  .btn:hover {
+    filter: brightness(1.08);
+    transform: translateY(-1px);
+    box-shadow: 0 10px 20px -10px rgba(17, 94, 65, 0.6);
+  }
 }
 
 .btn:active {
@@ -821,8 +847,10 @@ select {
   box-shadow: 0 6px 16px -8px rgba(168, 134, 27, 0.65);
 }
 
-.btn-primary:hover {
-  box-shadow: 0 10px 22px -10px rgba(168, 134, 27, 0.75);
+@media (hover: hover) {
+  .btn-primary:hover {
+    box-shadow: 0 10px 22px -10px rgba(168, 134, 27, 0.75);
+  }
 }
 
 .btn-secondary {
@@ -832,9 +860,11 @@ select {
   box-shadow: var(--shadow-sm);
 }
 
-.btn-secondary:hover {
-  background: var(--canvas);
-  box-shadow: var(--shadow-sm);
+@media (hover: hover) {
+  .btn-secondary:hover {
+    background: var(--canvas);
+    box-shadow: var(--shadow-sm);
+  }
 }
 
 .btn-danger {
@@ -843,8 +873,10 @@ select {
   box-shadow: 0 6px 14px -8px rgba(214, 69, 69, 0.6);
 }
 
-.btn-danger:hover {
-  background: #b93a3a;
+@media (hover: hover) {
+  .btn-danger:hover {
+    background: #b93a3a;
+  }
 }
 
 .btn-sm {
@@ -895,8 +927,10 @@ select {
   transition: background 0.14s var(--ease);
 }
 
-.data-table tbody tr:hover {
-  background: rgba(17, 94, 65, 0.035);
+@media (hover: hover) {
+  .data-table tbody tr:hover {
+    background: rgba(17, 94, 65, 0.035);
+  }
 }
 
 /* ---- formularios ---- */
@@ -977,7 +1011,7 @@ select {
   }
 }
 
-/* ---- rango de fechas agrupado (Desde â†’ Hasta) ---- */
+/* ---- rango de fechas agrupado (Desde → Hasta) ---- */
 .rango-fechas {
   display: flex;
   flex-wrap: wrap;
@@ -1034,9 +1068,11 @@ select {
   transition: background 0.16s var(--ease), border-color 0.16s var(--ease), color 0.16s var(--ease);
 }
 
-.chip:hover {
-  background: rgba(201, 162, 39, 0.24);
-  border-color: var(--gold);
+@media (hover: hover) {
+  .chip:hover {
+    background: rgba(201, 162, 39, 0.24);
+    border-color: var(--gold);
+  }
 }
 
 .chip.activo {
@@ -1045,11 +1081,13 @@ select {
   color: var(--success);
 }
 
-.chip.activo:hover {
-  background: rgba(31, 138, 91, 0.22);
+@media (hover: hover) {
+  .chip.activo:hover {
+    background: rgba(31, 138, 91, 0.22);
+  }
 }
 
-/* ---- selector con bÃºsqueda ---- */
+/* ---- selector con búsqueda ---- */
 .buscador-select {
   position: relative;
   width: 100%;
@@ -1104,8 +1142,10 @@ select {
   transition: background 0.12s var(--ease);
 }
 
-.buscador-select-opcion:hover {
-  background: var(--canvas);
+@media (hover: hover) {
+  .buscador-select-opcion:hover {
+    background: var(--canvas);
+  }
 }
 
 .buscador-select-opcion.seleccionada {
@@ -1269,7 +1309,7 @@ select {
   color: var(--green-800);
 }
 
-/* ---- pestaÃ±as (ConfiguraciÃ³n) ---- */
+/* ---- pestañas (Configuración) ---- */
 .tabs {
   display: flex;
   gap: 4px;
@@ -1290,9 +1330,11 @@ select {
   transition: color 0.16s var(--ease), background 0.16s var(--ease);
 }
 
-.tab:hover {
-  color: var(--green-700);
-  background: rgba(17, 94, 65, 0.05);
+@media (hover: hover) {
+  .tab:hover {
+    color: var(--green-700);
+    background: rgba(17, 94, 65, 0.05);
+  }
 }
 
 .tab.active {
@@ -1470,11 +1512,13 @@ select {
   background: rgba(197, 160, 71, 0.14);
 }
 
-.calendario-dia.habil:hover {
-  background: rgba(197, 160, 71, 0.32);
+@media (hover: hover) {
+  .calendario-dia.habil:hover {
+    background: rgba(197, 160, 71, 0.32);
+  }
 }
 
-/* fuera del rango y dÃ­as no hÃ¡biles: no se pueden elegir */
+/* fuera del rango y días no hábiles: no se pueden elegir */
 .calendario-dia.fuera {
   color: var(--border);
   cursor: default;
@@ -1498,7 +1542,7 @@ select {
   font-weight: 700;
 }
 
-/* ya hay exÃ¡menes de ese curso ese dÃ­a */
+/* ya hay exámenes de ese curso ese día */
 .calendario-dia.cargado::after {
   content: '';
   position: absolute;
@@ -1545,7 +1589,7 @@ select {
   text-decoration: underline;
 }
 
-/* ---- foja de desempeÃ±o ---- */
+/* ---- foja de desempeño ---- */
 .foja-card {
   background: #fff;
   border: 1px solid var(--border);
@@ -1617,9 +1661,9 @@ select {
     padding: 0;
   }
 
-  /* compresiÃ³n para que la Foja completa entre en una sola A4:
-     las descripciones largas de criterios envuelven a 2 lÃ­neas y
-     con el tamaÃ±o de pantalla no entraba en una hoja. Los
+  /* compresión para que la Foja completa entre en una sola A4:
+     las descripciones largas de criterios envuelven a 2 líneas y
+     con el tamaño de pantalla no entraba en una hoja. Los
      "!important" pisan los style inline del JSX (margin, fontSize). */
   .foja-escudo {
     width: 70px !important;
