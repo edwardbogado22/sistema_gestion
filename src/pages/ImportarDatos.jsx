@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { normalizar, parseArchivo, descargarCSV } from '../lib/csv'
 import { NIVEL_MIN, NIVEL_MAX, obtenidoEncuesta } from '../lib/encuestaAlumnos'
+import { fetchTodo } from '../lib/paginar'
 
 const TABS = [
   { key: 'asignaturas', label: 'Asignaturas' },
@@ -83,19 +84,29 @@ function ResumenImportacion({ resumen }) {
   )
 }
 
+// Las cátedras ya pasan las 1000 filas que PostgREST devuelve por defecto:
+// sin paginar, las que quedaban afuera daban "No existe esa cátedra".
 function useCatedrasLookup() {
   const [catedras, setCatedras] = useState(null)
   useEffect(() => {
-    supabase
-      .from('catedras')
-      .select('id, periodo_lectivo, profesores(documento_identidad), asignaturas(nombre, carreras(nombre)), sedes(nombre)')
-      .then(({ data }) => setCatedras(data || []))
+    fetchTodo((desde, hasta) =>
+      supabase
+        .from('catedras')
+        .select('id, periodo_lectivo, seccion_grupo, profesores(documento_identidad), asignaturas(nombre, carreras(nombre)), sedes(nombre)')
+        .eq('activo', true)
+        .order('id')
+        .range(desde, hasta),
+    ).then(({ data }) => setCatedras(data || []))
   }, [])
   return catedras
 }
 
+// Devuelve { catedra } o { error }. Un docente puede tener la misma materia
+// en varias secciones de una sede: sin seccion_grupo no hay forma de saber
+// cuál es, y elegir la primera pisaba los datos de una sección con los de
+// otra. En ese caso se pide la sección en vez de adivinar.
 function resolverCatedra(catedras, row) {
-  return (catedras || []).find(
+  const candidatas = (catedras || []).filter(
     (c) =>
       normalizar(c.profesores?.documento_identidad) === normalizar(row.docente_documento) &&
       normalizar(c.asignaturas?.nombre) === normalizar(row.asignatura) &&
@@ -103,6 +114,17 @@ function resolverCatedra(catedras, row) {
       normalizar(c.sedes?.nombre) === normalizar(row.sede) &&
       normalizar(c.periodo_lectivo) === normalizar(row.periodo),
   )
+  const seccion = row.seccion_grupo ?? row.seccion
+  const elegidas = seccion ? candidatas.filter((c) => normalizar(c.seccion_grupo) === normalizar(seccion)) : candidatas
+  if (elegidas.length === 1) return { catedra: elegidas[0] }
+  if (elegidas.length === 0) {
+    return {
+      error: seccion && candidatas.length
+        ? `No existe esa cátedra en la sección "${seccion}".`
+        : 'No existe esa cátedra (docente/asignatura/carrera/sede/periodo).',
+    }
+  }
+  return { error: `El docente tiene esa materia en ${elegidas.length} cátedras: indicá la sección en "seccion_grupo".` }
 }
 
 function ImportarAsignaturas() {
@@ -359,7 +381,7 @@ function ImportarIndicadorObjetivo({ tabla, columnasExtra, columnaPorcentaje, ca
   const [filas, setFilas] = useState([])
   const [importando, setImportando] = useState(false)
   const [resumen, setResumen] = useState(null)
-  const columnasBase = ['docente_documento', 'asignatura', 'carrera', 'sede', 'periodo']
+  const columnasBase = ['docente_documento', 'asignatura', 'carrera', 'sede', 'periodo', 'seccion_grupo']
   const columnas = [...columnasBase, ...columnasExtra]
 
   const handleFile = async (e) => {
@@ -369,8 +391,8 @@ function ImportarIndicadorObjetivo({ tabla, columnasExtra, columnaPorcentaje, ca
     setResumen(null)
     setFilas(
       data.map((row) => {
-        const catedra = resolverCatedra(catedras, row)
-        if (!catedra) return { row, estado: 'error', mensaje: 'No existe esa cátedra (docente/asignatura/carrera/sede/periodo).' }
+        const { catedra, error: errCatedra } = resolverCatedra(catedras, row)
+        if (!catedra) return { row, estado: 'error', mensaje: errCatedra }
         for (const col of columnasExtra) {
           if (row[col] === undefined || row[col] === '') return { row, estado: 'error', mensaje: `Falta "${col}"` }
         }
@@ -407,7 +429,7 @@ function ImportarIndicadorObjetivo({ tabla, columnasExtra, columnaPorcentaje, ca
 
   return (
     <div>
-      <AyudaPlantilla columnas={columnas} nombreArchivo={nombreArchivo} ejemplo={[...['1234567', 'Cuentas Nacionales', 'Economía', 'Sede Central', '2026'], ...ejemploExtra]} />
+      <AyudaPlantilla columnas={columnas} nombreArchivo={nombreArchivo} ejemplo={[...['1234567', 'Cuentas Nacionales', 'Economía', 'Sede Central', '2026', 'A'], ...ejemploExtra]} />
       <input type="file" accept=".csv" onChange={handleFile} />
       {filas.length > 0 && (
         <>
@@ -583,7 +605,7 @@ function ImportarCriterioCatedra({ origenEsperado, columnaValor, labelValor, min
   const [filas, setFilas] = useState([])
   const [importando, setImportando] = useState(false)
   const [resumen, setResumen] = useState(null)
-  const columnasBase = ['docente_documento', 'asignatura', 'carrera', 'sede', 'periodo', 'criterio_codigo']
+  const columnasBase = ['docente_documento', 'asignatura', 'carrera', 'sede', 'periodo', 'seccion_grupo', 'criterio_codigo']
   const columnas = origenEsperado === 'ENCUESTA_ALUMNOS' ? [...columnasBase, columnaValor, 'total_encuestados'] : [...columnasBase, columnaValor]
 
   useEffect(() => {
@@ -601,8 +623,8 @@ function ImportarCriterioCatedra({ origenEsperado, columnaValor, labelValor, min
     setResumen(null)
     setFilas(
       data.map((row) => {
-        const catedra = resolverCatedra(catedras, row)
-        if (!catedra) return { row, estado: 'error', mensaje: 'No existe esa cátedra (docente/asignatura/carrera/sede/periodo).' }
+        const { catedra, error: errCatedra } = resolverCatedra(catedras, row)
+        if (!catedra) return { row, estado: 'error', mensaje: errCatedra }
         const criterio = criterios.find(
           (c) => normalizar(c.codigo) === normalizar(row.criterio_codigo) && normalizar(c.periodo_lectivo) === normalizar(row.periodo),
         )
@@ -658,8 +680,8 @@ function ImportarCriterioCatedra({ origenEsperado, columnaValor, labelValor, min
         nombreArchivo={nombreArchivo}
         ejemplo={
           origenEsperado === 'ENCUESTA_ALUMNOS'
-            ? ['1234567', 'Cuentas Nacionales', 'Economía', 'Sede Central', '2026', 'ALU_PUNTUALIDAD', '2.85', '30']
-            : ['1234567', 'Cuentas Nacionales', 'Economía', 'Sede Central', '2026', 'PLANIFICACION_DOCUMENTACION', '18']
+            ? ['1234567', 'Cuentas Nacionales', 'Economía', 'Sede Central', '2026', 'A', 'ALU_PUNTUALIDAD', '2.85', '30']
+            : ['1234567', 'Cuentas Nacionales', 'Economía', 'Sede Central', '2026', 'A', 'PLANIFICACION_DOCUMENTACION', '18']
         }
       />
       <input type="file" accept=".csv" onChange={handleFile} />
