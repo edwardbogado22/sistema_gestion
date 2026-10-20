@@ -1,10 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../../lib/supabase'
+import { useAuth } from '../../contexts/AuthContext'
 import { coincideTexto } from '../../lib/buscar'
 
 const empty = { documento_identidad: '', nombres: '', apellidos: '', email: '', telefono: '' }
 
 export function Profesores() {
+  // Configuración → Profesores es de Dirección Académica; la Secretaría de
+  // Dirección Académica entra por /profesores solo a consultar el padrón.
+  const { esAdmin } = useAuth()
+  const soloLectura = !esAdmin
   const [profesores, setProfesores] = useState([])
   const [loading, setLoading] = useState(true)
   const [form, setForm] = useState(empty)
@@ -112,44 +117,51 @@ export function Profesores() {
 
   return (
     <div>
-      <form className="form-card" onSubmit={handleSubmit} style={{ marginBottom: '1.5rem' }}>
-        <div className="form-grid">
-          <label>
-            Documento de identidad
-            <input
-              value={form.documento_identidad}
-              onChange={(e) => setForm({ ...form, documento_identidad: e.target.value })}
-              required
-            />
-          </label>
-          <label>
-            Nombres
-            <input value={form.nombres} onChange={(e) => setForm({ ...form, nombres: e.target.value })} required />
-          </label>
-          <label>
-            Apellidos
-            <input
-              value={form.apellidos}
-              onChange={(e) => setForm({ ...form, apellidos: e.target.value })}
-              required
-            />
-          </label>
-          <label>
-            Email
-            <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
-          </label>
-          <label>
-            Teléfono
-            <input value={form.telefono} onChange={(e) => setForm({ ...form, telefono: e.target.value })} />
-          </label>
+      {soloLectura ? (
+        <div className="page-header">
+          <h1>Profesores</h1>
+          <p>Padrón de profesores de la facultad (solo consulta).</p>
         </div>
-        {error && <p className="error-text">{error}</p>}
-        <div className="form-actions">
-          <button type="submit" className="btn btn-primary" disabled={saving}>
-            {saving ? 'Guardando...' : '+ Nuevo profesor'}
-          </button>
-        </div>
-      </form>
+      ) : (
+        <form className="form-card" onSubmit={handleSubmit} style={{ marginBottom: '1.5rem' }}>
+          <div className="form-grid">
+            <label>
+              Documento de identidad
+              <input
+                value={form.documento_identidad}
+                onChange={(e) => setForm({ ...form, documento_identidad: e.target.value })}
+                required
+              />
+            </label>
+            <label>
+              Nombres
+              <input value={form.nombres} onChange={(e) => setForm({ ...form, nombres: e.target.value })} required />
+            </label>
+            <label>
+              Apellidos
+              <input
+                value={form.apellidos}
+                onChange={(e) => setForm({ ...form, apellidos: e.target.value })}
+                required
+              />
+            </label>
+            <label>
+              Email
+              <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+            </label>
+            <label>
+              Teléfono
+              <input value={form.telefono} onChange={(e) => setForm({ ...form, telefono: e.target.value })} />
+            </label>
+          </div>
+          {error && <p className="error-text">{error}</p>}
+          <div className="form-actions">
+            <button type="submit" className="btn btn-primary" disabled={saving}>
+              {saving ? 'Guardando...' : '+ Nuevo profesor'}
+            </button>
+          </div>
+        </form>
+      )}
 
       {loading ? (
         <p>Cargando...</p>
@@ -178,7 +190,7 @@ export function Profesores() {
                 <th>Email</th>
                 <th>Teléfono</th>
                 <th>Estado</th>
-                <th>Acciones</th>
+                {!soloLectura && <th>Acciones</th>}
               </tr>
             </thead>
             <tbody>
@@ -249,28 +261,30 @@ export function Profesores() {
                           <span className="badge badge-success">Confirmado</span>
                         )}
                       </td>
-                      <td>
-                        {p.confirmado === false && (
-                          <>
-                            <button type="button" className="btn btn-primary btn-sm" onClick={() => confirmarPendiente(p.id)}>
-                              Confirmar
-                            </button>{' '}
-                          </>
-                        )}
-                        <button type="button" className="btn btn-secondary btn-sm" onClick={() => empezarEdicion(p)}>
-                          Editar
-                        </button>{' '}
-                        <button type="button" className="btn btn-danger btn-sm" onClick={() => eliminar(p.id)}>
-                          Eliminar
-                        </button>
-                      </td>
+                      {!soloLectura && (
+                        <td>
+                          {p.confirmado === false && (
+                            <>
+                              <button type="button" className="btn btn-primary btn-sm" onClick={() => confirmarPendiente(p.id)}>
+                                Confirmar
+                              </button>{' '}
+                            </>
+                          )}
+                          <button type="button" className="btn btn-secondary btn-sm" onClick={() => empezarEdicion(p)}>
+                            Editar
+                          </button>{' '}
+                          <button type="button" className="btn btn-danger btn-sm" onClick={() => eliminar(p.id)}>
+                            Eliminar
+                          </button>
+                        </td>
+                      )}
                     </>
                   )}
                 </tr>
               ))}
               {profesoresFiltrados.length === 0 && (
                 <tr>
-                  <td colSpan={7}>
+                  <td colSpan={soloLectura ? 6 : 7}>
                     {profesores.length === 0 ? 'No hay profesores cargados.' : 'Ningún profesor coincide con la búsqueda.'}
                   </td>
                 </tr>

@@ -7,6 +7,7 @@ const ROLES = [
   { value: 'SECRETARIO', label: 'Secretario de Carrera' },
   { value: 'DIRECTOR', label: 'Director de Carrera' },
   { value: 'ASISTENTE', label: 'Asistente (solo registra eventos)' },
+  { value: 'SECRETARIA_ACADEMICA', label: 'Secretaría de Dirección Académica (consulta, fojas y reportes)' },
 ]
 
 // Crear la cuenta de acceso (email + contraseña) exige la service_role key,

@@ -1,8 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../../lib/supabase'
+import { useAuth } from '../../contexts/AuthContext'
 import { formatoLargo } from '../../lib/fechas'
 
 export function CapacitacionResultados() {
+  // Solo Dirección Académica carga resultados; la Secretaría de Dirección
+  // Académica los consulta.
+  const { esAdmin } = useAuth()
   const [eventos, setEventos] = useState([])
   const [periodos, setPeriodos] = useState([])
   const [claveSeleccionada, setClaveSeleccionada] = useState('')
@@ -186,20 +190,22 @@ export function CapacitacionResultados() {
 
       {grupoSel && (
         <>
-          <div className="form-row" style={{ marginBottom: 20 }}>
-            <label style={{ flex: '1 1 260px' }}>
-              Agregar profesor manualmente (documento o nombre)
-              <input
-                value={busqueda}
-                onChange={(e) => setBusqueda(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && buscarProfesor()}
-                placeholder="Para sumar a alguien que no aparece en la lista..."
-              />
-            </label>
-            <button type="button" className="btn btn-secondary" onClick={buscarProfesor}>
-              Buscar
-            </button>
-          </div>
+          {esAdmin && (
+            <div className="form-row" style={{ marginBottom: 20 }}>
+              <label style={{ flex: '1 1 260px' }}>
+                Agregar profesor manualmente (documento o nombre)
+                <input
+                  value={busqueda}
+                  onChange={(e) => setBusqueda(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && buscarProfesor()}
+                  placeholder="Para sumar a alguien que no aparece en la lista..."
+                />
+              </label>
+              <button type="button" className="btn btn-secondary" onClick={buscarProfesor}>
+                Buscar
+              </button>
+            </div>
+          )}
 
           {resultadosBusqueda.length > 0 && (
             <div className="data-table-wrap" style={{ marginBottom: 20 }}>
@@ -260,6 +266,7 @@ export function CapacitacionResultados() {
                         <input
                           type="checkbox"
                           checked={fila.aprobado}
+                          disabled={!esAdmin}
                           onChange={(e) => setCampo(profesorId, 'aprobado', e.target.checked)}
                         />
                       </td>
@@ -269,17 +276,24 @@ export function CapacitacionResultados() {
                           min="0"
                           max="100"
                           step="0.01"
-                          disabled={fila.aprobado}
+                          disabled={!esAdmin || fila.aprobado}
                           value={fila.aprobado ? '100' : fila.porcentaje}
                           onChange={(e) => setCampo(profesorId, 'porcentaje', e.target.value)}
                         />
                       </td>
                       <td>
-                        <input type="number" step="0.01" value={fila.nota} onChange={(e) => setCampo(profesorId, 'nota', e.target.value)} />
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={fila.nota}
+                          disabled={!esAdmin}
+                          onChange={(e) => setCampo(profesorId, 'nota', e.target.value)}
+                        />
                       </td>
                       <td>
                         <input
                           value={fila.resolucion}
+                          disabled={!esAdmin}
                           onChange={(e) => setCampo(profesorId, 'resolucion', e.target.value)}
                           placeholder="N° de resolución (opcional)"
                         />
@@ -292,14 +306,16 @@ export function CapacitacionResultados() {
                         )}
                       </td>
                       <td>
-                        <button
-                          type="button"
-                          className="btn btn-primary btn-sm"
-                          disabled={guardandoId === profesorId}
-                          onClick={() => guardar(profesorId)}
-                        >
-                          {guardandoId === profesorId ? 'Guardando...' : 'Guardar'}
-                        </button>
+                        {esAdmin && (
+                          <button
+                            type="button"
+                            className="btn btn-primary btn-sm"
+                            disabled={guardandoId === profesorId}
+                            onClick={() => guardar(profesorId)}
+                          >
+                            {guardandoId === profesorId ? 'Guardando...' : 'Guardar'}
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}

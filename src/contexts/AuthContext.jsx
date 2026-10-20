@@ -103,6 +103,11 @@ export function AuthProvider({ children }) {
   const esSecretario = rol === 'SECRETARIO'
   const esDirector = rol === 'DIRECTOR'
   const esAsistente = rol === 'ASISTENTE'
+  // Secretaría de Dirección Académica: consulta e imprime de toda la
+  // facultad (profesores, fojas, reportes), sin cargar ni modificar.
+  const esSecretariaAcademica = rol === 'SECRETARIA_ACADEMICA'
+  // Ve toda la facultad sin alcance por carrera/sede.
+  const veTodo = esAdmin || esSecretariaAcademica
   // DIRECTOR audita: mismo alcance por carrera/sede que el secretario,
   // pero sin permiso de carga (la RLS es la que realmente lo impide).
   const puedeEscribir = esAdmin || esSecretario
@@ -117,6 +122,8 @@ export function AuthProvider({ children }) {
         esSecretario,
         esDirector,
         esAsistente,
+        esSecretariaAcademica,
+        veTodo,
         puedeEscribir,
         alcance,
         loading,

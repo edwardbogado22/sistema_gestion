@@ -8,7 +8,12 @@
 const GESTION = ['ADMIN', 'SECRETARIO', 'DIRECTOR']
 const ADMIN = ['ADMIN']
 const ADMIN_ASISTENTE = ['ADMIN', 'ASISTENTE']
-const ADMIN_DIRECTOR = ['ADMIN', 'DIRECTOR']
+// SECRETARIA_ACADEMICA (Secretaría de Dirección Académica) entra a todo
+// lo que es consulta, impresión y reportes, nunca a pantallas de carga.
+const SA = 'SECRETARIA_ACADEMICA'
+const GESTION_SA = [...GESTION, SA]
+const REPORTES = ['ADMIN', SA]
+const REPORTES_DIRECTOR = ['ADMIN', 'DIRECTOR', SA]
 
 export const AREAS = [
   {
@@ -25,18 +30,28 @@ export const AREAS = [
         titulo: 'Cátedras',
         desc: 'Listado, alta y edición. Desde cada cátedra se cargan los indicadores, se ve el contenido dictado y se imprime la foja de desempeño.',
         destacada: true,
+        roles: GESTION_SA,
+      },
+      {
+        to: '/fojas/emision',
+        icon: '🖨️',
+        titulo: 'Emisión de fojas',
+        desc: 'Qué fojas de desempeño se imprimieron, a qué profesor, cuándo y quién las emitió. Pendientes por carrera y sede.',
+        roles: REPORTES,
       },
       {
         to: '/plan-anual',
         icon: '📘',
         titulo: 'Plan Anual de Clases',
         desc: 'Registro por cátedra de la entrega del plan anual. Aporta al 20% de "Planificación y documentación" en la Foja de Desempeño.',
+        roles: GESTION_SA,
       },
       {
         to: '/plan-anual/reporte',
         icon: '📄',
         titulo: 'Constancia de Plan Anual',
         desc: 'Entregas registradas por carrera y sede, con formato institucional para evidenciar el trabajo de Secretaría.',
+        roles: GESTION_SA,
       },
       {
         to: '/contenido/kiosco',
@@ -63,12 +78,14 @@ export const AREAS = [
         icon: '📊',
         titulo: 'Reporte de asistencia a clases',
         desc: 'Efectividad por docente en un rango de fechas, exportable e imprimible.',
+        roles: GESTION_SA,
       },
       {
         to: '/asistencia/reemplazos',
         icon: '🔄',
         titulo: 'Reemplazos',
         desc: 'Clases donde el titular faltó y otro profesor cubrió su lugar.',
+        roles: GESTION_SA,
       },
     ],
   },
@@ -83,13 +100,14 @@ export const AREAS = [
         titulo: 'Llamados y fechas de examen',
         desc: 'Llamados, rango de fechas habilitado y fecha de examen por materia. Desde cada llamado: vocales, reporte y asistencia a mesas.',
         destacada: true,
+        roles: GESTION_SA,
       },
       {
         to: '/examenes/seguimiento',
         icon: '📈',
         titulo: 'Seguimiento de carga',
         desc: 'Progreso de carga de fechas por secretario, carrera y sede, para revisar cómo va Secretaría.',
-        roles: ADMIN,
+        roles: REPORTES,
       },
     ],
   },
@@ -125,14 +143,14 @@ export const AREAS = [
         icon: '📊',
         titulo: 'Reporte de asistencia a eventos',
         desc: 'Matriz de asistencia por evento o grupo de eventos, exportable e imprimible.',
-        roles: ADMIN,
+        roles: REPORTES,
       },
       {
         to: '/eventos/capacitaciones',
         icon: '🎓',
         titulo: 'Resultados de capacitación',
         desc: 'Aprobado o participación parcial por profesor, una vez sale la resolución del examen.',
-        roles: ADMIN,
+        roles: REPORTES,
       },
     ],
   },
@@ -147,28 +165,35 @@ export const AREAS = [
         titulo: 'Mesas por profesor',
         desc: 'Buscar un profesor por cédula o nombre y ver todas las mesas examinadoras en las que participa en el año.',
         destacada: true,
-        roles: ADMIN,
+        roles: REPORTES,
+      },
+      {
+        to: '/profesores',
+        icon: '👤',
+        titulo: 'Profesores',
+        desc: 'Consulta del padrón de profesores: documento, nombre y datos de contacto.',
+        roles: [SA],
       },
       {
         to: '/examenes/actas-firmas',
         icon: '✍️',
         titulo: 'Actas a firmar',
         desc: 'Buscar un profesor por nombre o cédula y ver cada acta de examen que tiene que firmar, con número y fecha. Se marca la firma y se imprime el listado.',
-        roles: GESTION,
+        roles: GESTION_SA,
       },
       {
         to: '/eventos/busqueda',
         icon: '🔍',
         titulo: 'Eventos por profesor',
         desc: 'Buscar un docente por documento o nombre y ver su historial de asistencia a eventos.',
-        roles: ADMIN,
+        roles: REPORTES,
       },
       {
         to: '/informes',
         icon: '📈',
         titulo: 'Informes consolidados',
         desc: 'Rendimiento promedio por carrera, por sede y ranking de profesores.',
-        roles: ADMIN_DIRECTOR,
+        roles: REPORTES_DIRECTOR,
       },
     ],
   },

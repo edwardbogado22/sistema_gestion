@@ -74,13 +74,18 @@ const MisMesas = lazy(() => import('./pages/MisMesas').then((m) => ({ default: m
 const ReportePlanAnual = lazy(() =>
   import('./pages/ReportePlanAnual').then((m) => ({ default: m.ReportePlanAnual })),
 )
+const EmisionFojas = lazy(() => import('./pages/EmisionFojas').then((m) => ({ default: m.EmisionFojas })))
 
 // Secciones exclusivas de Dirección Académica. La restricción real está en
 // las policies de RLS; esto evita ofrecer pantallas que no van a funcionar.
 const ADMIN = ['ADMIN']
 const ADMIN_ASISTENTE = ['ADMIN', 'ASISTENTE']
-const ADMIN_DIRECTOR = ['ADMIN', 'DIRECTOR']
 const GESTION = ['ADMIN', 'SECRETARIO', 'DIRECTOR']
+// Secretaría de Dirección Académica: consulta, impresión y reportes.
+const SA = 'SECRETARIA_ACADEMICA'
+const REPORTES = ['ADMIN', SA]
+const REPORTES_DIRECTOR = ['ADMIN', 'DIRECTOR', SA]
+const GESTION_SA = [...GESTION, SA]
 
 function withLayout(element) {
   return <Layout>{element}</Layout>
@@ -103,21 +108,21 @@ function App() {
         />
         <Route
           path="/foja/:catedraId"
-          element={<PrivateRoute roles={ADMIN_DIRECTOR}>{withLayout(<FojaDesempeno />)}</PrivateRoute>}
+          element={<PrivateRoute roles={REPORTES_DIRECTOR}>{withLayout(<FojaDesempeno />)}</PrivateRoute>}
         />
 
         <Route path="/examenes" element={<PrivateRoute>{withLayout(<Llamados />)}</PrivateRoute>} />
         <Route
           path="/examenes/seguimiento"
-          element={<PrivateRoute roles={ADMIN}>{withLayout(<SeguimientoCarga />)}</PrivateRoute>}
+          element={<PrivateRoute roles={REPORTES}>{withLayout(<SeguimientoCarga />)}</PrivateRoute>}
         />
         <Route
           path="/examenes/consulta-profesor"
-          element={<PrivateRoute roles={ADMIN}>{withLayout(<ConsultaProfesor />)}</PrivateRoute>}
+          element={<PrivateRoute roles={REPORTES}>{withLayout(<ConsultaProfesor />)}</PrivateRoute>}
         />
         <Route
           path="/examenes/actas-firmas"
-          element={<PrivateRoute roles={GESTION}>{withLayout(<ActasFirmas />)}</PrivateRoute>}
+          element={<PrivateRoute roles={GESTION_SA}>{withLayout(<ActasFirmas />)}</PrivateRoute>}
         />
         <Route path="/examenes/:llamadoId" element={<PrivateRoute>{withLayout(<PanelFechas />)}</PrivateRoute>} />
         <Route
@@ -130,7 +135,7 @@ function App() {
         />
         <Route
           path="/examenes/:llamadoId/mesas-reporte"
-          element={<PrivateRoute roles={ADMIN}>{withLayout(<ReporteMesas />)}</PrivateRoute>}
+          element={<PrivateRoute roles={REPORTES}>{withLayout(<ReporteMesas />)}</PrivateRoute>}
         />
         <Route
           path="/examenes/:llamadoId/actas"
@@ -138,7 +143,7 @@ function App() {
         />
         <Route
           path="/examenes/:llamadoId/asistencia-mesas"
-          element={<PrivateRoute roles={ADMIN}>{withLayout(<AsistenciaMesas />)}</PrivateRoute>}
+          element={<PrivateRoute roles={REPORTES}>{withLayout(<AsistenciaMesas />)}</PrivateRoute>}
         />
 
         <Route path="/asistencia" element={<PrivateRoute>{withLayout(<RegistrarAsistencia />)}</PrivateRoute>} />
@@ -158,15 +163,15 @@ function App() {
         <Route path="/eventos/gestion" element={<PrivateRoute roles={ADMIN}>{withLayout(<Eventos />)}</PrivateRoute>} />
         <Route
           path="/eventos/busqueda"
-          element={<PrivateRoute roles={ADMIN}>{withLayout(<BusquedaAsistenciaEvento />)}</PrivateRoute>}
+          element={<PrivateRoute roles={REPORTES}>{withLayout(<BusquedaAsistenciaEvento />)}</PrivateRoute>}
         />
         <Route
           path="/eventos/reporte"
-          element={<PrivateRoute roles={ADMIN}>{withLayout(<ReporteEventos />)}</PrivateRoute>}
+          element={<PrivateRoute roles={REPORTES}>{withLayout(<ReporteEventos />)}</PrivateRoute>}
         />
         <Route
           path="/eventos/capacitaciones"
-          element={<PrivateRoute roles={ADMIN}>{withLayout(<CapacitacionResultados />)}</PrivateRoute>}
+          element={<PrivateRoute roles={REPORTES}>{withLayout(<CapacitacionResultados />)}</PrivateRoute>}
         />
         <Route
           path="/eventos/mis-registros"
@@ -187,7 +192,15 @@ function App() {
 
         <Route
           path="/informes"
-          element={<PrivateRoute roles={ADMIN_DIRECTOR}>{withLayout(<InformesConsolidados />)}</PrivateRoute>}
+          element={<PrivateRoute roles={REPORTES_DIRECTOR}>{withLayout(<InformesConsolidados />)}</PrivateRoute>}
+        />
+        <Route
+          path="/fojas/emision"
+          element={<PrivateRoute roles={REPORTES}>{withLayout(<EmisionFojas />)}</PrivateRoute>}
+        />
+        <Route
+          path="/profesores"
+          element={<PrivateRoute roles={[SA]}>{withLayout(<Profesores />)}</PrivateRoute>}
         />
         <Route
           path="/importar"

@@ -13,6 +13,7 @@ export function FojaDesempeno() {
   const [filas, setFilas] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [impresiones, setImpresiones] = useState([])
 
   useEffect(() => {
     setLoading(true)
@@ -26,6 +27,34 @@ export function FojaDesempeno() {
         setLoading(false)
       })
   }, [catedraId])
+
+  useEffect(() => {
+    supabase
+      .from('foja_impresion')
+      .select('id, impreso_en')
+      .eq('catedra_id', catedraId)
+      .order('impreso_en', { ascending: false })
+      .then(({ data }) => setImpresiones(data || []))
+  }, [catedraId])
+
+  // Cada impresión queda registrada para el informe de Emisión de fojas.
+  // Se engancha a "beforeprint" y no al botón, así también cuenta Ctrl+P.
+  // Si el registro falla (sin permiso, sin conexión) la impresión sigue.
+  useEffect(() => {
+    const e = filas[0]
+    if (!e) return undefined
+    const registrar = async () => {
+      const { data, error: eReg } = await supabase
+        .from('foja_impresion')
+        .insert({ catedra_id: e.catedra_id, profesor_id: e.profesor_id, periodo_lectivo: e.periodo_lectivo })
+        .select('id, impreso_en')
+        .single()
+      if (eReg) console.warn('No se pudo registrar la impresión de la foja:', eReg.message)
+      else setImpresiones((prev) => [data, ...prev])
+    }
+    window.addEventListener('beforeprint', registrar)
+    return () => window.removeEventListener('beforeprint', registrar)
+  }, [filas])
 
   if (loading) {
     return (
@@ -63,10 +92,17 @@ export function FojaDesempeno() {
 
   return (
     <div className="page-padding foja-desempeno">
-      <div className="form-actions no-print" style={{ marginBottom: '1rem' }}>
+      <div className="form-actions no-print" style={{ marginBottom: '1rem', alignItems: 'center' }}>
         <button type="button" className="btn btn-primary" onClick={() => window.print()}>
           Imprimir
         </button>
+        <span className="muted-text">
+          {impresiones.length === 0
+            ? 'Esta foja todavía no se imprimió.'
+            : `Impresa ${impresiones.length} ${impresiones.length === 1 ? 'vez' : 'veces'} · última el ${new Date(
+                impresiones[0].impreso_en,
+              ).toLocaleString('es-PY', { dateStyle: 'short', timeStyle: 'short' })}`}
+        </span>
       </div>
 
       <div className="foja-card">

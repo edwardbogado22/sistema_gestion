@@ -56,7 +56,7 @@ async function sincronizarHorario(catedraId, dias) {
 }
 
 export function Catedras() {
-  const { esAdmin, esSecretario, alcance } = useAuth()
+  const { esAdmin, esSecretario, esSecretariaAcademica, veTodo, alcance } = useAuth()
   const [profesores, setProfesores] = useState([])
   const [carreras, setCarreras] = useState([])
   const [carrerasSedes, setCarrerasSedes] = useState([])
@@ -153,20 +153,20 @@ export function Catedras() {
   // alcance del usuario: un secretario/director no debería ni ver como opción
   // una carrera o sede ajena, aunque la tabla catedras ya se lo bloquee.
   const carrerasPermitidas = useMemo(() => {
-    if (esAdmin) return carreras
+    if (veTodo) return carreras
     const ids = new Set(alcance.map((a) => a.carrera_id))
     return carreras.filter((c) => ids.has(c.id))
-  }, [carreras, esAdmin, alcance])
+  }, [carreras, veTodo, alcance])
 
   const sedesPermitidas = useMemo(() => {
-    if (esAdmin) return sedes
+    if (veTodo) return sedes
     const ids = new Set()
     for (const a of alcance) {
       if (a.sede_id) ids.add(a.sede_id)
       else carrerasSedes.filter((cs) => cs.carrera_id === a.carrera_id).forEach((cs) => ids.add(cs.sede_id))
     }
     return sedes.filter((s) => ids.has(s.id))
-  }, [sedes, esAdmin, alcance, carrerasSedes])
+  }, [sedes, veTodo, alcance, carrerasSedes])
 
   const carrerasFiltradas = useMemo(() => {
     if (!form.sede_id) return carrerasPermitidas
@@ -560,9 +560,13 @@ export function Catedras() {
                               Editar
                             </button>
                           )}
-                          <Link to={`/indicadores/${c.id}`} className="btn btn-secondary btn-sm">
-                            Indicadores
-                          </Link>
+                          {/* Indicadores es una pantalla de carga: la Secretaría de
+                              Dirección Académica solo consulta la foja y los reportes. */}
+                          {!esSecretariaAcademica && (
+                            <Link to={`/indicadores/${c.id}`} className="btn btn-secondary btn-sm">
+                              Indicadores
+                            </Link>
+                          )}
                           <Link to={`/foja/${c.id}`} className="btn btn-secondary btn-sm">
                             Foja
                           </Link>

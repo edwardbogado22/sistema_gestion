@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
+import { useAuth } from '../../contexts/AuthContext'
 import { formatoLargo } from '../../lib/fechas'
 
 const ROL_LABEL = { TITULAR: 'Presidente', VOCAL: 'Vocal', PRESIDENTE: 'Presidente' }
@@ -9,6 +10,9 @@ const nombreProfesor = (p) => (p ? `${p.apellidos}, ${p.nombres}` : '')
 
 export function AsistenciaMesas() {
   const { llamadoId } = useParams()
+  // Solo Dirección Académica registra asistencia; la Secretaría de
+  // Dirección Académica entra a consultarla.
+  const { esAdmin } = useAuth()
   const [llamado, setLlamado] = useState(null)
   const [filas, setFilas] = useState([])
   const [loading, setLoading] = useState(true)
@@ -200,12 +204,19 @@ export function AsistenciaMesas() {
       {error && <p className="error-text">{error}</p>}
       {ok && <p className="muted-text">{ok}</p>}
 
-      <div className="form-actions" style={{ marginBottom: 16, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        <button type="button" className="btn btn-primary" disabled={pendientes === 0 || guardando} onClick={guardar}>
-          {guardando ? 'Guardando...' : `Guardar asistencia (${pendientes})`}
-        </button>
-        <button type="button" className="btn btn-secondary" disabled={recalculando} onClick={recalcular}>
-          {recalculando ? 'Recalculando...' : 'Recalcular asistencia en la Foja'}
+      <div className="form-actions no-print" style={{ marginBottom: 16, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        {esAdmin && (
+          <>
+            <button type="button" className="btn btn-primary" disabled={pendientes === 0 || guardando} onClick={guardar}>
+              {guardando ? 'Guardando...' : `Guardar asistencia (${pendientes})`}
+            </button>
+            <button type="button" className="btn btn-secondary" disabled={recalculando} onClick={recalcular}>
+              {recalculando ? 'Recalculando...' : 'Recalcular asistencia en la Foja'}
+            </button>
+          </>
+        )}
+        <button type="button" className="btn btn-secondary" onClick={() => window.print()}>
+          Imprimir
         </button>
       </div>
 
@@ -247,6 +258,7 @@ export function AsistenciaMesas() {
                 <td>
                   <select
                     value={i.asistio === null || i.asistio === undefined ? '' : i.asistio ? 'si' : 'no'}
+                    disabled={!esAdmin}
                     onChange={(e) =>
                       setAsistio(f.examen_fecha_id, i.profesor_id, e.target.value === '' ? null : e.target.value === 'si')
                     }

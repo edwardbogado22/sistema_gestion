@@ -27,7 +27,7 @@ const vacio = {
 }
 
 export function Llamados() {
-  const { esAdmin } = useAuth()
+  const { esAdmin, esSecretariaAcademica } = useAuth()
   const [llamados, setLlamados] = useState([])
   const [excepciones, setExcepciones] = useState([])
   const [avance, setAvance] = useState([])
@@ -317,20 +317,24 @@ export function Llamados() {
               </Link>
 
               {esAdmin && (
-                <>
-                  <Link to={`/examenes/${l.id}/vocales`} className="btn btn-secondary btn-sm">
-                    Asignar vocales
-                  </Link>
-                  <Link to={`/examenes/${l.id}/mesas-reporte`} className="btn btn-secondary btn-sm">
-                    Reporte de mesas
-                  </Link>
-                  <Link to={`/examenes/${l.id}/actas`} className="btn btn-secondary btn-sm">
-                    Numerar actas
-                  </Link>
-                  <Link to={`/examenes/${l.id}/asistencia-mesas`} className="btn btn-secondary btn-sm">
-                    Asistencia a mesas
-                  </Link>
-                </>
+                <Link to={`/examenes/${l.id}/vocales`} className="btn btn-secondary btn-sm">
+                  Asignar vocales
+                </Link>
+              )}
+              {(esAdmin || esSecretariaAcademica) && (
+                <Link to={`/examenes/${l.id}/mesas-reporte`} className="btn btn-secondary btn-sm">
+                  Reporte de mesas
+                </Link>
+              )}
+              {esAdmin && (
+                <Link to={`/examenes/${l.id}/actas`} className="btn btn-secondary btn-sm">
+                  Numerar actas
+                </Link>
+              )}
+              {(esAdmin || esSecretariaAcademica) && (
+                <Link to={`/examenes/${l.id}/asistencia-mesas`} className="btn btn-secondary btn-sm">
+                  Asistencia a mesas
+                </Link>
               )}
 
               {esAdmin && l.estado === 'BORRADOR' && (
