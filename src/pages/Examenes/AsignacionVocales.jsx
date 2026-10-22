@@ -4,7 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { fetchTodo } from '../../lib/paginar'
 import { aISO, deISO, formatoLargo } from '../../lib/fechas'
 import { descargarFilas } from '../../lib/csv'
-import { construirContexto, candidatos, estado, asignarAuto, calcularRebalanceo, diaSemana } from '../../lib/vocalesExamen'
+import { construirContexto, candidatos, estado, vocalesFueraDeCriterio, asignarAuto, calcularRebalanceo, diaSemana } from '../../lib/vocalesExamen'
 
 const sinFiltro = { sede_id: '', carrera_id: '', curso_nivel: '', estado: '', busqueda: '' }
 
@@ -475,6 +475,7 @@ export function AsignacionVocales() {
           )}
           {visibles.map(({ f, idx }) => {
             const e = estado(filas, idx, ctx)
+            const fuera = e === 'err' ? vocalesFueraDeCriterio(filas, idx, ctx) : []
             return (
               <Fragment key={f.catedra_id}>
               <tr>
@@ -514,8 +515,32 @@ export function AsignacionVocales() {
                   {e === 'ok' && <span className="badge badge-success">Completa</span>}
                   {e === 'warn' && <span className="badge badge-gold">Incompleta</span>}
                   {e === 'err' && (
-                    <span className="badge" style={{ background: 'var(--danger-soft)', color: 'var(--danger)' }}>
-                      {f.extras.length > 0 ? 'Sobran vocales' : 'Conflicto'}
+                    <span
+                      className="badge"
+                      style={{ background: 'var(--danger-soft)', color: 'var(--danger)' }}
+                      title={
+                        fuera.length > 0
+                          ? fuera
+                              .map(
+                                (v) =>
+                                  `${ctx.nombrePorId.get(v.id)}: ${[
+                                    !v.plantel && 'no es del plantel de esta carrera en esta sede',
+                                    !v.dia && `no tiene clase el ${diaSemana(f.fecha).toLowerCase()} en esta sede`,
+                                  ]
+                                    .filter(Boolean)
+                                    .join(' y ')}`,
+                              )
+                              .join('\n')
+                          : undefined
+                      }
+                    >
+                      {f.extras.length > 0
+                        ? 'Sobran vocales'
+                        : fuera.some((v) => !v.plantel)
+                          ? 'Fuera del plantel'
+                          : fuera.length > 0
+                            ? 'Sin clase ese día'
+                            : 'Conflicto'}
                     </span>
                   )}
                 </td>
@@ -669,15 +694,6 @@ function CeldaVocal({ fila, idx, campo, editando, setEditando, filas, ctx, onEle
         {cand.presente.length > 0 && (
           <optgroup label={`Tiene clase ese día (${cand.presente.length})`}>
             {cand.presente.map((id) => (
-              <option key={id} value={id}>
-                {ctx.nombrePorId.get(id)}
-              </option>
-            ))}
-          </optgroup>
-        )}
-        {cand.mismoDia.length > 0 && (
-          <optgroup label={`Sin horario cargado, mismo día de semana (${cand.mismoDia.length})`}>
-            {cand.mismoDia.map((id) => (
               <option key={id} value={id}>
                 {ctx.nombrePorId.get(id)}
               </option>

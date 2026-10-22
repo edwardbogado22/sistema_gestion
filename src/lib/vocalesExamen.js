@@ -14,9 +14,11 @@ import { deISO } from './fechas'
 // llamado (no de cualquier profesor del sistema) — mismo criterio que el
 // original: solo se recluta entre quienes ya presiden alguna mesa. Además
 // deben ser de la misma sede y carrera que la mesa (si no, no forman
-// parte del plantel que se está convocando ahí) y, siempre que haya datos
-// de horario, se prioriza a quien ese día ya tiene clase en esa sede —
-// para no convocar a alguien un día que no está en la institución.
+// parte del plantel que se está convocando ahí) y tienen que tener clase
+// ese día de la semana en esa sede según su horario (catedra_horario). No
+// se convoca a nadie un día en que no viene: no se sabe qué compromisos
+// tiene asumidos el resto de la semana (p. ej. quien viaja a una filial
+// solo los martes no puede quedar en una mesa de un miércoles ahí).
 
 const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
 
@@ -36,17 +38,22 @@ export function claveCluster(f) {
 
 const esOptativa = (f) => !!f.optativa
 
+const claveSedeCarrera = (f) => `${f.sede_id}|${f.carrera_id}`
+
 // `presencia`: Map<profesorId, Map<sedeId, Set<diaSemanaNumero>>> — de
-// dónde y qué días tiene clase cada profesor (catedra_horario). Opcional:
-// sin datos, el algoritmo cae al respaldo más débil (mismo día de semana
-// que otra mesa propia).
+// dónde y qué días tiene clase cada profesor (catedra_horario). Sin
+// horario cargado, ese profesor no es convocable como vocal.
 export function construirContexto(filas, presencia) {
   const ocupado = new Map() // profesorId -> Set(fecha) en que preside una mesa
   const clusterOpt = new Map() // claveCluster -> Set(profesorId) que preside una optativa de ese cluster
+  const plantel = new Map() // claveSedeCarrera -> Set(profesorId) titulares de esa carrera en esa sede
   const nombrePorId = new Map()
   for (const f of filas) {
     if (!f.titular_id) continue
     nombrePorId.set(f.titular_id, f.titular_nombre)
+    const kPlantel = claveSedeCarrera(f)
+    if (!plantel.has(kPlantel)) plantel.set(kPlantel, new Set())
+    plantel.get(kPlantel).add(f.titular_id)
     if (!ocupado.has(f.titular_id)) ocupado.set(f.titular_id, new Set())
     ocupado.get(f.titular_id).add(f.fecha)
     if (esOptativa(f)) {
@@ -58,22 +65,43 @@ export function construirContexto(filas, presencia) {
     if (f.vocal2_id) nombrePorId.set(f.vocal2_id, f.vocal2_nombre)
     for (const v of f.extras || []) nombrePorId.set(v.id, v.nombre)
   }
-  return { ocupado, clusterOpt, nombrePorId, presencia: presencia || new Map() }
+  return { ocupado, clusterOpt, plantel, nombrePorId, presencia: presencia || new Map() }
+}
+
+const tieneClaseEseDia = (ctx, prof, f) => !!ctx.presencia.get(prof)?.get(f.sede_id)?.has(diaSemanaNumero(f.fecha))
+
+// Co-presidente de una optativa del mismo cluster y fecha: ese día ya está
+// en la sede presidiendo, así que puede ser vocal aunque no tenga clase.
+const copresideOptativa = (ctx, prof, f) =>
+  esOptativa(f) && !!ctx.clusterOpt.get(claveCluster(f))?.has(prof) && !!ctx.ocupado.get(prof)?.has(f.fecha)
+
+// Vocales de la fila i que no cumplen los dos criterios de convocatoria:
+// ser del plantel de esa carrera en esa sede (titular de alguna mesa del
+// llamado ahí) y tener clase en esa sede ese día de la semana. Devuelve
+// [{ id, plantel, dia }] con lo que le falta a cada uno.
+export function vocalesFueraDeCriterio(filas, i, ctx) {
+  const f = filas[i]
+  const fuera = []
+  for (const v of [f.vocal1_id, f.vocal2_id]) {
+    if (!v || copresideOptativa(ctx, v, f)) continue
+    const plantel = !!ctx.plantel.get(claveSedeCarrera(f))?.has(v)
+    const dia = tieneClaseEseDia(ctx, v, f)
+    if (!plantel || !dia) fuera.push({ id: v, plantel, dia })
+  }
+  return fuera
 }
 
 // Candidatos a vocal para la fila i, excluyendo los ids en `excluir`.
 // Tiers, de mejor a peor:
 //   0 optCluster — co-presidentes de una optativa del mismo cluster y fecha (excepción al choque)
 //   1 presente   — tiene clase regular ese día de semana en esa sede (catedra_horario)
-//   2 mismoDia   — sin dato de horario, pero tiene otra mesa un día de semana igual (respaldo débil)
+// Quien no entra en ninguno no es candidato.
 export function candidatos(filas, i, excluir, ctx) {
   const f = filas[i]
   const soyOpt = esOptativa(f)
   const kCluster = soyOpt ? claveCluster(f) : null
-  const diaNum = diaSemanaNumero(f.fecha)
-  const diaTxt = diaSemana(f.fecha)
 
-  const mejorTier = new Map() // profesorId -> 0 | 1 | 2 (menor = mejor)
+  const mejorTier = new Map() // profesorId -> 0 | 1 (menor = mejor)
 
   for (const o of filas) {
     const prof = o.titular_id
@@ -85,28 +113,24 @@ export function candidatos(filas, i, excluir, ctx) {
       tier = 0
     } else {
       if (ctx.ocupado.has(prof) && ctx.ocupado.get(prof).has(f.fecha)) continue // choque: ya preside otra mesa ese día
-      if (ctx.presencia.get(prof)?.get(f.sede_id)?.has(diaNum)) tier = 1
-      else if (diaSemana(o.fecha) === diaTxt) tier = 2
+      if (tieneClaseEseDia(ctx, prof, f)) tier = 1
     }
     if (tier === null) continue
     if (!mejorTier.has(prof) || mejorTier.get(prof) > tier) mejorTier.set(prof, tier)
   }
 
   const p0 = [],
-    p1 = [],
-    p2 = []
+    p1 = []
   for (const [prof, tier] of mejorTier) {
     if (tier === 0) p0.push(prof)
-    else if (tier === 1) p1.push(prof)
-    else p2.push(prof)
+    else p1.push(prof)
   }
 
   const porNombre = (a, b) => (ctx.nombrePorId.get(a) || '').localeCompare(ctx.nombrePorId.get(b) || '')
   p0.sort(porNombre)
   p1.sort(porNombre)
-  p2.sort(porNombre)
 
-  return { optCluster: p0, presente: p1, mismoDia: p2, todos: [...p0, ...p1, ...p2] }
+  return { optCluster: p0, presente: p1, todos: [...p0, ...p1] }
 }
 
 // 'ok' | 'warn' | 'err' para la fila i.
@@ -129,6 +153,7 @@ export function estado(filas, i, ctx) {
       if (!permitido) return 'err'
     }
   }
+  if (vocalesFueraDeCriterio(filas, i, ctx).length) return 'err'
 
   return f.vocal1_id && f.vocal2_id ? 'ok' : 'warn'
 }
