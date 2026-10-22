@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 
 // Escala valorativa definida por Dirección Académica. El total se
@@ -17,6 +17,7 @@ function clasificar(total) {
 
 export function FojaDesempeno() {
   const { catedraId } = useParams()
+  const navigate = useNavigate()
   const [filas, setFilas] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -97,9 +98,21 @@ export function FojaDesempeno() {
   const subtotalAluObt = alumnos.reduce((a, f) => a + Number(f.obtenido_porcentaje), 0)
   const total = Math.round((subtotalInstObt + subtotalAluObt) * 100) / 100
 
+  // Abierta en una pestaña nueva (desde Cátedras / Emisión de fojas) la
+  // pestaña no tiene historial: se cierra y queda la lista filtrada que
+  // estaba atrás. Abierta en la misma pestaña, vuelve a la pantalla
+  // anterior.
+  const volver = () => {
+    if (window.history.length <= 1) window.close()
+    else navigate(-1)
+  }
+
   return (
     <div className="page-padding foja-desempeno">
       <div className="form-actions no-print" style={{ marginBottom: '1rem', alignItems: 'center' }}>
+        <button type="button" className="btn btn-secondary" onClick={volver}>
+          ← Volver a la lista
+        </button>
         <button type="button" className="btn btn-primary" onClick={() => window.print()}>
           Imprimir
         </button>
