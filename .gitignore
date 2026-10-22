@@ -46,3 +46,5 @@ archivo/
 
 # Configuración local de Claude Code
 .claude/
+planilla/encuesta/
+planilla/foja/
