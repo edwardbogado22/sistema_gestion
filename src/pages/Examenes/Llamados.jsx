@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../contexts/AuthContext'
 import { formatoLargo } from '../../lib/fechas'
+import { PanelHorarioLlamado } from './PanelHorarioLlamado'
 
 const TIPOS = [
   { value: 'ORDINARIO', label: 'Ordinario' },
@@ -145,7 +146,11 @@ export function Llamados() {
       p_sobrescribir: sobrescribir,
     })
     if (error) return setError(error.message)
-    setOk(`Se asignaron ${data} fechas. Revisalas antes de aprobar.`)
+    const ll = llamados.find((x) => x.id === id)
+    setOk(
+      `Se asignaron ${data} fechas. Revisalas antes de aprobar.` +
+        (ll && ll.tipo !== 'ORDINARIO' ? ' Las materias que no entraron figuran abajo, en "materias sin fecha", con el motivo.' : ''),
+    )
     cargar()
   }
 
@@ -366,6 +371,17 @@ export function Llamados() {
                 </button>
               )}
             </div>
+
+            {esAdmin && l.tipo !== 'ORDINARIO' && (
+              <PanelHorarioLlamado
+                key={`${l.id}|${l.fecha_fin}|${exc.length}|${conFecha}`}
+                llamado={l}
+                puedeEditar={l.estado !== 'CERRADO'}
+                onCambio={cargar}
+                setError={setError}
+                setOk={setOk}
+              />
+            )}
 
             {esAdmin && (
             <div style={{ marginTop: 14 }}>
