@@ -209,6 +209,70 @@ function contarCompletables(filas, ctx) {
 // Completa vocal1/vocal2 vacíos balanceando por cantidad de veces que cada
 // profesor ya es vocal (no cuenta las veces que preside). Devuelve un
 // array nuevo, no muta `filas`.
+// Equipara la carga de examinadores: pasa una mesa del vocal más cargado
+// a un candidato válido (mismas reglas que candidatos(): plantel de la
+// carrera, clase ese día en esa sede, no preside otra mesa ese día) que
+// tenga al menos 2 mesas menos, hasta que no quede ningún pase posible.
+// A igual carga se prefiere al que tiene menos mesas ese mismo día.
+// Devuelve las filas nuevas (no muta `filas`) y un resumen.
+export function equilibrarCarga(filas, presencia) {
+  const nuevas = filas.map((f) => ({ ...f }))
+  const ctx = construirContexto(nuevas, presencia)
+  const carga = new Map(ctx.vecesVocal)
+  const porDia = new Map() // `${prof}|${fecha}` -> mesas como vocal ese día
+  const claveDia = (p, fecha) => `${p}|${fecha}`
+  for (const f of nuevas) {
+    for (const v of [f.vocal1_id, f.vocal2_id]) {
+      if (v) porDia.set(claveDia(v, f.fecha), (porDia.get(claveDia(v, f.fecha)) || 0) + 1)
+    }
+  }
+  const resumen = (m) => {
+    const vals = [...m.values()].filter((n) => n > 0)
+    return { max: vals.length ? Math.max(...vals) : 0, profesores: vals.length }
+  }
+  const antes = resumen(carga)
+
+  let cambios = 0
+  for (let vuelta = 0; vuelta < 50; vuelta++) {
+    let movio = false
+    // primero las mesas del vocal más cargado
+    const slots = []
+    nuevas.forEach((f, i) => {
+      for (const campo of ['vocal1_id', 'vocal2_id']) if (f[campo] && !f.extras?.length) slots.push({ i, campo })
+    })
+    slots.sort((a, b) => (carga.get(nuevas[b.i][b.campo]) || 0) - (carga.get(nuevas[a.i][a.campo]) || 0))
+
+    for (const { i, campo } of slots) {
+      const f = nuevas[i]
+      const actual = f[campo]
+      const otro = campo === 'vocal1_id' ? f.vocal2_id : f.vocal1_id
+      const excluir = new Set([f.titular_id, actual, otro].filter(Boolean))
+      const cand = candidatos(nuevas, i, excluir, ctx).todos
+      const cargaActual = carga.get(actual) || 0
+      let mejor = null
+      for (const q of cand) {
+        const cq = carga.get(q) || 0
+        if (cq > cargaActual - 2) continue
+        const dq = porDia.get(claveDia(q, f.fecha)) || 0
+        if (!mejor || cq < mejor.c || (cq === mejor.c && dq < mejor.d)) mejor = { q, c: cq, d: dq }
+      }
+      if (!mejor) continue
+
+      const base = campo.replace(/_id$/, '')
+      nuevas[i] = { ...f, [campo]: mejor.q, [`${base}_nombre`]: ctx.nombrePorId.get(mejor.q) }
+      carga.set(actual, cargaActual - 1)
+      carga.set(mejor.q, (carga.get(mejor.q) || 0) + 1)
+      porDia.set(claveDia(actual, f.fecha), (porDia.get(claveDia(actual, f.fecha)) || 1) - 1)
+      porDia.set(claveDia(mejor.q, f.fecha), (porDia.get(claveDia(mejor.q, f.fecha)) || 0) + 1)
+      cambios++
+      movio = true
+    }
+    if (!movio) break
+  }
+
+  return { filas: nuevas, cambios, antes, despues: resumen(carga) }
+}
+
 export function asignarAuto(filas, presencia) {
   const ctx = construirContexto(filas, presencia)
   const conteo = new Map()

@@ -4,7 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { fetchTodo } from '../../lib/paginar'
 import { aISO, deISO, formatoLargo } from '../../lib/fechas'
 import { descargarFilas } from '../../lib/csv'
-import { construirContexto, candidatos, estado, vocalesFueraDeCriterio, motivosConflicto, asignarAuto, calcularRebalanceo, diaSemana } from '../../lib/vocalesExamen'
+import { construirContexto, candidatos, estado, vocalesFueraDeCriterio, motivosConflicto, asignarAuto, equilibrarCarga, calcularRebalanceo, diaSemana } from '../../lib/vocalesExamen'
 
 const sinFiltro = { sede_id: '', carrera_id: '', curso_nivel: '', estado: '', busqueda: '' }
 
@@ -216,6 +216,22 @@ export function AsignacionVocales() {
     setFilas(asignarAuto(filas, presencia))
     setOk('')
     setError('')
+  }
+
+  const equilibrar = () => {
+    const r = equilibrarCarga(filas, presencia)
+    setError('')
+    if (r.cambios === 0) {
+      setOk('La carga ya está pareja: no hay ningún pase posible que respete las reglas de convocatoria.')
+      return
+    }
+    setFilas(r.filas)
+    setOk(
+      `Se proponen ${r.cambios} cambio(s) de examinador: el más cargado pasa de ${r.antes.max} a ${r.despues.max} mesas, ` +
+        `y las examinaciones se reparten entre ${r.despues.profesores} profesores (antes ${r.antes.profesores}). ` +
+        'Revisá la tabla y tocá "Guardar cambios" para confirmarlos ' +
+        '(o recargá la página para descartarlos).',
+    )
   }
 
   const setVocal = (idx, campo, profesorId) => {
@@ -438,6 +454,14 @@ export function AsignacionVocales() {
       <div className="form-actions" style={{ marginBottom: 16, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         <button type="button" className="btn btn-secondary" onClick={asignar}>
           Asignar automáticamente
+        </button>
+        <button
+          type="button"
+          className="btn btn-secondary"
+          onClick={equilibrar}
+          title="Pasa mesas de los examinadores más cargados a otros del plantel que vienen ese día a la sede"
+        >
+          Equilibrar carga
         </button>
         <button type="button" className="btn btn-secondary" onClick={exportarCSV}>
           Descargar CSV
