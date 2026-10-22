@@ -13,21 +13,23 @@
 --   3) PASO 3 de este archivo                 (completa las cátedras sin encuesta)
 --   4) PASO 4 de este archivo                 (controles)
 --
--- Cada paso se ejecuta por separado en el SQL Editor de Supabase.
+-- El PASO 1 va comentado: el archivo completo se puede ejecutar sin
+-- borrar nada (corre el PASO 3 y los controles del PASO 4).
 -- ============================================================
 
 
 -- ------------------------------------------------------------
 -- PASO 1 — Borrar la encuesta 2025 cargada hasta ahora
 -- ------------------------------------------------------------
--- Incluye Puntualidad / Entrega de resultados (que no estaban en el
--- cuestionario) y las cargas repetidas con otra escala.
-
-delete from evaluacion_criterio_catedra ecc
- using criterios_evaluacion cr
- where cr.id = ecc.criterio_id
-   and cr.origen = 'ENCUESTA_ALUMNOS'
-   and cr.periodo_lectivo = '2025';
+-- Va comentado a propósito: este archivo se puede ejecutar completo
+-- (pasos 3 y 4) sin borrar nada. Para el PASO 1, copiar SOLO estas
+-- líneas sin los "--" y ejecutarlas antes de importar el CSV.
+--
+-- delete from evaluacion_criterio_catedra ecc
+--  using criterios_evaluacion cr
+--  where cr.id = ecc.criterio_id
+--    and cr.origen = 'ENCUESTA_ALUMNOS'
+--    and cr.periodo_lectivo = '2025';
 
 
 -- ------------------------------------------------------------
