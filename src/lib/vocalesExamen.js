@@ -133,6 +133,31 @@ export function candidatos(filas, i, excluir, ctx) {
   return { optCluster: p0, presente: p1, todos: [...p0, ...p1] }
 }
 
+// Por qué la fila i está en conflicto, en las mismas reglas que estado():
+// una línea por problema, con el nombre del profesor. Vacío si no hay.
+export function motivosConflicto(filas, i, ctx) {
+  const f = filas[i]
+  const nombre = (id) => ctx.nombrePorId.get(id) || 'Profesor'
+  const motivos = []
+  if (f.extras?.length) motivos.push(`Tiene ${2 + f.extras.length} vocales guardados y lleva 2`)
+  if (f.vocal1_id && f.vocal1_id === f.vocal2_id) motivos.push(`${nombre(f.vocal1_id)} está dos veces como vocal`)
+  for (const v of [f.vocal1_id, f.vocal2_id]) {
+    if (v && v === f.titular_id) motivos.push(`${nombre(v)} es el presidente y también vocal`)
+  }
+  const kCluster = esOptativa(f) ? claveCluster(f) : null
+  for (const v of [f.vocal1_id, f.vocal2_id]) {
+    if (!v || v === f.titular_id || !ctx.ocupado.get(v)?.has(f.fecha)) continue
+    const permitido = kCluster && ctx.clusterOpt.get(kCluster)?.has(v)
+    if (!permitido) motivos.push(`${nombre(v)} preside otra mesa ese mismo día`)
+  }
+  const dia = diaSemana(f.fecha).toLowerCase()
+  for (const v of vocalesFueraDeCriterio(filas, i, ctx)) {
+    const faltas = [!v.plantel && 'no es del plantel de esta carrera en esta sede', !v.dia && `no tiene clase el ${dia} en esta sede`]
+    motivos.push(`${nombre(v.id)}: ${faltas.filter(Boolean).join(' y ')}`)
+  }
+  return motivos
+}
+
 // 'ok' | 'warn' | 'err' para la fila i.
 export function estado(filas, i, ctx) {
   const f = filas[i]

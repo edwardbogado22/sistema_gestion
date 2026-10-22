@@ -4,7 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { fetchTodo } from '../../lib/paginar'
 import { aISO, deISO, formatoLargo } from '../../lib/fechas'
 import { descargarFilas } from '../../lib/csv'
-import { construirContexto, candidatos, estado, vocalesFueraDeCriterio, asignarAuto, calcularRebalanceo, diaSemana } from '../../lib/vocalesExamen'
+import { construirContexto, candidatos, estado, vocalesFueraDeCriterio, motivosConflicto, asignarAuto, calcularRebalanceo, diaSemana } from '../../lib/vocalesExamen'
 
 const sinFiltro = { sede_id: '', carrera_id: '', curso_nivel: '', estado: '', busqueda: '' }
 
@@ -369,14 +369,25 @@ export function AsignacionVocales() {
           <div className="stat-value">{stats.ok}</div>
           <div className="stat-label">Completas</div>
         </div>
-        <div className="stat-card">
+        {/* tocar la tarjeta filtra la tabla por ese estado (y de nuevo lo quita) */}
+        <button
+          type="button"
+          className="stat-card"
+          style={{ cursor: 'pointer', textAlign: 'left', font: 'inherit', outline: filtro.estado === 'warn' ? '2px solid var(--gold)' : undefined }}
+          onClick={() => setFiltro({ ...filtro, estado: filtro.estado === 'warn' ? '' : 'warn' })}
+        >
           <div className="stat-value">{stats.warn}</div>
-          <div className="stat-label">Incompletas</div>
-        </div>
-        <div className="stat-card">
+          <div className="stat-label">Incompletas · ver</div>
+        </button>
+        <button
+          type="button"
+          className="stat-card"
+          style={{ cursor: 'pointer', textAlign: 'left', font: 'inherit', outline: filtro.estado === 'err' ? '2px solid var(--danger)' : undefined }}
+          onClick={() => setFiltro({ ...filtro, estado: filtro.estado === 'err' ? '' : 'err' })}
+        >
           <div className="stat-value">{stats.err}</div>
-          <div className="stat-label">Conflictos</div>
-        </div>
+          <div className="stat-label">Conflictos · ver</div>
+        </button>
       </div>
 
       <div className="form-row" style={{ marginBottom: 16, alignItems: 'center' }}>
@@ -476,6 +487,7 @@ export function AsignacionVocales() {
           {visibles.map(({ f, idx }) => {
             const e = estado(filas, idx, ctx)
             const fuera = e === 'err' ? vocalesFueraDeCriterio(filas, idx, ctx) : []
+            const motivos = e === 'err' ? motivosConflicto(filas, idx, ctx) : []
             return (
               <Fragment key={f.catedra_id}>
               <tr>
@@ -518,21 +530,6 @@ export function AsignacionVocales() {
                     <span
                       className="badge"
                       style={{ background: 'var(--danger-soft)', color: 'var(--danger)' }}
-                      title={
-                        fuera.length > 0
-                          ? fuera
-                              .map(
-                                (v) =>
-                                  `${ctx.nombrePorId.get(v.id)}: ${[
-                                    !v.plantel && 'no es del plantel de esta carrera en esta sede',
-                                    !v.dia && `no tiene clase el ${diaSemana(f.fecha).toLowerCase()} en esta sede`,
-                                  ]
-                                    .filter(Boolean)
-                                    .join(' y ')}`,
-                              )
-                              .join('\n')
-                          : undefined
-                      }
                     >
                       {f.extras.length > 0
                         ? 'Sobran vocales'
@@ -543,6 +540,11 @@ export function AsignacionVocales() {
                             : 'Conflicto'}
                     </span>
                   )}
+                  {motivos.map((m) => (
+                    <div key={m} className="error-text" style={{ fontSize: 12, marginTop: 4, lineHeight: 1.35 }}>
+                      {m}
+                    </div>
+                  ))}
                 </td>
               </tr>
               {f.extras.length > 0 && (
