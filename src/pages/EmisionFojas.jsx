@@ -352,7 +352,8 @@ export function EmisionFojas() {
                         <td>{imp[0] ? fechaHora(imp[0].impreso_en) : '—'}</td>
                         <td>{imp[0] ? usuarios.get(imp[0].impreso_por) || '—' : '—'}</td>
                         <td className="no-print">
-                          <Link to={`/foja/${c.id}`} className="btn btn-secondary btn-sm">
+                          {/* pestaña nueva: la lista filtrada queda abierta para seguir imprimiendo */}
+                          <Link to={`/foja/${c.id}`} target="_blank" rel="noopener" className="btn btn-secondary btn-sm">
                             Ver foja
                           </Link>
                         </td>

@@ -567,7 +567,8 @@ export function Catedras() {
                               Indicadores
                             </Link>
                           )}
-                          <Link to={`/foja/${c.id}`} className="btn btn-secondary btn-sm">
+                          {/* pestaña nueva: la lista filtrada queda abierta para seguir imprimiendo */}
+                          <Link to={`/foja/${c.id}`} target="_blank" rel="noopener" className="btn btn-secondary btn-sm">
                             Foja
                           </Link>
                           <Link to={`/contenido/reporte/${c.id}`} className="btn btn-secondary btn-sm">
