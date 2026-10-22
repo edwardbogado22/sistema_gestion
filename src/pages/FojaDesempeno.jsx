@@ -2,14 +2,16 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 
-// Escala valorativa definida por Dirección Académica. Los cortes van por
-// el límite inferior de cada rango, así un total con decimales (p. ej.
-// 90,5%) cae en el rango que todavía no alcanzó el siguiente (Muy bueno).
+// Escala valorativa definida por Dirección Académica. El total se
+// redondea al entero antes de clasificar, a favor del profesor (decisión
+// de la Directora Académica): 90,5% cuenta como 91% (Excelente) y 59,5%
+// como 60% (Necesita mejorar).
 function clasificar(total) {
-  if (total >= 91) return 'Excelente'
-  if (total >= 80) return 'Muy bueno'
-  if (total >= 70) return 'Bueno'
-  if (total >= 60) return 'Necesita mejorar'
+  const t = Math.round(total)
+  if (t >= 91) return 'Excelente'
+  if (t >= 80) return 'Muy bueno'
+  if (t >= 70) return 'Bueno'
+  if (t >= 60) return 'Necesita mejorar'
   return 'No cumple'
 }
 
