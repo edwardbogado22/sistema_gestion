@@ -674,6 +674,10 @@ function CeldaVocal({ fila, idx, campo, editando, setEditando, filas, ctx, onEle
   const excluir = new Set([fila.titular_id])
   if (fila[otroCampo]) excluir.add(fila[otroCampo])
   const cand = candidatos(filas, idx, excluir, ctx)
+  // Menos cargado primero; a igual carga, por nombre.
+  const veces = (id) => ctx.vecesVocal.get(id) || 0
+  const porCarga = (ids) => [...ids].sort((a, b) => veces(a) - veces(b))
+  const etiquetaCandidato = (id) => `${ctx.nombrePorId.get(id)} · ${veces(id)} ${veces(id) === 1 ? 'mesa' : 'mesas'} como examinador`
 
   return (
     <td>
@@ -686,18 +690,18 @@ function CeldaVocal({ fila, idx, campo, editando, setEditando, filas, ctx, onEle
         <option value="">— sin asignar —</option>
         {cand.optCluster.length > 0 && (
           <optgroup label={`Optativas del cluster (${cand.optCluster.length})`}>
-            {cand.optCluster.map((id) => (
+            {porCarga(cand.optCluster).map((id) => (
               <option key={id} value={id}>
-                {ctx.nombrePorId.get(id)}
+                {etiquetaCandidato(id)}
               </option>
             ))}
           </optgroup>
         )}
         {cand.presente.length > 0 && (
           <optgroup label={`Tiene clase ese día (${cand.presente.length})`}>
-            {cand.presente.map((id) => (
+            {porCarga(cand.presente).map((id) => (
               <option key={id} value={id}>
-                {ctx.nombrePorId.get(id)}
+                {etiquetaCandidato(id)}
               </option>
             ))}
           </optgroup>

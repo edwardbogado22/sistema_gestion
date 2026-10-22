@@ -65,7 +65,15 @@ export function construirContexto(filas, presencia) {
     if (f.vocal2_id) nombrePorId.set(f.vocal2_id, f.vocal2_nombre)
     for (const v of f.extras || []) nombrePorId.set(v.id, v.nombre)
   }
-  return { ocupado, clusterOpt, plantel, nombrePorId, presencia: presencia || new Map() }
+  // Cuántas mesas integra cada profesor como vocal en el llamado: se
+  // muestra al elegir un reemplazo, para repartir la carga.
+  const vecesVocal = new Map()
+  for (const f of filas) {
+    for (const v of [f.vocal1_id, f.vocal2_id, ...(f.extras || []).map((x) => x.id)]) {
+      if (v) vecesVocal.set(v, (vecesVocal.get(v) || 0) + 1)
+    }
+  }
+  return { ocupado, clusterOpt, plantel, nombrePorId, vecesVocal, presencia: presencia || new Map() }
 }
 
 const tieneClaseEseDia = (ctx, prof, f) => !!ctx.presencia.get(prof)?.get(f.sede_id)?.has(diaSemanaNumero(f.fecha))
