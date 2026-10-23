@@ -264,7 +264,8 @@ export function PanelFechas() {
     for (const n of noDisponible) {
       if (n.profesor_id === fila.profesor_id) motivos[n.fecha] = 'El profesor no está disponible'
     }
-    if (!fila.optativa) {
+    // Complementario y Regularización: sin tope de mesas por profesor y día
+    if (!fila.optativa && sinTope(fila) === false) {
       for (const o of ocupadoProfesor) {
         if (o.profesor_id === fila.profesor_id && o.catedra_id !== fila.catedra_id && o.origen !== 'AUTO') {
           motivos[o.fecha] = motivos[o.fecha] || `El profesor ya tiene una mesa asignada: ${o.materia}`
@@ -285,9 +286,11 @@ export function PanelFechas() {
     return motivos
   }
 
+  const sinTope = (fila) => !!fila.llamado_tipo && fila.llamado_tipo !== 'ORDINARIO'
+
   const avisosDe = (fila) => {
     const avisos = {}
-    if (!fila.optativa) {
+    if (!fila.optativa && sinTope(fila) === false) {
       for (const o of ocupadoProfesor) {
         if (o.profesor_id === fila.profesor_id && o.catedra_id !== fila.catedra_id && o.origen === 'AUTO') {
           avisos[o.fecha] = `Propuesta automática sin confirmar: ${o.materia}. Se libera si elegís esta fecha.`
@@ -299,7 +302,7 @@ export function PanelFechas() {
 
   const conflictoDe = (fila) => {
     const fecha = fechaDe(fila)
-    if (!fecha) return null
+    if (!fecha || sinTope(fila)) return null
     return conflictos.find((c) => c.profesor_id === fila.profesor_id && c.fecha === fecha) || null
   }
 
@@ -362,7 +365,7 @@ export function PanelFechas() {
         <p>
           Rango {formatoLargo(llamado.fecha_inicio)} a {formatoLargo(llamado.fecha_fin)} ·{' '}
           {totalConFecha} de {filas.length} con fecha
-          {conflictos.length > 0 && ` · ${conflictos.length} choque(s) de profesor`}
+          {conflictos.length > 0 && llamado.llamado_tipo === 'ORDINARIO' && ` · ${conflictos.length} choque(s) de profesor`}
         </p>
       </div>
 

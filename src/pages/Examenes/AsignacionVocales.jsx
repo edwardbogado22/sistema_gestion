@@ -142,7 +142,9 @@ export function AsignacionVocales() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [llamadoId])
 
-  const ctx = useMemo(() => construirContexto(filas, presencia), [filas, presencia])
+  // Complementario y Regularización: sin tope de mesas por profesor y día
+  const opcionesCtx = useMemo(() => ({ sinTopeDiario: !!llamado && llamado.tipo !== 'ORDINARIO' }), [llamado])
+  const ctx = useMemo(() => construirContexto(filas, presencia, opcionesCtx), [filas, presencia, opcionesCtx])
 
   const opciones = useMemo(() => {
     const unico = (clave, etiquetaClave) => {
@@ -213,13 +215,13 @@ export function AsignacionVocales() {
   }, [filtro])
 
   const asignar = () => {
-    setFilas(asignarAuto(filas, presencia))
+    setFilas(asignarAuto(filas, presencia, opcionesCtx))
     setOk('')
     setError('')
   }
 
   const equilibrar = () => {
-    const r = equilibrarCarga(filas, presencia)
+    const r = equilibrarCarga(filas, presencia, opcionesCtx)
     setError('')
     if (r.cambios === 0) {
       setOk('La carga ya está pareja: no hay ningún pase posible que respete las reglas de convocatoria.')
@@ -333,7 +335,7 @@ export function AsignacionVocales() {
   const abrirRebalanceo = () => {
     setRebalanceando(true)
     setTimeout(() => {
-      const r = calcularRebalanceo(filas, fechasHabilesPorDia, presencia)
+      const r = calcularRebalanceo(filas, fechasHabilesPorDia, presencia, opcionesCtx)
       setRebalanceo(r)
       setSeleccionadas(new Set(r.propuestas.map((_, i) => i)))
       setRebalanceando(false)

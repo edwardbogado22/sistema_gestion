@@ -43,7 +43,10 @@ const claveSedeCarrera = (f) => `${f.sede_id}|${f.carrera_id}`
 // `presencia`: Map<profesorId, Map<sedeId, Set<diaSemanaNumero>>> — de
 // dónde y qué días tiene clase cada profesor (catedra_horario). Sin
 // horario cargado, ese profesor no es convocable como vocal.
-export function construirContexto(filas, presencia) {
+// `opciones.sinTopeDiario`: Complementario y Regularización. Un profesor
+// que va ese día a la sede puede integrar todas las mesas de ese día, así
+// que presidir otra mesa el mismo día no lo excluye como vocal.
+export function construirContexto(filas, presencia, opciones = {}) {
   const ocupado = new Map() // profesorId -> Set(fecha) en que preside una mesa
   const clusterOpt = new Map() // claveCluster -> Set(profesorId) que preside una optativa de ese cluster
   const plantel = new Map() // claveSedeCarrera -> Set(profesorId) titulares de esa carrera en esa sede
@@ -73,7 +76,15 @@ export function construirContexto(filas, presencia) {
       if (v) vecesVocal.set(v, (vecesVocal.get(v) || 0) + 1)
     }
   }
-  return { ocupado, clusterOpt, plantel, nombrePorId, vecesVocal, presencia: presencia || new Map() }
+  return {
+    ocupado,
+    clusterOpt,
+    plantel,
+    nombrePorId,
+    vecesVocal,
+    presencia: presencia || new Map(),
+    sinTopeDiario: !!opciones.sinTopeDiario,
+  }
 }
 
 const tieneClaseEseDia = (ctx, prof, f) => !!ctx.presencia.get(prof)?.get(f.sede_id)?.has(diaSemanaNumero(f.fecha))
@@ -120,7 +131,7 @@ export function candidatos(filas, i, excluir, ctx) {
     if (soyOpt && esOptativa(o) && o.fecha === f.fecha && claveCluster(o) === kCluster) {
       tier = 0
     } else {
-      if (ctx.ocupado.has(prof) && ctx.ocupado.get(prof).has(f.fecha)) continue // choque: ya preside otra mesa ese día
+      if (!ctx.sinTopeDiario && ctx.ocupado.get(prof)?.has(f.fecha)) continue // choque: ya preside otra mesa ese día
       if (tieneClaseEseDia(ctx, prof, f)) tier = 1
     }
     if (tier === null) continue
@@ -154,7 +165,7 @@ export function motivosConflicto(filas, i, ctx) {
   }
   const kCluster = esOptativa(f) ? claveCluster(f) : null
   for (const v of [f.vocal1_id, f.vocal2_id]) {
-    if (!v || v === f.titular_id || !ctx.ocupado.get(v)?.has(f.fecha)) continue
+    if (ctx.sinTopeDiario || !v || v === f.titular_id || !ctx.ocupado.get(v)?.has(f.fecha)) continue
     const permitido = kCluster && ctx.clusterOpt.get(kCluster)?.has(v)
     if (!permitido) motivos.push(`${nombre(v)} preside otra mesa ese mismo día`)
   }
@@ -181,7 +192,7 @@ export function estado(filas, i, ctx) {
   const kCluster = soyOpt ? claveCluster(f) : null
   for (const ex of [f.vocal1_id, f.vocal2_id]) {
     if (!ex) continue
-    if (ctx.ocupado.has(ex) && ctx.ocupado.get(ex).has(f.fecha)) {
+    if (!ctx.sinTopeDiario && ctx.ocupado.get(ex)?.has(f.fecha)) {
       const permitido = soyOpt && ctx.clusterOpt.has(kCluster) && ctx.clusterOpt.get(kCluster).has(ex)
       if (!permitido) return 'err'
     }
@@ -215,9 +226,9 @@ function contarCompletables(filas, ctx) {
 // tenga al menos 2 mesas menos, hasta que no quede ningún pase posible.
 // A igual carga se prefiere al que tiene menos mesas ese mismo día.
 // Devuelve las filas nuevas (no muta `filas`) y un resumen.
-export function equilibrarCarga(filas, presencia) {
+export function equilibrarCarga(filas, presencia, opciones) {
   const nuevas = filas.map((f) => ({ ...f }))
-  const ctx = construirContexto(nuevas, presencia)
+  const ctx = construirContexto(nuevas, presencia, opciones)
   const carga = new Map(ctx.vecesVocal)
   const porDia = new Map() // `${prof}|${fecha}` -> mesas como vocal ese día
   const claveDia = (p, fecha) => `${p}|${fecha}`
@@ -273,8 +284,8 @@ export function equilibrarCarga(filas, presencia) {
   return { filas: nuevas, cambios, antes, despues: resumen(carga) }
 }
 
-export function asignarAuto(filas, presencia) {
-  const ctx = construirContexto(filas, presencia)
+export function asignarAuto(filas, presencia, opciones) {
+  const ctx = construirContexto(filas, presencia, opciones)
   const conteo = new Map()
   for (const f of filas) {
     if (f.vocal1_id) conteo.set(f.vocal1_id, (conteo.get(f.vocal1_id) || 0) + 1)
@@ -348,9 +359,9 @@ function describirPropuesta(m, filas) {
 // (dentro de `fechasHabilesPorDia`, Map<diaSemana, string[] fechasISO>)
 // para aumentar la cantidad de mesas completables. Búsqueda voraz, no
 // muta `filasOriginal`.
-export function calcularRebalanceo(filasOriginal, fechasHabilesPorDia, presencia) {
+export function calcularRebalanceo(filasOriginal, fechasHabilesPorDia, presencia, opciones) {
   const filas = filasOriginal.map((f) => ({ ...f }))
-  const ctxBase = construirContexto(filas, presencia)
+  const ctxBase = construirContexto(filas, presencia, opciones)
   const baseGlobal = contarCompletables(filas, ctxBase)
 
   const dias = new Set(filas.map((f) => diaSemana(f.fecha)))
@@ -366,7 +377,7 @@ export function calcularRebalanceo(filasOriginal, fechasHabilesPorDia, presencia
       guardia++
       mejora = false
       const grupos = gruposMovibles(filas, dia)
-      const ctx = construirContexto(filas, presencia)
+      const ctx = construirContexto(filas, presencia, opciones)
       const base = contarCompletables(filas, ctx)
       let mejor = null
 
@@ -378,7 +389,7 @@ export function calcularRebalanceo(filasOriginal, fechasHabilesPorDia, presencia
           g.idxs.forEach((idx) => {
             filas[idx] = { ...filas[idx], fecha: destino }
           })
-          const ctxProbado = construirContexto(filas, presencia)
+          const ctxProbado = construirContexto(filas, presencia, opciones)
           const ahora = contarCompletables(filas, ctxProbado)
           g.idxs.forEach((idx, k) => {
             filas[idx] = { ...filas[idx], fecha: previo[k] }
