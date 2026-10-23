@@ -167,9 +167,30 @@ export function PanelFechas() {
     if (fecha && fila?.profesor_id) refrescarProfesor(fila.profesor_id)
   }
 
+  // Las optativas de un mismo curso y sección (misma carrera y sede) se
+  // toman siempre el mismo día: elegir la fecha de una la aplica a todas.
+  const grupoOptativas = (f) =>
+    f?.optativa
+      ? filas.filter(
+          (o) =>
+            o.optativa &&
+            o.carrera_id === f.carrera_id &&
+            o.sede_id === f.sede_id &&
+            o.curso_nivel === f.curso_nivel &&
+            (o.seccion_grupo || '').toUpperCase() === (f.seccion_grupo || '').toUpperCase(),
+        )
+      : f
+        ? [f]
+        : []
+
   const elegirFecha = (catedraId, fecha) => {
-    setCambios((c) => ({ ...c, [catedraId]: fecha }))
-    guardarFila(catedraId, fecha)
+    const ids = grupoOptativas(filas.find((f) => f.catedra_id === catedraId)).map((f) => f.catedra_id)
+    setCambios((c) => {
+      const n = { ...c }
+      for (const id of ids) n[id] = fecha
+      return n
+    })
+    for (const id of ids) guardarFila(id, fecha)
   }
 
   const reintentarPendientes = () => {
@@ -485,6 +506,15 @@ export function PanelFechas() {
                 </td>
                 <td>
                   {f.curso_nivel}º · {f.seccion_grupo}
+                  {f.optativa && grupoOptativas(f).length > 1 && (
+                    <div className="muted-text" style={{ fontSize: 12 }}>
+                      Optativa: misma fecha que{' '}
+                      {grupoOptativas(f)
+                        .filter((o) => o.catedra_id !== f.catedra_id)
+                        .map((o) => o.materia)
+                        .join(', ')}
+                    </div>
+                  )}
                 </td>
                 <td>
                   {f.profesor}

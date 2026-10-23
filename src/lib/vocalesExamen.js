@@ -32,8 +32,10 @@ export function diaSemanaNumero(fechaISO) {
   return deISO(fechaISO).getDay()
 }
 
+// La sección va en mayúsculas: en la base conviven "UNICA" y "unica"
+// para un mismo curso, y las optativas del curso son un solo grupo.
 export function claveCluster(f) {
-  return [f.sede_id, f.carrera_id, f.curso_nivel, f.seccion_grupo].join('|')
+  return [f.sede_id, f.carrera_id, f.curso_nivel, (f.seccion_grupo || '').toUpperCase()].join('|')
 }
 
 const esOptativa = (f) => !!f.optativa
