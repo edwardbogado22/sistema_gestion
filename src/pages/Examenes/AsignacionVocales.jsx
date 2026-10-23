@@ -471,6 +471,10 @@ export function AsignacionVocales() {
         <Link to={`/examenes/${llamadoId}/mesas-reporte${reporteQuery}`} className="btn btn-secondary">
           Reporte para imprimir
         </Link>
+        {/* pestaña nueva: no se pierden los cambios sin guardar de esta pantalla */}
+        <Link to={`/examenes/${llamadoId}/carga-profesores`} target="_blank" rel="noopener" className="btn btn-secondary">
+          Carga por profesor
+        </Link>
         <button
           type="button"
           className="btn btn-secondary"

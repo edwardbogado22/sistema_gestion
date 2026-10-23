@@ -331,6 +331,11 @@ export function Llamados() {
                   Reporte de mesas
                 </Link>
               )}
+              {(esAdmin || esSecretariaAcademica) && (
+                <Link to={`/examenes/${l.id}/carga-profesores`} className="btn btn-secondary btn-sm">
+                  Carga por profesor
+                </Link>
+              )}
               {esAdmin && (
                 <Link to={`/examenes/${l.id}/actas`} className="btn btn-secondary btn-sm">
                   Numerar actas

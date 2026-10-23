@@ -33,6 +33,9 @@ const AsignacionVocales = lazy(() =>
   import('./pages/Examenes/AsignacionVocales').then((m) => ({ default: m.AsignacionVocales })),
 )
 const ReporteMesas = lazy(() => import('./pages/Examenes/ReporteMesas').then((m) => ({ default: m.ReporteMesas })))
+const CargaProfesores = lazy(() =>
+  import('./pages/Examenes/CargaProfesores').then((m) => ({ default: m.CargaProfesores })),
+)
 const AsistenciaMesas = lazy(() =>
   import('./pages/Examenes/AsistenciaMesas').then((m) => ({ default: m.AsistenciaMesas })),
 )
@@ -136,6 +139,10 @@ function App() {
         <Route
           path="/examenes/:llamadoId/mesas-reporte"
           element={<PrivateRoute roles={REPORTES}>{withLayout(<ReporteMesas />)}</PrivateRoute>}
+        />
+        <Route
+          path="/examenes/:llamadoId/carga-profesores"
+          element={<PrivateRoute roles={REPORTES}>{withLayout(<CargaProfesores />)}</PrivateRoute>}
         />
         <Route
           path="/examenes/:llamadoId/actas"
