@@ -103,6 +103,9 @@ export function CargaProfesores() {
         examinaciones: p.participaciones.filter((x) => x.rol === 'Examinador').length,
         total: p.participaciones.length,
         dias: porDia.size,
+        // Días que tiene que venir como examinador (vocal), aparte de los
+        // que viene solo a presidir sus propias mesas.
+        diasExaminador: new Set(p.participaciones.filter((x) => x.rol === 'Examinador').map((x) => x.fecha)).size,
         maxDia,
         diaMax,
       }
@@ -134,7 +137,8 @@ export function CargaProfesores() {
         presidencias: p.presidencias,
         examinaciones: p.examinaciones,
         total_mesas: p.total,
-        dias: p.dias,
+        dias_como_examinador: p.diasExaminador,
+        dias_en_total: p.dias,
         max_en_un_dia: p.maxDia,
         dia_mas_cargado: p.diaMax,
       })),
@@ -234,14 +238,15 @@ export function CargaProfesores() {
               <th style={{ width: 100 }}>Presidencias</th>
               <th style={{ width: 110 }}>Examinaciones</th>
               <th style={{ width: 80 }}>Total</th>
-              <th style={{ width: 70 }}>Días</th>
+              <th style={{ width: 110 }}>Días como examinador</th>
+              <th style={{ width: 80 }}>Días en total</th>
               <th style={{ width: 170 }}>Día más cargado</th>
             </tr>
           </thead>
           <tbody>
             {lista.length === 0 && (
               <tr>
-                <td colSpan={6} className="muted-text">
+                <td colSpan={7} className="muted-text">
                   {mesas.length === 0 ? 'Este llamado todavía no tiene mesas con fecha.' : 'Ningún profesor coincide con el filtro.'}
                 </td>
               </tr>
@@ -258,6 +263,7 @@ export function CargaProfesores() {
                   <td>
                     <strong>{p.total}</strong>
                   </td>
+                  <td>{p.diasExaminador || '—'}</td>
                   <td>{p.dias}</td>
                   <td>
                     {p.maxDia} · {diaSemana(p.diaMax)} {formatoLargo(p.diaMax)}
@@ -265,7 +271,7 @@ export function CargaProfesores() {
                 </tr>
                 {abierto === p.id && (
                   <tr>
-                    <td colSpan={6} style={{ background: 'var(--canvas)' }}>
+                    <td colSpan={7} style={{ background: 'var(--canvas)' }}>
                       <table className="data-table">
                         <thead>
                           <tr>
