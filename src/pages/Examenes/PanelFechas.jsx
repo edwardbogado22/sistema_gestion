@@ -4,7 +4,8 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../contexts/AuthContext'
 import { BuscadorSelect } from '../../components/BuscadorSelect'
 import { CalendarioRango } from '../../components/CalendarioRango'
-import { formatoLargo } from '../../lib/fechas'
+import { aISO, deISO, formatoLargo } from '../../lib/fechas'
+import { fetchTodo } from '../../lib/paginar'
 import { descargarFilas } from '../../lib/csv'
 
 const sinFiltro = {
@@ -25,6 +26,7 @@ export function PanelFechas() {
   const [conflictos, setConflictos] = useState([])
   const [noDisponible, setNoDisponible] = useState([])
   const [ocupadoProfesor, setOcupadoProfesor] = useState([])
+  const [diasClase, setDiasClase] = useState(new Map()) // catedra_id -> Set(dia_semana 1-5)
   const [filtro, setFiltro] = useState(sinFiltro)
   const [cambios, setCambios] = useState({})
   const [filaEstado, setFilaEstado] = useState({})
@@ -38,20 +40,31 @@ export function PanelFechas() {
     setLoading(true)
     // dias_bloqueados_llamado expande los feriados recurrentes al año
     // que corresponde y suma los domingos y las excepciones puntuales.
-    const [ag, exc, con, nd, ocup] = await Promise.all([
+    const [ag, exc, con, nd, ocup, hor] = await Promise.all([
       supabase.from('v_examen_agenda').select('*').eq('llamado_id', llamadoId),
       supabase.rpc('dias_bloqueados_llamado', { p_llamado: llamadoId }),
       supabase.from('v_examen_conflictos').select('*').eq('llamado_id', llamadoId),
       supabase.from('profesor_no_disponible').select('profesor_id, fecha').eq('llamado_id', llamadoId),
       supabase.rpc('examen_fechas_profesor_llamado', { p_llamado: llamadoId }),
+      // horario de clases: en Complementario y Regularización cada materia
+      // rinde solo el día de la semana en que se dicta
+      fetchTodo((desde, hasta) =>
+        supabase.from('catedra_horario').select('id, catedra_id, dia_semana').order('id').range(desde, hasta),
+      ),
     ])
-    const err = ag.error || exc.error || con.error || nd.error || ocup.error
+    const err = ag.error || exc.error || con.error || nd.error || ocup.error || hor.error
     if (err) setError(err.message)
     setFilas(ag.data || [])
     setBloqueados(exc.data || [])
     setConflictos(con.data || [])
     setNoDisponible(nd.data || [])
     setOcupadoProfesor(ocup.data || [])
+    const mapa = new Map()
+    for (const h of hor.data || []) {
+      if (!mapa.has(h.catedra_id)) mapa.set(h.catedra_id, new Set())
+      mapa.get(h.catedra_id).add(h.dia_semana)
+    }
+    setDiasClase(mapa)
     setLoading(false)
   }
 
@@ -256,6 +269,17 @@ export function PanelFechas() {
         if (o.profesor_id === fila.profesor_id && o.catedra_id !== fila.catedra_id && o.origen !== 'AUTO') {
           motivos[o.fecha] = motivos[o.fecha] || `El profesor ya tiene una mesa asignada: ${o.materia}`
         }
+      }
+    }
+    // Complementario y Regularización: solo el día de la semana en que se
+    // dicta la materia (misma regla que "Distribuir fechas").
+    if (fila.llamado_tipo && fila.llamado_tipo !== 'ORDINARIO' && fila.fecha_inicio && fila.fecha_fin) {
+      const dias = diasClase.get(fila.catedra_id)
+      const fin = deISO(fila.fecha_fin)
+      for (let d = deISO(fila.fecha_inicio); d <= fin; d.setDate(d.getDate() + 1)) {
+        if (dias && dias.has(d.getDay())) continue
+        const iso = aISO(d)
+        motivos[iso] = motivos[iso] || (dias ? 'No es día de clase de esta materia' : 'La materia no tiene horario cargado')
       }
     }
     return motivos
