@@ -142,7 +142,7 @@ export const AREAS = [
         to: '/eventos/reporte',
         icon: '📊',
         titulo: 'Reporte de asistencia a eventos',
-        desc: 'Matriz de asistencia por evento o grupo de eventos, exportable e imprimible.',
+        desc: 'Asistencia por profesor, filtrando por año, tipo y eventos elegidos, con totales por año. Exportable e imprimible.',
         roles: REPORTES,
       },
       {
