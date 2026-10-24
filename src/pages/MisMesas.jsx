@@ -100,12 +100,12 @@ export function MisMesas() {
       )}
 
       {/* Solo le llega a Dirección Académica con la sesión abierta: la
-          función incluye los llamados sin aprobar para poder revisar
-          cómo va a quedar antes de publicarlos. */}
+          función incluye todos los llamados, aprobados o no, para poder
+          revisar el siguiente antes de publicarlo. */}
       {resultado?.vista_previa && (
         <p className="mis-mesas-aviso no-print">
-          <strong>Vista previa de Dirección Académica.</strong> Estás viendo también los llamados que todavía no están
-          aprobados. Los profesores solo ven los aprobados.
+          <strong>Vista previa de Dirección Académica.</strong> Estás viendo todos los llamados, también los que todavía
+          no están aprobados. Los profesores solo ven el llamado vigente ya aprobado.
         </p>
       )}
 
@@ -120,7 +120,8 @@ export function MisMesas() {
 
           {mesas.length === 0 ? (
             <p className="mis-mesas-aviso">
-              Por ahora no tenés mesas designadas. Solo se muestran los llamados ya aprobados por Dirección Académica.
+              Por ahora no tenés mesas designadas. Solo se muestra el llamado vigente, una vez aprobado por Dirección
+              Académica.
             </p>
           ) : (
             <>
