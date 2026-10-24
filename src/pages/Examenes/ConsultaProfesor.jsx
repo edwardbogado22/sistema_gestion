@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../../lib/supabase'
+import { useAuth } from '../../contexts/AuthContext'
 import { BuscadorSelect } from '../../components/BuscadorSelect'
-import { fetchTodo } from '../../lib/paginar'
 import { formatoLargo } from '../../lib/fechas'
 import { descargarFilas } from '../../lib/csv'
 
@@ -18,9 +18,12 @@ const nombreProfesor = (p) => (p ? `${p.apellidos}, ${p.nombres}` : '')
 // Regularización) y los dos roles posibles: presidente (titular de la
 // cátedra) o examinador (vocal). No se filtra por alcance de carrera/sede
 // a propósito: un profesor suele dar clase en más de una carrera, y acá
-// se busca su agenda completa — por eso esta pantalla es solo para
-// Dirección Académica.
+// se busca su agenda completa. El secretario la usa para informar a los
+// profesores y ve solo el llamado vigente ya aprobado, lo mismo que el
+// profesor en /mis-mesas (consulta_mesas_profesor en
+// migracion_secretario_consulta_mesas.sql).
 export function ConsultaProfesor() {
+  const { esSecretario } = useAuth()
   const [periodos, setPeriodos] = useState([])
   const [periodo, setPeriodo] = useState('')
   const [profesores, setProfesores] = useState([])
@@ -64,67 +67,19 @@ export function ConsultaProfesor() {
     setConsultando(true)
     setAgenda([])
 
-    const { data: llamados, error: eLl } = await supabase
-      .from('examen_llamado')
-      .select('id')
-      .eq('periodo_lectivo', periodo)
-    if (eLl) {
-      setError(eLl.message)
-      setConsultando(false)
-      return
-    }
-    const llamadoIds = (llamados || []).map((l) => l.id)
-    if (llamadoIds.length === 0) {
-      setConsultando(false)
-      return
-    }
-
-    const { data: agendaDatos, error: eAg } = await supabase
-      .from('v_examen_agenda')
-      .select('*')
-      .in('llamado_id', llamadoIds)
-      .not('fecha', 'is', null)
+    // La función arma la agenda en SQL porque el secretario, por RLS, solo
+    // ve mesas de su carrera/sede y acá necesita las de todas.
+    const { data, error: eAg } = await supabase.rpc('consulta_mesas_profesor', {
+      p_profesor: profesorId,
+      p_periodo: periodo,
+    })
     if (eAg) {
       setError(eAg.message)
       setConsultando(false)
       return
     }
 
-    // mesa_integrante puede superar las 1000 filas que PostgREST devuelve
-    // por defecto en períodos grandes — se pagina igual que en
-    // AsignacionVocales/ReporteMesas.
-    const { data: integrantes, error: eInt } = await fetchTodo((desde, hasta) =>
-      supabase
-        .from('mesa_integrante')
-        .select('examen_fecha_id, profesor_id, rol_mesa, profesores(nombres, apellidos), examen_fecha!inner(llamado_id)')
-        .in('examen_fecha.llamado_id', llamadoIds)
-        .eq('rol_mesa', 'VOCAL')
-        .order('id')
-        .range(desde, hasta),
-    )
-    if (eInt) {
-      setError(eInt.message)
-      setConsultando(false)
-      return
-    }
-
-    const vocalesPorFecha = new Map()
-    for (const it of integrantes || []) {
-      if (!vocalesPorFecha.has(it.examen_fecha_id)) vocalesPorFecha.set(it.examen_fecha_id, [])
-      vocalesPorFecha.get(it.examen_fecha_id).push(it)
-    }
-
-    const participaciones = []
-    for (const a of agendaDatos || []) {
-      const vocales = vocalesPorFecha.get(a.examen_fecha_id) || []
-      if (a.profesor_id === profesorId) {
-        participaciones.push({ ...a, rol: 'Presidente' })
-      }
-      const comoVocal = vocales.find((v) => v.profesor_id === profesorId)
-      if (comoVocal) {
-        participaciones.push({ ...a, rol: 'Examinador' })
-      }
-    }
+    const participaciones = data || []
     participaciones.sort((x, y) => (x.fecha || '').localeCompare(y.fecha || '') || x.materia.localeCompare(y.materia))
 
     setAgenda(participaciones)
@@ -164,6 +119,11 @@ export function ConsultaProfesor() {
           Todas las mesas examinadoras en las que un profesor participa dentro de un período lectivo — ya sea como
           presidente (titular de la cátedra) o como examinador (vocal), sumando todos los llamados de ese año.
         </p>
+        {esSecretario && (
+          <p className="muted-text">
+            Se muestra solo el llamado vigente ya aprobado, lo mismo que ve el profesor al consultar sus mesas.
+          </p>
+        )}
       </div>
 
       {error && <p className="error-text">{error}</p>}
@@ -256,7 +216,11 @@ export function ConsultaProfesor() {
       )}
 
       {consultando === false && periodo && profesorId && agenda.length === 0 && !error && (
-        <p className="muted-text">Este profesor no tiene mesas con fecha asignada en el período {periodo}.</p>
+        <p className="muted-text">
+          {esSecretario
+            ? `Este profesor no tiene mesas en el llamado vigente del período ${periodo}.`
+            : `Este profesor no tiene mesas con fecha asignada en el período ${periodo}.`}
+        </p>
       )}
     </div>
   )

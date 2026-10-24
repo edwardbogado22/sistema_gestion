@@ -88,6 +88,7 @@ const GESTION = ['ADMIN', 'SECRETARIO', 'DIRECTOR']
 const SA = 'SECRETARIA_ACADEMICA'
 const REPORTES = ['ADMIN', SA]
 const REPORTES_DIRECTOR = ['ADMIN', 'DIRECTOR', SA]
+const REPORTES_SECRETARIO = ['ADMIN', 'SECRETARIO', SA]
 const GESTION_SA = [...GESTION, SA]
 
 function withLayout(element) {
@@ -121,7 +122,7 @@ function App() {
         />
         <Route
           path="/examenes/consulta-profesor"
-          element={<PrivateRoute roles={REPORTES}>{withLayout(<ConsultaProfesor />)}</PrivateRoute>}
+          element={<PrivateRoute roles={REPORTES_SECRETARIO}>{withLayout(<ConsultaProfesor />)}</PrivateRoute>}
         />
         <Route
           path="/examenes/actas-firmas"

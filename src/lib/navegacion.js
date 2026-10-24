@@ -14,6 +14,7 @@ const SA = 'SECRETARIA_ACADEMICA'
 const GESTION_SA = [...GESTION, SA]
 const REPORTES = ['ADMIN', SA]
 const REPORTES_DIRECTOR = ['ADMIN', 'DIRECTOR', SA]
+const REPORTES_SECRETARIO = ['ADMIN', 'SECRETARIO', SA]
 
 export const AREAS = [
   {
@@ -165,7 +166,7 @@ export const AREAS = [
         titulo: 'Mesas por profesor',
         desc: 'Buscar un profesor por cédula o nombre y ver todas las mesas examinadoras en las que participa en el año.',
         destacada: true,
-        roles: REPORTES,
+        roles: REPORTES_SECRETARIO,
       },
       {
         to: '/profesores',
