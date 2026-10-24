@@ -15,6 +15,7 @@ const GESTION_SA = [...GESTION, SA]
 const REPORTES = ['ADMIN', SA]
 const REPORTES_DIRECTOR = ['ADMIN', 'DIRECTOR', SA]
 const REPORTES_SECRETARIO = ['ADMIN', 'SECRETARIO', SA]
+const TODOS = ['ADMIN', 'SECRETARIO', 'DIRECTOR', 'ASISTENTE', SA]
 
 export const AREAS = [
   {
@@ -195,6 +196,20 @@ export const AREAS = [
         titulo: 'Informes consolidados',
         desc: 'Rendimiento promedio por carrera, por sede y ranking de profesores.',
         roles: REPORTES_DIRECTOR,
+      },
+    ],
+  },
+  {
+    id: 'ayuda',
+    titulo: 'Ayuda',
+    corto: 'Ayuda',
+    items: [
+      {
+        to: '/ayuda',
+        icon: '❓',
+        titulo: 'Centro de ayuda',
+        desc: 'Manuales y videos de cómo usar cada pantalla. También con el botón ? de la barra superior.',
+        roles: TODOS,
       },
     ],
   },

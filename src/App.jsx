@@ -78,6 +78,9 @@ const ReportePlanAnual = lazy(() =>
   import('./pages/ReportePlanAnual').then((m) => ({ default: m.ReportePlanAnual })),
 )
 const EmisionFojas = lazy(() => import('./pages/EmisionFojas').then((m) => ({ default: m.EmisionFojas })))
+const Ayuda = lazy(() => import('./pages/Ayuda/Ayuda').then((m) => ({ default: m.Ayuda })))
+const VerManual = lazy(() => import('./pages/Ayuda/VerManual').then((m) => ({ default: m.VerManual })))
+const EditarManual = lazy(() => import('./pages/Ayuda/EditarManual').then((m) => ({ default: m.EditarManual })))
 
 // Secciones exclusivas de Dirección Académica. La restricción real está en
 // las policies de RLS; esto evita ofrecer pantallas que no van a funcionar.
@@ -210,6 +213,19 @@ function App() {
           path="/profesores"
           element={<PrivateRoute roles={[SA]}>{withLayout(<Profesores />)}</PrivateRoute>}
         />
+        {/* Sin roles: cualquiera con perfil. Cada uno ve solo los manuales
+            de las pantallas de su menú (lib/manual.js). */}
+        <Route path="/ayuda" element={<PrivateRoute>{withLayout(<Ayuda />)}</PrivateRoute>} />
+        <Route
+          path="/ayuda/nuevo"
+          element={<PrivateRoute roles={ADMIN}>{withLayout(<EditarManual />)}</PrivateRoute>}
+        />
+        <Route path="/ayuda/:id" element={<PrivateRoute>{withLayout(<VerManual />)}</PrivateRoute>} />
+        <Route
+          path="/ayuda/:id/editar"
+          element={<PrivateRoute roles={ADMIN}>{withLayout(<EditarManual />)}</PrivateRoute>}
+        />
+
         <Route
           path="/importar"
           element={<PrivateRoute roles={ADMIN}>{withLayout(<ImportarDatos />)}</PrivateRoute>}

@@ -2,14 +2,16 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { areaActiva, areasVisibles, itemActivo } from '../lib/navegacion'
+import { PanelAyuda } from './PanelAyuda'
 
 export function Layout({ children }) {
-  const { user, perfil, rol, esSecretario, esDirector, esAsistente, alcance, logout } = useAuth()
+  const { user, perfil, rol, esAdmin, esSecretario, esDirector, esAsistente, alcance, logout } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   // Id del área desplegada (escritorio) y panel completo abierto (celular).
   const [abierta, setAbierta] = useState(null)
   const [panelAbierto, setPanelAbierto] = useState(false)
+  const [ayudaAbierta, setAyudaAbierta] = useState(false)
   const navRef = useRef(null)
 
   const areas = areasVisibles(rol)
@@ -110,6 +112,15 @@ export function Layout({ children }) {
                 {textoAlcance}
               </span>
             )}
+            <button
+              type="button"
+              className="nav-ayuda"
+              onClick={() => setAyudaAbierta(true)}
+              title="Ayuda de esta pantalla"
+              aria-label="Ayuda de esta pantalla"
+            >
+              ?
+            </button>
             <span className="nav-user">{perfil?.nombre_completo || user.email}</span>
             <button type="button" className="btn btn-secondary btn-sm" onClick={handleLogout}>
               Cerrar sesión
@@ -118,6 +129,7 @@ export function Layout({ children }) {
         )}
       </nav>
       <main className="app-main">{children}</main>
+      {ayudaAbierta && <PanelAyuda item={itemActual} esAdmin={esAdmin} onCerrar={() => setAyudaAbierta(false)} />}
       <footer className="footer">
         <div>
           <strong>Universidad Nacional del Este</strong> · Facultad de Ciencias Económicas
