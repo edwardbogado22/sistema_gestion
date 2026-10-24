@@ -1706,6 +1706,17 @@
     @page {
       size: A4;
       margin: 1.2cm;
+
+      /* pie de todos los informes impresos, en cada hoja. Va en el
+         margen, así que no le quita lugar al contenido. Los @page de
+         ReporteMesas y ActasFirmas solo cambian tamaño y margen, así
+         que también lo heredan. */
+      @bottom-center {
+        content: 'Departamento de Tecnología - FCE (Edward Bogado)';
+        font-family: Inter, sans-serif;
+        font-size: 7.5pt;
+        color: #666;
+      }
     }
 
     /* !important: tiene que ocultar aunque el elemento traiga un
