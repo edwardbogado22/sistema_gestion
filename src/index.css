@@ -1,4 +1,8 @@
-﻿@import url('https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap');
+﻿/* Source Serif 4 (títulos) e IBM Plex Sans (interfaz) son la tipografía
+   del sistema. Sora e Inter quedan solo para la Foja de Desempeño: con
+   otra letra cambia el largo de las líneas y la foja deja de entrar en
+   una A4 (ver .foja-card). */
+@import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&family=IBM+Plex+Sans:wght@400;500;600;700&family=Sora:wght@600;700&family=Inter:wght@400;500;600&display=swap');
 
 /* Orden de la cascada: una capa posterior gana siempre a una anterior,
    sin importar la especificidad. "utilities" va antes que "components"
@@ -65,10 +69,10 @@
     --gold-calendario: #c5a047;
     --white: #ffffff;
     --black: #000000;
-    --canvas: #f4f6f3;
+    --canvas: #f3f5f2;
     --card: #ffffff;
-    --ink: #14211b;
-    --muted: #64756d;
+    --ink: #1b2420;
+    --muted: #66716c;
     --line: color-mix(in oklab, var(--green-700) 14%, transparent);
     --border: #e4e9e3;
     --danger: #d64545;
@@ -90,8 +94,12 @@
     --shadow-lg: 0 4px 12px color-mix(in oklab, var(--green-950) 6%, transparent), 0 24px 48px -20px color-mix(in oklab, var(--green-950) 28%, transparent);
     --ring: 0 0 0 3px color-mix(in oklab, var(--gold) 22%, transparent);
     --ease: cubic-bezier(0.2, 0.8, 0.25, 1);
+    --serif: 'Source Serif 4', Georgia, serif;
+    --sans: 'IBM Plex Sans', Arial, sans-serif;
 
-    font-family: 'Inter', Arial, sans-serif;
+    font-family: var(--sans);
+    /* cifras del mismo ancho: fechas y cantidades quedan alineadas */
+    font-variant-numeric: tabular-nums;
     font-size: 16px;
     line-height: 1.55;
     color: var(--ink);
@@ -103,11 +111,10 @@
 
 @layer base {
   h1, h2, h3 {
-    font-family: 'Sora', sans-serif;
-    font-weight: 700;
+    font-family: var(--serif);
+    font-weight: 600;
     color: var(--green-800);
     margin: 0;
-    letter-spacing: -0.01em;
   }
 
   a {
@@ -197,49 +204,45 @@
 }
 
 @layer components {
-  /* ---- barra superior decorativa ---- */
-  .topbar {
-    height: 4px;
-    background: linear-gradient(90deg, var(--green-800) 0%, var(--gold) 45%, var(--gold-soft) 55%, var(--green-700) 100%);
-    position: relative;
-    z-index: 40;
-  }
-
   /* ---- navegación interna ---- */
   .nav-bar {
     display: flex;
     align-items: center;
     gap: 6px;
     padding: 0 24px;
-    min-height: 60px;
-    background: linear-gradient(160deg, var(--green-950) 0%, var(--green-800) 100%);
+    min-height: 58px;
+    background: var(--green-900);
     color: #fff;
     position: sticky;
     top: 0;
     z-index: 30;
-    box-shadow: 0 8px 24px -16px color-mix(in oklab, var(--green-950) 60%, transparent);
   }
 
   .nav-title {
-    font-family: 'Sora', sans-serif;
-    font-weight: 700;
-    font-size: 16px;
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: 17px;
     margin-right: 20px;
     white-space: nowrap;
-    letter-spacing: -0.01em;
     display: inline-flex;
     align-items: center;
     gap: 10px;
 
+    /* sello: el distintivo FCE como un timbre, no como una etiqueta */
     &::before {
       content: 'FCE';
-      font-size: 11px;
-      font-weight: 800;
-      letter-spacing: 0.08em;
-      color: var(--green-950);
-      background: linear-gradient(150deg, var(--gold-soft), var(--gold));
-      border-radius: 6px;
-      padding: 3px 7px;
+      flex-shrink: 0;
+      display: grid;
+      place-items: center;
+      width: 30px;
+      height: 30px;
+      border: 1.5px solid var(--gold);
+      border-radius: 50%;
+      font-family: var(--sans);
+      font-size: 10.5px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      color: var(--gold-soft);
     }
   }
 
@@ -263,9 +266,11 @@
       }
     }
 
+    /* activo: subrayado en oro en vez de pastilla */
     &.active {
-      background: var(--gold-tint);
-      color: var(--gold-soft);
+      color: #fff;
+      border-radius: 0;
+      box-shadow: inset 0 -2px 0 var(--gold);
     }
   }
 
@@ -435,14 +440,14 @@
       }
     }
 
-    .nav-area-boton {
+    .nav-area-boton,
+    .nav-area-boton.active {
       width: 100%;
       padding: 12px 6px 4px;
       border-radius: 0;
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
+      box-shadow: none;
+      font-size: 13px;
+      font-weight: 600;
       color: var(--gold-soft);
       background: transparent;
       cursor: default;
@@ -540,8 +545,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-family: 'Sora', sans-serif;
-    font-weight: 800;
+    font-family: var(--serif);
+    font-weight: 600;
     font-size: 19px;
     letter-spacing: 1px;
     color: var(--gold-soft);
@@ -648,21 +653,18 @@
   }
 
   .stat-value {
-    font-family: 'Sora', sans-serif;
+    font-family: var(--serif);
     font-size: 32px;
-    font-weight: 800;
+    font-weight: 600;
     color: var(--green-800);
     line-height: 1.1;
-    letter-spacing: -0.02em;
     font-variant-numeric: tabular-nums;
   }
 
   .stat-label {
     margin-top: 6px;
-    font-size: 11.5px;
-    font-weight: 700;
-    letter-spacing: 0.6px;
-    text-transform: uppercase;
+    font-size: 13px;
+    font-weight: 500;
     color: var(--muted);
   }
 
@@ -691,7 +693,7 @@
     margin: 40px 4px 20px;
 
     span {
-      font-family: 'Sora', sans-serif;
+      font-family: var(--serif);
       font-size: 17px;
       font-weight: 700;
       color: var(--green-800);
@@ -824,19 +826,19 @@
   /* ---- pie institucional ---- */
   .footer {
     margin-top: 48px;
-    background: linear-gradient(180deg, var(--green-950), var(--green-900));
-    color: color-mix(in oklab, var(--white) 68%, transparent);
+    border-top: 1px solid var(--border);
+    color: var(--muted);
     text-align: center;
-    padding: 28px 24px;
+    padding: 24px;
     font-size: 13px;
 
     strong {
-      color: #fff;
+      color: var(--ink);
       font-weight: 600;
     }
 
     .small {
-      opacity: 0.55;
+      opacity: 0.8;
       font-size: 12px;
       margin-top: 4px;
     }
@@ -1031,11 +1033,9 @@
     display: flex;
     flex-direction: column;
     gap: 6px;
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: var(--green-700);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--green-800);
     min-width: 0;
   }
 
@@ -1105,11 +1105,9 @@
     display: flex;
     flex-direction: column;
     gap: 6px;
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: var(--green-700);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--green-800);
     min-width: 0;
   }
 
@@ -1331,10 +1329,8 @@
     }
 
     dt {
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
+      font-size: 12.5px;
+      font-weight: 500;
       color: var(--muted);
     }
 
@@ -1668,6 +1664,20 @@
     max-width: 900px;
     margin: 0 auto;
     box-shadow: var(--shadow-sm);
+
+    /* la foja conserva su letra original (Inter y Sora, cifras
+       proporcionales): está ajustada para entrar en una sola A4 y con
+       la tipografía del sistema las líneas cambian de largo */
+    font-family: 'Inter', Arial, sans-serif;
+    font-variant-numeric: normal;
+
+    h1,
+    h2,
+    h3 {
+      font-family: 'Sora', sans-serif;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
   }
 
   .foja-header {
@@ -2006,7 +2016,7 @@
          que también lo heredan. */
       @bottom-center {
         content: 'Departamento de Tecnología - FCE (Edward Bogado)';
-        font-family: Inter, sans-serif;
+        font-family: 'IBM Plex Sans', sans-serif;
         font-size: 7.5pt;
         color: #666;
       }
@@ -2016,7 +2026,6 @@
        display propio, inline o de otra capa */
     .no-print,
     .nav-bar,
-    .topbar,
     .footer {
       display: none !important;
     }

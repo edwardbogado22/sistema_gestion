@@ -284,7 +284,6 @@ export function ContenidoKiosco() {
 
   return (
     <div className="app-layout">
-      <div className="topbar" />
       <nav className="nav-bar" style={{ justifyContent: 'space-between' }}>
         <span className="nav-title" style={{ color: '#fff' }}>
           Kiosco de Contenido Programático

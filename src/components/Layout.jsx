@@ -50,7 +50,6 @@ export function Layout({ children }) {
 
   return (
     <div className="app-layout">
-      <div className="topbar" />
       <nav className="nav-bar" ref={navRef}>
         <Link to="/" className="nav-title" style={{ color: '#fff', textDecoration: 'none' }} onClick={cerrarMenu}>
           Sistema de Evaluación Docente
