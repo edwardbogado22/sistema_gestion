@@ -11,11 +11,13 @@ const ADMIN_ASISTENTE = ['ADMIN', 'ASISTENTE']
 // SECRETARIA_ACADEMICA (Secretaría de Dirección Académica) entra a todo
 // lo que es consulta, impresión y reportes, nunca a pantallas de carga.
 const SA = 'SECRETARIA_ACADEMICA'
-const GESTION_SA = [...GESTION, SA]
-const REPORTES = ['ADMIN', SA]
-const REPORTES_DIRECTOR = ['ADMIN', 'DIRECTOR', SA]
-const REPORTES_SECRETARIO = ['ADMIN', 'SECRETARIO', SA]
-const TODOS = ['ADMIN', 'SECRETARIO', 'DIRECTOR', 'ASISTENTE', SA]
+// Decanato: misma consulta de toda la facultad que la Secretaría.
+const DECANO = 'DECANO'
+const GESTION_SA = [...GESTION, SA, DECANO]
+const REPORTES = ['ADMIN', SA, DECANO]
+const REPORTES_DIRECTOR = ['ADMIN', 'DIRECTOR', SA, DECANO]
+const REPORTES_SECRETARIO = ['ADMIN', 'SECRETARIO', SA, DECANO]
+const TODOS = ['ADMIN', 'SECRETARIO', 'DIRECTOR', 'ASISTENTE', SA, DECANO]
 
 export const AREAS = [
   {
@@ -162,6 +164,14 @@ export const AREAS = [
     corto: 'Consultas',
     items: [
       {
+        to: '/informes/gerencial',
+        icon: '📊',
+        titulo: 'Informe gerencial',
+        desc: 'Estado de situación por carrera y sede: profesores, asistencia a clases y su carga, mesas examinadoras y rendimiento de la foja.',
+        destacada: true,
+        roles: REPORTES_DIRECTOR,
+      },
+      {
         to: '/examenes/consulta-profesor',
         icon: '🔎',
         titulo: 'Mesas por profesor',
@@ -174,7 +184,7 @@ export const AREAS = [
         icon: '👤',
         titulo: 'Profesores',
         desc: 'Consulta del padrón de profesores: documento, nombre y datos de contacto.',
-        roles: [SA],
+        roles: [SA, DECANO],
       },
       {
         to: '/examenes/actas-firmas',

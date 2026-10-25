@@ -78,6 +78,7 @@ const ReportePlanAnual = lazy(() =>
   import('./pages/ReportePlanAnual').then((m) => ({ default: m.ReportePlanAnual })),
 )
 const EmisionFojas = lazy(() => import('./pages/EmisionFojas').then((m) => ({ default: m.EmisionFojas })))
+const InformeGerencial = lazy(() => import('./pages/InformeGerencial').then((m) => ({ default: m.InformeGerencial })))
 const Ayuda = lazy(() => import('./pages/Ayuda/Ayuda').then((m) => ({ default: m.Ayuda })))
 const VerManual = lazy(() => import('./pages/Ayuda/VerManual').then((m) => ({ default: m.VerManual })))
 const EditarManual = lazy(() => import('./pages/Ayuda/EditarManual').then((m) => ({ default: m.EditarManual })))
@@ -89,10 +90,12 @@ const ADMIN_ASISTENTE = ['ADMIN', 'ASISTENTE']
 const GESTION = ['ADMIN', 'SECRETARIO', 'DIRECTOR']
 // Secretaría de Dirección Académica: consulta, impresión y reportes.
 const SA = 'SECRETARIA_ACADEMICA'
-const REPORTES = ['ADMIN', SA]
-const REPORTES_DIRECTOR = ['ADMIN', 'DIRECTOR', SA]
-const REPORTES_SECRETARIO = ['ADMIN', 'SECRETARIO', SA]
-const GESTION_SA = [...GESTION, SA]
+// Decanato: misma consulta de toda la facultad que la Secretaría.
+const DECANO = 'DECANO'
+const REPORTES = ['ADMIN', SA, DECANO]
+const REPORTES_DIRECTOR = ['ADMIN', 'DIRECTOR', SA, DECANO]
+const REPORTES_SECRETARIO = ['ADMIN', 'SECRETARIO', SA, DECANO]
+const GESTION_SA = [...GESTION, SA, DECANO]
 
 function withLayout(element) {
   return <Layout>{element}</Layout>
@@ -202,6 +205,10 @@ function App() {
         />
 
         <Route
+          path="/informes/gerencial"
+          element={<PrivateRoute roles={REPORTES_DIRECTOR}>{withLayout(<InformeGerencial />)}</PrivateRoute>}
+        />
+        <Route
           path="/informes"
           element={<PrivateRoute roles={REPORTES_DIRECTOR}>{withLayout(<InformesConsolidados />)}</PrivateRoute>}
         />
@@ -211,7 +218,7 @@ function App() {
         />
         <Route
           path="/profesores"
-          element={<PrivateRoute roles={[SA]}>{withLayout(<Profesores />)}</PrivateRoute>}
+          element={<PrivateRoute roles={[SA, DECANO]}>{withLayout(<Profesores />)}</PrivateRoute>}
         />
         {/* Sin roles: cualquiera con perfil. Cada uno ve solo los manuales
             de las pantallas de su menú (lib/manual.js). */}

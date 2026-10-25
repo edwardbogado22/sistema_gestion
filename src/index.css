@@ -2003,6 +2003,358 @@
     }
   }
 
+  /* ---- informe gerencial ---- */
+  /* Rampa secuencial de un solo verde (validada con el validador de
+     dataviz: monótona, un solo tono, el paso claro despega del fondo) y
+     colores de estado reservados, siempre con ícono y texto. */
+  .ig {
+    --ig-1: #86bf9e;
+    --ig-2: #5ea880;
+    --ig-3: #3a8f66;
+    --ig-4: #1f7752;
+    --ig-5: #115e41;
+    --ig-riel: #e2eee7;
+    --ig-bien: #0ca30c;
+    --ig-atencion: #fab219;
+    --ig-critico: #d03b3b;
+
+    max-width: 1240px;
+
+    h3 {
+      font-size: 16px;
+      margin: 22px 0 10px;
+    }
+  }
+
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .ig-filtros {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: flex-end;
+    margin-bottom: 20px;
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--card);
+
+    label {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--green-800);
+    }
+  }
+
+  /* datos viejos a media opacidad mientras llegan los nuevos, sin saltos */
+  .ig-actualizando {
+    opacity: 0.55;
+    transition: opacity 0.2s var(--ease);
+  }
+
+  .ig-indicadores {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+
+  .ig-indicador {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 16px 18px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--card);
+  }
+
+  .ig-indicador-titulo {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+  }
+
+  /* cifra grande: misma sans del sistema y cifras proporcionales */
+  .ig-indicador-valor {
+    font-size: 34px;
+    font-weight: 600;
+    line-height: 1.1;
+    color: var(--ink);
+    font-variant-numeric: normal;
+  }
+
+  .ig-indicador-detalle {
+    font-size: 12.5px;
+    color: var(--muted);
+  }
+
+  .ig-seccion {
+    margin-bottom: 34px;
+
+    h2 {
+      font-size: 21px;
+      margin: 0 0 8px;
+    }
+  }
+
+  .ig-seccion-cabecera {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .ig-nota {
+    margin: 0 0 12px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  .ig-estado {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-right: 6px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  .ig-estado-icono {
+    display: inline-grid;
+    place-items: center;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    font-size: 10px;
+    font-weight: 700;
+    color: #fff;
+  }
+
+  .ig-estado-bien .ig-estado-icono {
+    background: var(--ig-bien);
+  }
+
+  .ig-estado-atencion .ig-estado-icono {
+    background: var(--ig-atencion);
+    color: var(--ink);
+  }
+
+  .ig-estado-critico .ig-estado-icono {
+    background: var(--ig-critico);
+  }
+
+  .ig-tabla {
+    td {
+      vertical-align: middle;
+    }
+
+    tfoot td {
+      font-weight: 600;
+      border-top: 2px solid var(--line);
+    }
+  }
+
+  .ig-num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .ig-medidor {
+    display: grid;
+    grid-template-columns: minmax(44px, 1fr) 46px 16px;
+    align-items: center;
+    gap: 6px;
+    min-width: 124px;
+
+    .ig-estado {
+      margin: 0;
+    }
+  }
+
+  .ig-medidor-riel,
+  .ig-barra-riel {
+    height: 8px;
+    border-radius: 4px;
+    background: var(--ig-riel);
+    overflow: hidden;
+
+    span {
+      display: block;
+      height: 100%;
+      border-radius: 0 4px 4px 0;
+      background: var(--ig-3);
+    }
+  }
+
+  .ig-medidor-valor {
+    text-align: right;
+    font-size: 13.5px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .ig-llamados {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 14px;
+  }
+
+  .ig-llamado {
+    padding: 16px 18px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--card);
+
+    h3 {
+      margin: 0 0 4px;
+    }
+
+    dl {
+      display: grid;
+      gap: 10px;
+      margin: 0;
+    }
+
+    dt {
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    dd {
+      margin: 2px 0 0;
+    }
+  }
+
+  .ig-columnas {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 32px;
+  }
+
+  .ig-barras {
+    display: grid;
+    gap: 10px;
+  }
+
+  .ig-barra {
+    display: grid;
+    grid-template-columns: minmax(120px, 34%) minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    font-size: 13.5px;
+  }
+
+  .ig-barra-valor {
+    min-width: 52px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* escala valorativa: barra apilada ordinal, 2px de fondo entre tramos */
+  .ig-escala {
+    display: flex;
+    gap: 2px;
+    height: 22px;
+  }
+
+  .ig-escala-tramo {
+    flex-basis: 0;
+    min-width: 2px;
+
+    &:first-child {
+      border-radius: 4px 0 0 4px;
+    }
+
+    &:last-child {
+      border-radius: 0 4px 4px 0;
+    }
+  }
+
+  .ig-paso-1 {
+    background: var(--ig-1);
+  }
+
+  .ig-paso-2 {
+    background: var(--ig-2);
+  }
+
+  .ig-paso-3 {
+    background: var(--ig-3);
+  }
+
+  .ig-paso-4 {
+    background: var(--ig-4);
+  }
+
+  .ig-paso-5 {
+    background: var(--ig-5);
+  }
+
+  .ig-escala-leyenda {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 20px;
+    list-style: none;
+    margin: 10px 0 0;
+    padding: 0;
+    font-size: 13.5px;
+
+    li {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+  }
+
+  .ig-muestra {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+  }
+
+  @media (max-width: 1100px) {
+    .ig-indicadores {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .ig-columnas {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  @media print {
+    .ig-indicadores {
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+
+    .ig-seccion,
+    .ig-llamado,
+    .ig-indicador {
+      break-inside: avoid;
+    }
+
+    .ig-medidor-riel span,
+    .ig-barra-riel span,
+    .ig-escala-tramo,
+    .ig-muestra,
+    .ig-estado-icono {
+      print-color-adjust: exact;
+      -webkit-print-color-adjust: exact;
+    }
+  }
+
   /* ---- calendario de exámenes del período (Llamados) ---- */
   .periodo-panel {
     background: var(--green-900);

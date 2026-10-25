@@ -16,10 +16,11 @@ const SA = 'SECRETARIA_ACADEMICA'
 const ACCESOS = {
   SECRETARIO: ['/asistencia', '/examenes/actas-firmas', '/examenes', '/examenes/consulta-profesor', '/plan-anual', '/ayuda'],
   ADMIN: ['/examenes', '/asistencia', '/catedras', '/eventos', '/fojas/emision', '/ayuda'],
-  DIRECTOR: ['/catedras', '/asistencia/reporte', '/examenes', '/informes', '/plan-anual/reporte', '/ayuda'],
-  [SA]: ['/catedras', '/fojas/emision', '/examenes/actas-firmas', '/examenes/consulta-profesor', '/asistencia/reporte', '/ayuda'],
+  DIRECTOR: ['/informes/gerencial', '/catedras', '/asistencia/reporte', '/examenes', '/plan-anual/reporte', '/ayuda'],
+  [SA]: ['/informes/gerencial', '/catedras', '/fojas/emision', '/examenes/actas-firmas', '/examenes/consulta-profesor', '/ayuda'],
+  DECANO: ['/informes/gerencial', '/informes', '/catedras', '/asistencia/reporte', '/examenes', '/ayuda'],
 }
-const DIARIOS = { SECRETARIO: 2, ADMIN: 1, DIRECTOR: 0, [SA]: 0 }
+const DIARIOS = { SECRETARIO: 2, ADMIN: 1, DIRECTOR: 1, [SA]: 1, DECANO: 1 }
 
 const itemDe = (to) => AREAS.flatMap((a) => a.items).find((i) => i.to === to)
 
@@ -48,7 +49,7 @@ function useInicio(rol) {
   useEffect(() => {
     let activo = true
     const hoy = aISO(new Date())
-    const leeEvaluacion = rol === 'ADMIN' || rol === SA
+    const leeEvaluacion = rol === 'ADMIN' || rol === SA || rol === 'DECANO'
     const esSecretario = rol === 'SECRETARIO'
 
     ;(async () => {
@@ -391,7 +392,7 @@ function Accesos({ d, rol, examenes, alcance }) {
   return (
     <>
       <p className="inicio-accesos-titulo">
-        Tu trabajo de todos los días{textoAlcance && rol !== 'ADMIN' && rol !== SA ? `: ${textoAlcance}` : ''}
+        Tu trabajo de todos los días{textoAlcance && rol !== 'ADMIN' && rol !== SA && rol !== 'DECANO' ? `: ${textoAlcance}` : ''}
       </p>
       <div className="inicio-accesos">
         {lista.map((it, i) => {
@@ -423,8 +424,8 @@ function Pendientes({ d, rol, examenes }) {
       modulo: 'Exámenes',
       titulo: `${rol === 'SECRETARIO' ? 'Te faltan' : 'Faltan'} ${plural(avance.sin_fecha, 'materia', 'materias')} sin fecha`,
       texto: `En el ${foco.nombre}, que empieza el ${formatoCorto(foco.fecha_inicio)}.`,
-      to: rol === 'ADMIN' || rol === SA ? '/examenes/seguimiento' : `/examenes/${foco.id}`,
-      enlace: rol === 'ADMIN' || rol === SA ? 'Ver el seguimiento' : 'Abrir el panel de fechas',
+      to: rol === 'ADMIN' || rol === SA || rol === 'DECANO' ? '/examenes/seguimiento' : `/examenes/${foco.id}`,
+      enlace: rol === 'ADMIN' || rol === SA || rol === 'DECANO' ? 'Ver el seguimiento' : 'Abrir el panel de fechas',
     })
 
   if (rol === 'ADMIN' && foco?.estado === 'ASIGNACION' && avance?.total > 0 && avance.sin_fecha === 0)

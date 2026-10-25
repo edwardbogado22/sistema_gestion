@@ -106,8 +106,10 @@ export function AuthProvider({ children }) {
   // Secretaría de Dirección Académica: consulta e imprime de toda la
   // facultad (profesores, fojas, reportes), sin cargar ni modificar.
   const esSecretariaAcademica = rol === 'SECRETARIA_ACADEMICA'
+  // Decanato: misma consulta de toda la facultad, para el informe gerencial.
+  const esDecano = rol === 'DECANO'
   // Ve toda la facultad sin alcance por carrera/sede.
-  const veTodo = esAdmin || esSecretariaAcademica
+  const veTodo = esAdmin || esSecretariaAcademica || esDecano
   // DIRECTOR audita: mismo alcance por carrera/sede que el secretario,
   // pero sin permiso de carga (la RLS es la que realmente lo impide).
   const puedeEscribir = esAdmin || esSecretario
@@ -123,6 +125,7 @@ export function AuthProvider({ children }) {
         esDirector,
         esAsistente,
         esSecretariaAcademica,
+        esDecano,
         veTodo,
         puedeEscribir,
         alcance,

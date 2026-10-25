@@ -56,7 +56,7 @@ async function sincronizarHorario(catedraId, dias) {
 }
 
 export function Catedras() {
-  const { esAdmin, esSecretario, esSecretariaAcademica, veTodo, alcance } = useAuth()
+  const { esAdmin, esSecretario, esSecretariaAcademica, esDecano, veTodo, alcance } = useAuth()
   const [profesores, setProfesores] = useState([])
   const [carreras, setCarreras] = useState([])
   const [carrerasSedes, setCarrerasSedes] = useState([])
@@ -562,7 +562,7 @@ export function Catedras() {
                           )}
                           {/* Indicadores es una pantalla de carga: la Secretaría de
                               Dirección Académica solo consulta la foja y los reportes. */}
-                          {!esSecretariaAcademica && (
+                          {!(esSecretariaAcademica || esDecano) && (
                             <Link to={`/indicadores/${c.id}`} className="btn btn-secondary btn-sm">
                               Indicadores
                             </Link>

@@ -31,7 +31,7 @@ const vacio = {
 }
 
 export function Llamados() {
-  const { rol, esAdmin, esSecretariaAcademica } = useAuth()
+  const { rol, esAdmin, esSecretariaAcademica, esDecano } = useAuth()
   const [llamados, setLlamados] = useState([])
   const [excepciones, setExcepciones] = useState([])
   const [avance, setAvance] = useState([])
@@ -335,12 +335,12 @@ export function Llamados() {
                   Asignar vocales
                 </Link>
               )}
-              {(esAdmin || esSecretariaAcademica) && (
+              {(esAdmin || esSecretariaAcademica || esDecano) && (
                 <Link to={`/examenes/${l.id}/mesas-reporte`} className="btn btn-secondary btn-sm">
                   Reporte de mesas
                 </Link>
               )}
-              {(esAdmin || esSecretariaAcademica) && (
+              {(esAdmin || esSecretariaAcademica || esDecano) && (
                 <Link to={`/examenes/${l.id}/carga-profesores`} className="btn btn-secondary btn-sm">
                   Carga por profesor
                 </Link>
@@ -350,7 +350,7 @@ export function Llamados() {
                   Numerar actas
                 </Link>
               )}
-              {(esAdmin || esSecretariaAcademica) && (
+              {(esAdmin || esSecretariaAcademica || esDecano) && (
                 <Link to={`/examenes/${l.id}/asistencia-mesas`} className="btn btn-secondary btn-sm">
                   Asistencia a mesas
                 </Link>

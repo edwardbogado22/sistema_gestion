@@ -1,19 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-
 // Escala valorativa definida por Dirección Académica. El total se
 // redondea al entero antes de clasificar, a favor del profesor (decisión
 // de la Directora Académica): 90,5% cuenta como 91% (Excelente) y 59,5%
-// como 60% (Necesita mejorar).
-function clasificar(total) {
-  const t = Math.round(total)
-  if (t >= 91) return 'Excelente'
-  if (t >= 80) return 'Muy bueno'
-  if (t >= 70) return 'Bueno'
-  if (t >= 60) return 'Necesita mejorar'
-  return 'No cumple'
-}
+// como 60% (Necesita mejorar). La comparte el informe gerencial.
+import { clasificar } from '../lib/foja'
 
 export function FojaDesempeno() {
   const { catedraId } = useParams()
