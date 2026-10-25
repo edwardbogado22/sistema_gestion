@@ -237,7 +237,7 @@ Entrá a **Cátedras → Cátedras**. Usá **Buscar** (profesor, materia, carrer
 Antes de guardar, revisá que el profesor nuevo sea el correcto: desde ese momento, la asistencia, las mesas y la foja de esa cátedra quedan a su nombre.
 
 ## Otros botones
-- **Indicadores**: la carga de los indicadores de la cátedra que se hacen a mano.
+- **Indicadores**: los indicadores de la cátedra que se cargan a mano. Los carga Dirección Académica.
 - **Reporte contenido**: el avance del contenido programático dictado.
 - **Eliminar**: borra la cátedra **y sus indicadores cargados**. Pide confirmación y no se puede deshacer: usalo solo si la cátedra se creó por error.
 

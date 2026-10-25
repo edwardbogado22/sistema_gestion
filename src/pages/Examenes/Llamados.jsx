@@ -4,6 +4,9 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../contexts/AuthContext'
 import { formatoLargo } from '../../lib/fechas'
 import { PanelHorarioLlamado } from './PanelHorarioLlamado'
+import { CalendarioExamenes } from '../../components/CalendarioExamenes'
+import { avancePorLlamado, periodoDeExamenes } from '../../lib/examenes'
+import { aISO } from '../../lib/fechas'
 
 const TIPOS = [
   { value: 'ORDINARIO', label: 'Ordinario' },
@@ -28,7 +31,7 @@ const vacio = {
 }
 
 export function Llamados() {
-  const { esAdmin, esSecretariaAcademica } = useAuth()
+  const { rol, esAdmin, esSecretariaAcademica } = useAuth()
   const [llamados, setLlamados] = useState([])
   const [excepciones, setExcepciones] = useState([])
   const [avance, setAvance] = useState([])
@@ -213,6 +216,12 @@ export function Llamados() {
 
       {error && <p className="error-text">{error}</p>}
       {ok && <p className="muted-text">{ok}</p>}
+
+      <CalendarioExamenes
+        llamados={llamados}
+        avance={avancePorLlamado(avance).get(periodoDeExamenes(llamados, aISO(new Date())).foco?.id)}
+        rol={rol}
+      />
 
       {esAdmin && (
       <form onSubmit={crear} className="stat-card" style={{ textAlign: 'left', marginBottom: 24 }}>

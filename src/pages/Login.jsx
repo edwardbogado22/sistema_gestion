@@ -31,7 +31,7 @@ export function Login() {
         <div className="crest" style={{ background: 'var(--green-700)', margin: '0 auto 14px' }}>
           FCE
         </div>
-        <h2 style={{ marginBottom: 4 }}>Sistema de Evaluación Docente</h2>
+        <h2 style={{ marginBottom: 4 }}>Sistema de Gestión Académico</h2>
         <p className="muted-text">Universidad Nacional del Este</p>
       </div>
       <form onSubmit={handleSubmit}>
