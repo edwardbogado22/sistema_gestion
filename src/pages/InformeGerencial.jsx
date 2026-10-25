@@ -5,7 +5,19 @@ import { fetchTodo } from '../lib/paginar'
 import { aISO, formatoCorto, formatoLargo } from '../lib/fechas'
 import { descargarFilas } from '../lib/csv'
 import { clasificar } from '../lib/foja'
-import { estadoDe, pct, resumirAsistencia, resumirCatedras, resumirMesas, resumirRendimiento } from '../lib/informeGerencial'
+import {
+  estadoDe,
+  pct,
+  resumirAsistencia,
+  resumirAsistenciaImportada,
+  resumirCatedras,
+  resumirMesas,
+  resumirMesasImportadas,
+  resumirRendimiento,
+} from '../lib/informeGerencial'
+
+// cátedra del período con su carrera y sede, para las tablas importadas
+const DE_CATEDRA = 'catedras!inner(periodo_lectivo, activo, sedes(nombre), asignaturas(carreras(nombre)))'
 
 const ESTADOS = {
   bien: { icono: '✓', texto: 'Bien' },
@@ -126,7 +138,17 @@ export function InformeGerencial() {
       setError('')
       setCargando('Leyendo cátedras y asistencia...')
       const hoy = aISO(new Date())
-      const [catedras, asistencia, llamados, foja] = await Promise.all([
+      const importada = (tabla, campos) =>
+        fetchTodo((d, h) =>
+          supabase
+            .from(tabla)
+            .select(`id, ${campos}, ${DE_CATEDRA}`)
+            .eq('catedras.periodo_lectivo', etiqueta)
+            .eq('catedras.activo', true)
+            .order('id')
+            .range(d, h),
+        )
+      const [catedras, asistencia, llamados, foja, clasesImportadas, mesasImportadas] = await Promise.all([
         fetchTodo((d, h) =>
           supabase
             .from('catedras')
@@ -145,6 +167,8 @@ export function InformeGerencial() {
         fetchTodo((d, h) =>
           supabase.rpc('v_evaluacion_docente_ver', { p_periodo_lectivo: etiqueta }).order('catedra_id').order('criterio_id').range(d, h),
         ),
+        importada('asistencia_clases', 'horas_programadas, horas_dictadas, porcentaje_asistencia'),
+        importada('asistencia_mesas_examinadoras', 'mesas_convocadas, mesas_asistidas, porcentaje_asistencia'),
       ])
       if (!activo) return
       setCargando('Leyendo mesas examinadoras...')
@@ -191,6 +215,8 @@ export function InformeGerencial() {
         agenda: agenda.data || [],
         integrantes: integrantes.data || [],
         foja: foja.data || [],
+        clasesImportadas: clasesImportadas.data || [],
+        mesasImportadas: mesasImportadas.data || [],
       })
       setCargando('')
     })()
@@ -216,15 +242,27 @@ export function InformeGerencial() {
     const pasa = (car, sed) => (!carrera || car === carrera) && (!sede || sed === sede)
     const catedras = datos.catedras.filter((c) => pasa(c.asignaturas?.carreras?.nombre, c.sedes?.nombre))
     const activas = new Set(catedras.map((c) => c.id))
+    const deImportada = (r) => pasa(r.catedras?.asignaturas?.carreras?.nombre, r.catedras?.sedes?.nombre)
+
+    // Sin registro diario en el período (p. ej. 2025, cargado con Importar
+    // datos), se usa lo importado por cátedra, que es lo mismo que usa la foja.
+    const diaria = resumirAsistencia(datos.asistencia.filter((r) => pasa(r.carrera, r.sede)))
+    const clasesImp = datos.clasesImportadas.filter(deImportada)
+    const asistencia = diaria.total.registradas === 0 && clasesImp.length ? resumirAsistenciaImportada(clasesImp) : diaria
+
+    const porMesa = resumirMesas(
+      datos.agenda.filter((m) => pasa(m.carrera, m.sede)),
+      datos.integrantes,
+      datos.llamados,
+      datos.hoy,
+    )
+    const mesasImp = datos.mesasImportadas.filter(deImportada)
+    const mesas = porMesa.total.registrados === 0 && mesasImp.length ? resumirMesasImportadas(mesasImp) : porMesa
+
     return {
       catedras: resumirCatedras(catedras),
-      asistencia: resumirAsistencia(datos.asistencia.filter((r) => pasa(r.carrera, r.sede))),
-      mesas: resumirMesas(
-        datos.agenda.filter((m) => pasa(m.carrera, m.sede)),
-        datos.integrantes,
-        datos.llamados,
-        datos.hoy,
-      ),
+      asistencia,
+      mesas,
       rendimiento: resumirRendimiento(datos.foja, activas),
     }
   }, [datos, carrera, sede])
@@ -253,9 +291,17 @@ export function InformeGerencial() {
           catedras: c?.catedras ?? 0,
           asistencia: a?.asistencia ?? null,
           carga: a?.carga ?? null,
-          asistenciaDetalle: a ? `${fmt(a.registradas)} de ${fmt(a.esperadas)} clases registradas` : '',
+          asistenciaDetalle: !a
+            ? ''
+            : a.importado
+              ? `${fmt(a.dictadas)} de ${fmt(a.programadas)} horas dictadas (datos importados)`
+              : `${fmt(a.registradas)} de ${fmt(a.esperadas)} clases registradas`,
           mesas: m?.asistencia ?? null,
-          mesasDetalle: m ? `${fmt(m.asistieron)} de ${fmt(m.registrados)} con asistencia registrada, en ${fmt(m.tomadas)} mesas tomadas` : '',
+          mesasDetalle: !m
+            ? ''
+            : m.importado
+              ? `${fmt(m.asistidas)} de ${fmt(m.convocadas)} mesas asistidas (datos importados)`
+              : `${fmt(m.asistieron)} de ${fmt(m.registrados)} con asistencia registrada, en ${fmt(m.tomadas)} mesas tomadas`,
           rendimiento: r?.promedio ?? null,
         }
       })
@@ -393,20 +439,30 @@ export function InformeGerencial() {
             <Indicador
               titulo="Asistencia a clases"
               valor={t.asistencia.total.asistencia}
-              detalle={`presentes sobre lo registrado, del ${formatoCorto(desde)} al ${formatoCorto(hasta)}`}
+              detalle={
+                t.asistencia.importado
+                  ? `horas dictadas sobre programadas: ${fmt(t.asistencia.total.dictadas)} de ${fmt(t.asistencia.total.programadas)} (datos importados)`
+                  : `presentes sobre lo registrado, del ${formatoCorto(desde)} al ${formatoCorto(hasta)}`
+              }
             />
             <Indicador
               titulo="Carga de asistencia"
               valor={t.asistencia.total.carga}
-              detalle={`${fmt(t.asistencia.total.registradas)} de ${fmt(t.asistencia.total.esperadas)} clases registradas`}
+              detalle={
+                t.asistencia.importado
+                  ? 'sin registro diario: el período se cargó con datos importados por cátedra'
+                  : `${fmt(t.asistencia.total.registradas)} de ${fmt(t.asistencia.total.esperadas)} clases registradas`
+              }
             />
             <Indicador
               titulo="Asistencia a mesas examinadoras"
               valor={t.mesas.total.asistencia}
               detalle={
-                t.mesas.total.tomadas
-                  ? `en ${fmt(t.mesas.total.tomadas)} mesas ya tomadas del período`
-                  : 'todavía no se tomaron mesas en el período'
+                t.mesas.importado
+                  ? `${fmt(t.mesas.total.asistidas)} de ${fmt(t.mesas.total.convocadas)} mesas asistidas (datos importados)`
+                  : t.mesas.total.tomadas
+                    ? `en ${fmt(t.mesas.total.tomadas)} mesas ya tomadas del período`
+                    : 'todavía no se tomaron mesas en el período'
               }
             />
             <Indicador
@@ -427,6 +483,13 @@ export function InformeGerencial() {
               <Estado valor={70} conTexto /> 60 a 79 % <Estado valor={10} conTexto /> menos de 60 %. Sin marca: 80 %
               o más. La asistencia a clases se mide sobre lo registrado; la carga
               muestra cuánto de lo esperado por horario se registró.
+            {(t.asistencia.importado || t.mesas.importado) && (
+                <strong>
+                  {' '}
+                  En este período {t.asistencia.importado && t.mesas.importado ? 'la asistencia a clases y a mesas salen' : t.asistencia.importado ? 'la asistencia a clases sale' : 'la asistencia a mesas sale'}{' '}
+                  de los datos importados por cátedra.
+                </strong>
+              )}
             </p>
             {matriz.length === 0 ? (
               <p className="muted-text">No hay datos para el período y los filtros elegidos.</p>
@@ -496,7 +559,28 @@ export function InformeGerencial() {
 
           <section className="ig-seccion" aria-labelledby="ig-mesas">
             <h2 id="ig-mesas">Mesas examinadoras del período</h2>
-            {t.mesas.porLlamado.length === 0 ? (
+            {t.mesas.importado ? (
+              <div className="ig-llamados">
+                <div className="ig-llamado">
+                  <h3>Datos importados por cátedra</h3>
+                  <p className="ig-nota">
+                    El período se cargó con Importar datos: mesas convocadas y asistidas por cátedra, sin el detalle de cada
+                    llamado.
+                  </p>
+                  <dl>
+                    <div>
+                      <dt>Mesas asistidas sobre convocadas</dt>
+                      <dd>
+                        <Medidor
+                          valor={t.mesas.total.asistencia}
+                          detalle={`${fmt(t.mesas.total.asistidas)} de ${fmt(t.mesas.total.convocadas)}`}
+                        />
+                      </dd>
+                    </div>
+                  </dl>
+                </div>
+              </div>
+            ) : t.mesas.porLlamado.length === 0 ? (
               <p className="muted-text">No hay llamados de examen en este período.</p>
             ) : (
               <div className="ig-llamados">

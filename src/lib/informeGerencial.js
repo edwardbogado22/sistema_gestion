@@ -17,6 +17,8 @@ export function estadoDe(valor) {
   return 'critico'
 }
 
+const promedio = (valores) => (valores.length ? valores.reduce((a, b) => a + b, 0) / valores.length : null)
+
 function fila(mapa, carrera, sede) {
   const k = clave(carrera, sede)
   if (!mapa.has(k)) mapa.set(k, { clave: k, carrera, sede })
@@ -117,8 +119,6 @@ export function resumirMesas(agenda, integrantes, llamados, hoy) {
   }
 }
 
-const promedio = (valores) => (valores.length ? valores.reduce((a, b) => a + b, 0) / valores.length : null)
-
 // Foja: rendimiento por cátedra sobre los criterios institucionales. La
 // valoración de alumnos (encuesta) no la genera el sistema y queda fuera
 // del informe: lo obtenido se expresa sobre el peso institucional (80
@@ -189,4 +189,48 @@ export function resumirRendimiento(detalle, idsActivas) {
       .map((c) => ({ nombre: c.nombre, orden: c.orden, peso: c.peso, obtenido: c.catedras ? c.obtenido / c.catedras : 0 }))
       .sort((a, b) => a.orden - b.orden),
   }
+}
+
+// ---- datos importados (consolidado por cátedra) ----
+// Los períodos anteriores al registro diario (p. ej. 2025) se cargaron con
+// Importar datos en asistencia_clases y asistencia_mesas_examinadoras, una
+// fila por cátedra, que es lo que usa la foja. Sin detalle diario no hay
+// "carga de asistencia": solo el resultado.
+const nombres = (r) => [r.catedras?.asignaturas?.carreras?.nombre || 'Sin carrera', r.catedras?.sedes?.nombre || 'Sin sede']
+
+export function resumirAsistenciaImportada(filas) {
+  const mapa = new Map()
+  const total = { programadas: 0, dictadas: 0, porcentajes: [] }
+  for (const r of filas) {
+    const f = fila(mapa, ...nombres(r))
+    f.programadas = (f.programadas || 0) + (Number(r.horas_programadas) || 0)
+    f.dictadas = (f.dictadas || 0) + (Number(r.horas_dictadas) || 0)
+    f.porcentajes = [...(f.porcentajes || []), Number(r.porcentaje_asistencia)].filter((x) => !Number.isNaN(x))
+    total.programadas += Number(r.horas_programadas) || 0
+    total.dictadas += Number(r.horas_dictadas) || 0
+    if (r.porcentaje_asistencia != null) total.porcentajes.push(Number(r.porcentaje_asistencia))
+  }
+  // horas dictadas sobre programadas; si no hay horas, el promedio de los porcentajes
+  const indicadores = (x) => ({
+    asistencia: x.programadas > 0 ? pct(x.dictadas, x.programadas) : promedio(x.porcentajes || []),
+    carga: null,
+    importado: true,
+  })
+  for (const f of mapa.values()) Object.assign(f, indicadores(f))
+  return { porClave: mapa, total: { ...total, ...indicadores(total) }, importado: true }
+}
+
+export function resumirMesasImportadas(filas) {
+  const mapa = new Map()
+  const total = { convocadas: 0, asistidas: 0 }
+  for (const r of filas) {
+    const f = fila(mapa, ...nombres(r))
+    f.convocadas = (f.convocadas || 0) + (Number(r.mesas_convocadas) || 0)
+    f.asistidas = (f.asistidas || 0) + (Number(r.mesas_asistidas) || 0)
+    total.convocadas += Number(r.mesas_convocadas) || 0
+    total.asistidas += Number(r.mesas_asistidas) || 0
+  }
+  const indicadores = (x) => ({ asistencia: pct(x.asistidas, x.convocadas), importado: true })
+  for (const f of mapa.values()) Object.assign(f, indicadores(f))
+  return { porClave: mapa, porLlamado: [], total: { ...total, ...indicadores(total) }, importado: true }
 }
