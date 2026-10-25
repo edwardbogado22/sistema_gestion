@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../contexts/AuthContext'
 import { BuscadorSelect } from '../../components/BuscadorSelect'
 import { deISO, formatoLargo } from '../../lib/fechas'
+import { opcionesProfesores } from '../../lib/profesores'
 
 const ESTADOS = [
   { value: '', label: '— Pendiente —' },
@@ -38,7 +39,7 @@ export function RegistrarAsistencia() {
         .select('profesor_id, sede_id, sedes(nombre), asignaturas(nombre, carrera_id, carreras(nombre))')
         .eq('activo', true),
       supabase.from('v_catedra_horario').select('*'),
-      supabase.from('profesores').select('id, documento_identidad, nombres, apellidos').eq('confirmado', true).order('apellidos'),
+      supabase.from('profesores').select('id, documento_identidad, nombres, apellidos, activo').eq('confirmado', true).order('apellidos'),
       supabase.from('periodo_academico').select('*').eq('activo', true).maybeSingle(),
     ])
     const err = c.error || h.error || p.error || per.error
@@ -80,10 +81,6 @@ export function RegistrarAsistencia() {
 
   const combo = combos.find((c) => `${c.carrera_id}|${c.sede_id}` === comboId) || null
 
-  const opcionesSuplente = useMemo(
-    () => profesores.map((p) => ({ value: p.id, label: `${p.apellidos}, ${p.nombres}` })),
-    [profesores],
-  )
 
   const consultar = async () => {
     if (!combo) {
@@ -416,7 +413,7 @@ export function RegistrarAsistencia() {
                       <td style={{ minWidth: 220 }}>
                         {esAusencia && (
                           <BuscadorSelect
-                            opciones={opcionesSuplente.filter((o) => o.value !== p.profesor_id)}
+                            opciones={opcionesProfesores(profesores, suplenteDe(p.profesor_id)).filter((o) => o.value !== p.profesor_id)}
                             value={suplenteDe(p.profesor_id)}
                             onChange={(v) => setCambio(p.profesor_id, { profesor_suplente_id: v })}
                             placeholder="¿Quién cubrió?"

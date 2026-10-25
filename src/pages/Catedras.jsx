@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { BuscadorSelect } from '../components/BuscadorSelect'
 import { coincideTexto } from '../lib/buscar'
 import { useAuth } from '../contexts/AuthContext'
+import { opcionesProfesores } from '../lib/profesores'
 
 const empty = {
   profesor_id: '',
@@ -335,7 +336,7 @@ export function Catedras() {
           <label>
             Profesor
             <BuscadorSelect
-              opciones={profesores.map((p) => ({ value: p.id, label: `${p.apellidos}, ${p.nombres}` }))}
+              opciones={opcionesProfesores(profesores, form.profesor_id)}
               value={form.profesor_id}
               onChange={(id) => setForm({ ...form, profesor_id: id })}
               placeholder="Buscar profesor..."
@@ -481,7 +482,7 @@ export function Catedras() {
                         <label style={{ minWidth: 220, flex: '1 1 220px' }}>
                           Profesor
                           <BuscadorSelect
-                            opciones={profesores.map((p) => ({ value: p.id, label: `${p.apellidos}, ${p.nombres}` }))}
+                            opciones={opcionesProfesores(profesores, editForm.profesor_id)}
                             value={editForm.profesor_id}
                             onChange={(id) => setEditForm({ ...editForm, profesor_id: id })}
                             placeholder="Buscar profesor..."
