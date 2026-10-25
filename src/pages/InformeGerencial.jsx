@@ -137,7 +137,9 @@ export function InformeGerencial() {
             .range(d, h),
         ),
         desde <= hasta
-          ? supabase.rpc('reporte_asistencia_clases', { p_desde: desde, p_hasta: hasta, p_carrera: null, p_sede: null, p_profesor: null })
+          ? // ya sumado por carrera y sede en la base (migracion_informe_asistencia_rapido.sql):
+            // reporte_asistencia_clases() para un período entero supera el tiempo límite
+            supabase.rpc('informe_asistencia_carrera_sede', { p_desde: desde, p_hasta: hasta })
           : Promise.resolve({ data: [] }),
         supabase.from('examen_llamado').select('*').eq('periodo_lectivo', etiqueta).order('fecha_inicio'),
         fetchTodo((d, h) =>
@@ -170,8 +172,17 @@ export function InformeGerencial() {
         : [{ data: [] }, { data: [] }]
       if (!activo) return
 
-      const err = catedras.error || asistencia.error || llamados.error || foja.error || agenda.error || integrantes.error
-      if (err) setError(err.message)
+      // cada fuente por separado: si una falla, el resto del informe se ve igual
+      const errores = [
+        ['Cátedras', catedras.error],
+        ['Asistencia a clases', asistencia.error],
+        ['Llamados', llamados.error],
+        ['Foja de desempeño', foja.error],
+        ['Mesas examinadoras', agenda.error || integrantes.error],
+      ]
+        .filter(([, e]) => e)
+        .map(([fuente, e]) => `${fuente}: ${e.message}`)
+      setError(errores.join(' · '))
       setDatos({
         hoy,
         catedras: catedras.data || [],
@@ -275,7 +286,7 @@ export function InformeGerencial() {
         asistencia_clases_pct: f.asistencia?.toFixed(1) ?? '',
         carga_asistencia_pct: f.carga?.toFixed(1) ?? '',
         asistencia_mesas_pct: f.mesas?.toFixed(1) ?? '',
-        rendimiento_foja_pct: f.rendimiento?.toFixed(1) ?? '',
+        rendimiento_institucional_pct: f.rendimiento?.toFixed(1) ?? '',
       })),
     )
 
@@ -287,7 +298,7 @@ export function InformeGerencial() {
         carreras: [...p.carreras].join(' / '),
         sedes: [...p.sedes].join(' / '),
         catedras: p.catedras,
-        promedio_foja_pct: p.promedio.toFixed(1),
+        rendimiento_institucional_pct: p.promedio.toFixed(1),
         escala: clasificar(p.promedio),
       })),
     )
@@ -399,9 +410,9 @@ export function InformeGerencial() {
               }
             />
             <Indicador
-              titulo="Rendimiento promedio (foja)"
+              titulo="Rendimiento institucional (foja)"
               valor={t.rendimiento.promedio}
-              detalle={`sobre ${fmt(t.rendimiento.catedras)} cátedras evaluadas`}
+              detalle={`criterios institucionales, en ${fmt(t.rendimiento.catedras)} cátedras`}
             />
           </section>
 
@@ -431,7 +442,7 @@ export function InformeGerencial() {
                       <th>Asistencia a clases</th>
                       <th>Carga de asistencia</th>
                       <th>Asistencia a mesas</th>
-                      <th>Rendimiento (foja)</th>
+                      <th>Rendimiento institucional</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -522,6 +533,10 @@ export function InformeGerencial() {
 
           <section className="ig-seccion" aria-labelledby="ig-rendimiento">
             <h2 id="ig-rendimiento">Rendimiento según la Foja de Desempeño</h2>
+            <p className="ig-nota">
+              Solo los criterios institucionales que registra el sistema: la valoración de alumnos (encuesta) queda fuera.
+              El porcentaje es lo obtenido sobre el peso de esos criterios.
+            </p>
             {t.rendimiento.catedras === 0 ? (
               <p className="muted-text">Todavía no hay fojas calculadas para este período.</p>
             ) : (
@@ -545,7 +560,7 @@ export function InformeGerencial() {
                   </div>
                 </div>
 
-                <h3>Cátedras por escala valorativa</h3>
+                <h3>Cátedras por escala valorativa (sobre los criterios institucionales)</h3>
                 <div className="ig-escala" role="img" aria-label={t.rendimiento.escala.map((e) => `${e.nombre}: ${e.catedras}`).join(', ')}>
                   {[...t.rendimiento.escala].reverse().map((e, i) =>
                     e.catedras ? (

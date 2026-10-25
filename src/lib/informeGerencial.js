@@ -119,12 +119,17 @@ export function resumirMesas(agenda, integrantes, llamados, hoy) {
 
 const promedio = (valores) => (valores.length ? valores.reduce((a, b) => a + b, 0) / valores.length : null)
 
-// Foja: total por cátedra (suma de lo obtenido en cada criterio) y sus
-// promedios por carrera y sede, por profesor, por criterio y por escala.
+// Foja: rendimiento por cátedra sobre los criterios institucionales. La
+// valoración de alumnos (encuesta) no la genera el sistema y queda fuera
+// del informe: lo obtenido se expresa sobre el peso institucional (80
+// puntos en la Resolución 054/2021) como porcentaje, para que 100 % siga
+// siendo el máximo. Promedios por carrera y sede, por profesor, por
+// criterio y distribución en la escala valorativa.
 export function resumirRendimiento(detalle, idsActivas) {
   const catedras = new Map()
   const criterios = new Map()
   for (const f of detalle) {
+    if (f.grupo === 'ALUMNOS') continue
     if (idsActivas && !idsActivas.has(f.catedra_id)) continue
     if (!catedras.has(f.catedra_id)) {
       catedras.set(f.catedra_id, {
@@ -133,32 +138,23 @@ export function resumirRendimiento(detalle, idsActivas) {
         sede: f.sede,
         profesor_id: f.profesor_id,
         profesor: f.profesor_completo,
-        total: 0,
-      })
-    }
-    catedras.get(f.catedra_id).total += Number(f.obtenido_porcentaje) || 0
-
-    const grupo = f.grupo === 'ALUMNOS' ? 'ALUMNOS' : f.criterio_id
-    if (!criterios.has(grupo)) {
-      criterios.set(grupo, {
-        nombre: f.grupo === 'ALUMNOS' ? 'Valoración de alumnos' : f.criterio_nombre,
-        orden: f.grupo === 'ALUMNOS' ? 99 : f.orden,
-        peso: 0,
-        pesos: new Set(),
         obtenido: 0,
-        catedras: new Set(),
+        peso: 0,
       })
     }
-    const c = criterios.get(grupo)
-    if (!c.pesos.has(f.criterio_id)) {
-      c.pesos.add(f.criterio_id)
-      c.peso += Number(f.ponderacion) || 0
-    }
+    const c = catedras.get(f.catedra_id)
     c.obtenido += Number(f.obtenido_porcentaje) || 0
-    c.catedras.add(f.catedra_id)
+    c.peso += Number(f.ponderacion) || 0
+
+    if (!criterios.has(f.criterio_id)) {
+      criterios.set(f.criterio_id, { nombre: f.criterio_nombre, orden: f.orden, peso: Number(f.ponderacion) || 0, obtenido: 0, catedras: 0 })
+    }
+    const cr = criterios.get(f.criterio_id)
+    cr.obtenido += Number(f.obtenido_porcentaje) || 0
+    cr.catedras += 1
   }
 
-  const lista = [...catedras.values()]
+  const lista = [...catedras.values()].map((c) => ({ ...c, total: c.peso > 0 ? (100 * c.obtenido) / c.peso : 0 }))
   const agrupar = (pick, extra = () => ({})) => {
     const mapa = new Map()
     for (const c of lista) {
@@ -190,7 +186,7 @@ export function resumirRendimiento(detalle, idsActivas) {
     porProfesor,
     escala,
     criterios: [...criterios.values()]
-      .map((c) => ({ nombre: c.nombre, orden: c.orden, peso: c.peso, obtenido: c.catedras.size ? c.obtenido / c.catedras.size : 0 }))
+      .map((c) => ({ nombre: c.nombre, orden: c.orden, peso: c.peso, obtenido: c.catedras ? c.obtenido / c.catedras : 0 }))
       .sort((a, b) => a.orden - b.orden),
   }
 }
