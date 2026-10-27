@@ -124,7 +124,7 @@ export function AsignacionVocales() {
       (a, b) =>
         a.carrera.localeCompare(b.carrera) ||
         a.curso_nivel - b.curso_nivel ||
-        a.seccion_grupo.localeCompare(b.seccion_grupo) ||
+        a.seccion_grupo.localeCompare(b.seccion_grupo, 'es', { sensitivity: 'base' }) ||
         a.materia.localeCompare(b.materia),
     )
 

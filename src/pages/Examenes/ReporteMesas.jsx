@@ -154,7 +154,7 @@ export function ReporteMesas() {
         (a, c) =>
           (a.numeroActa ?? Infinity) - (c.numeroActa ?? Infinity) ||
           a.curso_nivel - c.curso_nivel ||
-          a.seccion_grupo.localeCompare(c.seccion_grupo) ||
+          a.seccion_grupo.localeCompare(c.seccion_grupo, 'es', { sensitivity: 'base' }) ||
           (a.fecha || '9999').localeCompare(c.fecha || '9999') ||
           a.materia.localeCompare(c.materia),
       )

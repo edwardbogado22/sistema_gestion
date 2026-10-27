@@ -52,7 +52,7 @@ export function ReporteCarga() {
       b.filas.sort(
         (a, c) =>
           a.curso_nivel - c.curso_nivel ||
-          a.seccion_grupo.localeCompare(c.seccion_grupo) ||
+          a.seccion_grupo.localeCompare(c.seccion_grupo, 'es', { sensitivity: 'base' }) ||
           (a.fecha || '9999').localeCompare(c.fecha || '9999') ||
           a.materia.localeCompare(c.materia),
       )

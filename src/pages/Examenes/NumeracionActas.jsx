@@ -5,6 +5,14 @@ import { fetchTodo } from '../../lib/paginar'
 
 const claveBloque = (b) => `${b.sede_id}|${b.carrera_id}`
 
+// Orden de los horarios de examen, del que sale la correlatividad de las
+// actas: curso, sección (sin distinguir mayúsculas), fecha y materia.
+const ordenHorario = (a, b) =>
+  a.curso_nivel - b.curso_nivel ||
+  (a.seccion_grupo || '').localeCompare(b.seccion_grupo || '', 'es', { sensitivity: 'base' }) ||
+  (a.fecha || '').localeCompare(b.fecha || '') ||
+  (a.materia || '').localeCompare(b.materia || '')
+
 /**
  * Numeración de actas de un llamado. Dirección Académica indica el primer
  * número y el orden de sede/carrera; acta_numerar() asigna el correlativo
@@ -37,7 +45,7 @@ export function NumeracionActas() {
       fetchTodo((desde, hasta) =>
         supabase
           .from('v_examen_agenda')
-          .select('examen_fecha_id, sede_id, sede, carrera_id, carrera, fecha_estado')
+          .select('examen_fecha_id, sede_id, sede, carrera_id, carrera, curso_nivel, seccion_grupo, fecha, materia, fecha_estado')
           .eq('llamado_id', llamadoId)
           .not('fecha', 'is', null)
           .order('catedra_id')
@@ -81,12 +89,21 @@ export function NumeracionActas() {
     for (const m of mesas) {
       const k = claveBloque(m)
       if (!mapa.has(k)) {
-        mapa.set(k, { sede_id: m.sede_id, carrera_id: m.carrera_id, sede: m.sede, carrera: m.carrera, mesas: 0, numeros: [] })
+        mapa.set(k, { sede_id: m.sede_id, carrera_id: m.carrera_id, sede: m.sede, carrera: m.carrera, mesas: 0, numeros: [], lista: [] })
       }
       const b = mapa.get(k)
       b.mesas++
+      b.lista.push(m)
       const n = actas.get(m.examen_fecha_id)
       if (n != null) b.numeros.push(n)
+    }
+    // Una fecha cambiada después de numerar deja los números fuera del
+    // orden del horario: se cuentan las mesas que no quedaron en su lugar.
+    for (const b of mapa.values()) {
+      const numeradas = b.lista.filter((m) => actas.has(m.examen_fecha_id))
+      const porNumero = [...numeradas].sort((x, y) => actas.get(x.examen_fecha_id) - actas.get(y.examen_fecha_id))
+      const ideal = [...numeradas].sort(ordenHorario)
+      b.fueraDeOrden = porNumero.filter((m, i) => m !== ideal[i]).length
     }
     return [...mapa.values()]
       .map((b) => ({
@@ -335,7 +352,14 @@ export function NumeracionActas() {
                       {b.numeradas} de {b.mesas}
                     </span>
                   </td>
-                  <td>{b.desde != null ? `N° ${b.desde} a N° ${b.hasta}` : '—'}</td>
+                  <td>
+                    {b.desde != null ? `N° ${b.desde} a N° ${b.hasta}` : '—'}
+                    {b.fueraDeOrden > 0 && (
+                      <div className="error-text" style={{ fontSize: 12, margin: 0 }}>
+                        {b.fueraDeOrden} mesa(s) fuera del orden curso, sección y fecha: renumerar
+                      </div>
+                    )}
+                  </td>
                   <td>
                     {b.numeradas > 0 && (
                       <button type="button" className="btn btn-secondary btn-sm" onClick={() => quitar(b)}>
