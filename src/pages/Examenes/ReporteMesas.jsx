@@ -31,6 +31,9 @@ export function ReporteMesas() {
   const [filas, setFilas] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  // El horario también se publica antes de oficializar las actas: sin el
+  // número, la primera columna vuelve a ser el orden 1, 2, 3...
+  const [mostrarActas, setMostrarActas] = useState(true)
 
   // El filtro viaja por la URL para poder llegar ya aplicado desde
   // Asignación de Vocales ("Reporte para imprimir" ahí abajo manda el
@@ -174,7 +177,8 @@ export function ReporteMesas() {
   }
 
   const enc = filas[0]
-  const hayActas = filas.some((f) => f.numeroActa != null)
+  const tieneActas = filas.some((f) => f.numeroActa != null)
+  const hayActas = tieneActas && mostrarActas
   const hayFiltro = sedeFiltro || carreraFiltro || cursoFiltro
 
   return (
@@ -252,6 +256,12 @@ export function ReporteMesas() {
           </button>
         )}
         <div style={{ flex: 1 }} />
+        {tieneActas && (
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <input type="checkbox" checked={mostrarActas} onChange={(e) => setMostrarActas(e.target.checked)} />
+            Mostrar N° de acta
+          </label>
+        )}
         <button type="button" className="btn btn-primary" onClick={() => window.print()}>
           Imprimir
         </button>
