@@ -51,6 +51,8 @@ export function ReporteFechasProfesores() {
   const [noDisponible, setNoDisponible] = useState(new Set())
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [sedeFiltro, setSedeFiltro] = useState('')
+  const [carreraFiltro, setCarreraFiltro] = useState('')
 
   useEffect(() => {
     ;(async () => {
@@ -198,11 +200,27 @@ export function ReporteFechasProfesores() {
       .sort(ordenBloque)
   }, [mesas, vocales, presencia, noDisponible])
 
+  const opciones = useMemo(() => {
+    const unico = (clave, etiqueta) =>
+      [...new Map(bloques.map((b) => [b[clave], b[etiqueta]]))]
+        .map(([value, label]) => ({ value, label }))
+        .sort((x, y) => x.label.localeCompare(y.label))
+    return { sedes: unico('sede_id', 'sede'), carreras: unico('carrera_id', 'carrera') }
+  }, [bloques])
+
+  const visibles = useMemo(
+    () =>
+      bloques.filter(
+        (b) => (!sedeFiltro || b.sede_id === sedeFiltro) && (!carreraFiltro || b.carrera_id === carreraFiltro),
+      ),
+    [bloques, sedeFiltro, carreraFiltro],
+  )
+
   // La misma información, agrupada por fecha: una fila por carrera y sede
   // que toma examen ese día.
   const porFecha = useMemo(() => {
     const mapa = new Map()
-    for (const b of bloques) {
+    for (const b of visibles) {
       for (const d of b.dias) {
         if (!mapa.has(d.fecha)) mapa.set(d.fecha, { fecha: d.fecha, dia: d.dia, examenes: 0, filas: [] })
         const f = mapa.get(d.fecha)
@@ -211,7 +229,7 @@ export function ReporteFechasProfesores() {
       }
     }
     return [...mapa.values()].sort((x, y) => x.fecha.localeCompare(y.fecha))
-  }, [bloques])
+  }, [visibles])
 
   const exportar = () => {
     descargarFilas(
@@ -238,7 +256,7 @@ export function ReporteFechasProfesores() {
     return <p className="page-padding muted-text">Este llamado todavía no tiene mesas con fecha.</p>
   }
 
-  const total = bloques.reduce(
+  const total = visibles.reduce(
     (t, b) => ({ examenes: t.examenes + b.examenes, dias: t.dias + b.dias.length }),
     { examenes: 0, dias: 0 },
   )
@@ -255,6 +273,35 @@ export function ReporteFechasProfesores() {
         <button type="button" className="btn btn-primary" onClick={() => window.print()}>
           Imprimir
         </button>
+      </div>
+
+      <div className="form-row no-print" style={{ marginBottom: '1rem', alignItems: 'flex-end' }}>
+        <label>
+          Carrera
+          <select
+            value={carreraFiltro}
+            onChange={(e) => setCarreraFiltro(e.target.value)}
+            style={{ display: 'block', minWidth: 180 }}
+          >
+            <option value="">Todas las carreras</option>
+            {opciones.carreras.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Sede
+          <select value={sedeFiltro} onChange={(e) => setSedeFiltro(e.target.value)} style={{ display: 'block', minWidth: 200 }}>
+            <option value="">Todas las sedes</option>
+            {opciones.sedes.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
 
       <div className="foja-card" style={{ marginBottom: 24 }}>
@@ -292,7 +339,7 @@ export function ReporteFechasProfesores() {
             </tr>
           </thead>
           <tbody>
-            {bloques.map((b) => (
+            {visibles.map((b) => (
               <tr key={`${b.sede_id}-${b.carrera}`}>
                 <td>{b.carrera}</td>
                 <td>{b.sede}</td>
