@@ -224,7 +224,7 @@ export function ReporteFechasProfesores() {
           sede: r.sede,
           examenes: r.examenes,
           lugares_en_mesas: r.lugares,
-          profesores_convocados: r.convocados,
+          total_profesores_de_la_carrera: r.plantel,
           disponibles_de_la_carrera: r.disponibles,
           adicionales_por_otra_carrera: r.adicionales,
         })),
@@ -326,7 +326,7 @@ export function ReporteFechasProfesores() {
           del plantel que ese día no tienen clase en esa carrera, pero asisten a la sede por otra carrera (clase o
           mesa); pueden sumarse para completar las mesas. No se cuenta a quienes marcaron ese día como no
           disponible.{' '}
-          <strong>Convocados</strong>: profesores distintos que integran las mesas de ese día (titulares y vocales).
+          <strong>Total de profesores de la carrera</strong>: el plantel de esa carrera en esa sede.
         </p>
       </div>
 
@@ -342,7 +342,7 @@ export function ReporteFechasProfesores() {
                 <th>SEDE</th>
                 <th style={{ textAlign: 'right' }}>EXÁMENES</th>
                 <th style={{ textAlign: 'right' }}>LUGARES EN MESAS</th>
-                <th style={{ textAlign: 'right' }}>PROFESORES CONVOCADOS</th>
+                <th style={{ textAlign: 'right' }}>TOTAL DE PROFESORES DE LA CARRERA</th>
                 <th style={{ textAlign: 'right' }}>DISPONIBLES DE LA CARRERA</th>
                 <th style={{ textAlign: 'right' }}>DISPONIBLES POR OTRA CARRERA</th>
               </tr>
@@ -354,7 +354,7 @@ export function ReporteFechasProfesores() {
                   <td>{r.sede}</td>
                   <td style={{ textAlign: 'right' }}>{r.examenes}</td>
                   <td style={{ textAlign: 'right' }}>{r.lugares}</td>
-                  <td style={{ textAlign: 'right' }}>{r.convocados}</td>
+                  <td style={{ textAlign: 'right' }}>{r.plantel}</td>
                   <td style={{ textAlign: 'right' }}>{r.disponibles}</td>
                   <td style={{ textAlign: 'right' }}>{r.adicionales}</td>
                 </tr>
