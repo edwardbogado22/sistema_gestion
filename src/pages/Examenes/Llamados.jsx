@@ -345,6 +345,11 @@ export function Llamados() {
                   Carga por profesor
                 </Link>
               )}
+              {(esAdmin || esSecretariaAcademica || esDecano) && (
+                <Link to={`/examenes/${l.id}/fechas-profesores`} className="btn btn-secondary btn-sm">
+                  Fechas y profesores
+                </Link>
+              )}
               {esAdmin && (
                 <Link to={`/examenes/${l.id}/actas`} className="btn btn-secondary btn-sm">
                   Numerar actas
