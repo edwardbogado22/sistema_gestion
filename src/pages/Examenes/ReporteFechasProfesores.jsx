@@ -32,17 +32,22 @@ const ordenBloque = (a, b) =>
  * y cuántos profesores están disponibles para integrar las mesas. Sirve
  * para justificar la convocatoria de profesores y el reparto de mesas.
  *
- * Disponible, con el mismo criterio que la asignación de vocales: preside
- * alguna mesa de esa carrera en esa sede en el llamado (plantel) y ese día
- * va a la sede — tiene clase ese día de la semana ahí o preside una mesa
- * ese día —, salvo que haya cargado ese día como no disponible.
+ * Plantel de una carrera en una sede: los profesores que presiden alguna
+ * mesa de esa carrera ahí en el llamado. De cada uno se mira, para cada
+ * fecha, por qué va a la sede ese día:
+ *   - del día: tiene clase en esa carrera ese día de la semana, o preside
+ *     una mesa de esa carrera ese día;
+ *   - adicional: no le toca por esa carrera, pero ese día va a la sede por
+ *     otra carrera (clase o mesa);
+ *   - si no va a la sede ese día, no se cuenta.
+ * Quien cargó ese día como no disponible no se cuenta.
  */
 export function ReporteFechasProfesores() {
   const { llamadoId } = useParams()
   const [llamado, setLlamado] = useState(null)
   const [mesas, setMesas] = useState([])
   const [vocales, setVocales] = useState(new Map())
-  const [presencia, setPresencia] = useState(new Map())
+  const [presencia, setPresencia] = useState(new Set())
   const [noDisponible, setNoDisponible] = useState(new Set())
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -80,7 +85,7 @@ export function ReporteFechasProfesores() {
         fetchTodo((desde, hasta) =>
           supabase
             .from('v_catedra_horario')
-            .select('profesor_id, sede_id, dia_semana')
+            .select('profesor_id, sede_id, carrera_id, dia_semana')
             .eq('periodo_lectivo', ll.periodo_lectivo)
             .order('catedra_id')
             .order('dia_semana')
@@ -111,23 +116,34 @@ export function ReporteFechasProfesores() {
       }
       setVocales(porMesa)
 
-      const pres = new Map() // `${profesor}|${sede}` -> Set(dia_semana)
-      for (const h of hor.data) {
-        const k = `${h.profesor_id}|${h.sede_id}`
-        if (!pres.has(k)) pres.set(k, new Set())
-        pres.get(k).add(h.dia_semana)
-      }
-      setPresencia(pres)
+      // Claves `${profesor}|${sede}|${carrera}|${dia_semana}`
+      setPresencia(new Set(hor.data.map((h) => `${h.profesor_id}|${h.sede_id}|${h.carrera_id}|${h.dia_semana}`)))
       setNoDisponible(new Set(nd.data.map((n) => `${n.profesor_id}|${n.fecha}`)))
       setLoading(false)
     })()
   }, [llamadoId])
 
   const bloques = useMemo(() => {
+    // Quién va a cada sede cada día y por qué carrera, por horario de
+    // clases o por presidir una mesa ese día.
+    const porCarrera = new Set() // `${profesor}|${sede}|${carrera}|${dia_semana}` o `...|${fecha}`
+    const porSede = new Set() // `${profesor}|${sede}|${dia_semana}` o `...|${fecha}`
+    for (const k of presencia) {
+      porCarrera.add(k)
+      const [p, s, , d] = k.split('|')
+      porSede.add(`${p}|${s}|${d}`)
+    }
+    for (const m of mesas) {
+      porCarrera.add(`${m.profesor_id}|${m.sede_id}|${m.carrera_id}|${m.fecha}`)
+      porSede.add(`${m.profesor_id}|${m.sede_id}|${m.fecha}`)
+    }
+
     const mapa = new Map()
     for (const m of mesas) {
       const k = `${m.sede_id}|${m.carrera_id}`
-      if (!mapa.has(k)) mapa.set(k, { sede_id: m.sede_id, sede: m.sede, carrera: m.carrera, plantel: new Set(), mesas: [] })
+      if (!mapa.has(k)) {
+        mapa.set(k, { sede_id: m.sede_id, sede: m.sede, carrera_id: m.carrera_id, carrera: m.carrera, plantel: new Set(), mesas: [] })
+      }
       const b = mapa.get(k)
       b.plantel.add(m.profesor_id)
       b.mesas.push(m)
@@ -143,21 +159,21 @@ export function ReporteFechasProfesores() {
           .sort(([x], [y]) => x.localeCompare(y))
           .map(([fecha, ms]) => {
             const dow = diaSemanaNumero(fecha)
-            const presiden = new Set(ms.map((m) => m.profesor_id))
             const convocados = new Set()
             for (const m of ms) {
               convocados.add(m.profesor_id)
               for (const v of vocales.get(m.examen_fecha_id) || []) convocados.add(v)
             }
-            // Del día: van a la sede ese día. Adicionales: son de la carrera
-            // en esa sede pero ese día no tienen clase ahí; habría que
-            // convocarlos especialmente para completar mesas.
             let disponibles = 0
             let adicionales = 0
             for (const p of b.plantel) {
               if (noDisponible.has(`${p}|${fecha}`)) continue
-              if (presiden.has(p) || presencia.get(`${p}|${b.sede_id}`)?.has(dow)) disponibles++
-              else adicionales++
+              const base = `${p}|${b.sede_id}`
+              if (porCarrera.has(`${base}|${b.carrera_id}|${dow}`) || porCarrera.has(`${base}|${b.carrera_id}|${fecha}`)) {
+                disponibles++
+              } else if (porSede.has(`${base}|${dow}`) || porSede.has(`${base}|${fecha}`)) {
+                adicionales++
+              }
             }
             return {
               fecha,
@@ -167,7 +183,6 @@ export function ReporteFechasProfesores() {
               convocados: convocados.size,
               disponibles,
               adicionales,
-              totalPosible: disponibles + adicionales,
             }
           })
         const examenes = b.mesas.length
@@ -210,9 +225,8 @@ export function ReporteFechasProfesores() {
           examenes: r.examenes,
           lugares_en_mesas: r.lugares,
           profesores_convocados: r.convocados,
-          disponibles_del_dia: r.disponibles,
-          adicionales_no_es_su_dia: r.adicionales,
-          total_posible: r.totalPosible,
+          disponibles_de_la_carrera: r.disponibles,
+          adicionales_por_otra_carrera: r.adicionales,
         })),
       ),
     )
@@ -307,11 +321,11 @@ export function ReporteFechasProfesores() {
         <p className="muted-text" style={{ fontSize: 12, marginTop: 12 }}>
           Cada mesa la integran {POR_MESA} profesores: el titular de la cátedra y dos vocales. <strong>Plantel</strong>:
           profesores que presiden alguna mesa de esa carrera en esa sede en este llamado; de ellos salen los vocales.{' '}
-          <strong>Disponibles del día</strong>: profesores del plantel que ese día van a la sede, porque tienen clase
-          ese día de la semana ahí o presiden una mesa ese día. <strong>Adicionales</strong>: profesores del plantel
-          de esa carrera y sede para los que ese día no es su día de clase; se pueden convocar para completar mesas.{' '}
-          <strong>Total posible</strong>: la suma de ambos. En todos los casos se descuenta a quienes marcaron ese
-          día como no disponible.{' '}
+          <strong>Disponibles de la carrera</strong>: profesores del plantel que ese día de la semana tienen clase en
+          esa carrera y sede, o presiden ese día una mesa de esa carrera. <strong>Por otra carrera</strong>: profesores
+          del plantel que ese día no tienen clase en esa carrera, pero asisten a la sede por otra carrera (clase o
+          mesa); pueden sumarse para completar las mesas. No se cuenta a quienes marcaron ese día como no
+          disponible.{' '}
           <strong>Convocados</strong>: profesores distintos que integran las mesas de ese día (titulares y vocales).
         </p>
       </div>
@@ -329,9 +343,8 @@ export function ReporteFechasProfesores() {
                 <th style={{ textAlign: 'right' }}>EXÁMENES</th>
                 <th style={{ textAlign: 'right' }}>LUGARES EN MESAS</th>
                 <th style={{ textAlign: 'right' }}>PROFESORES CONVOCADOS</th>
-                <th style={{ textAlign: 'right' }}>DISPONIBLES DEL DÍA</th>
-                <th style={{ textAlign: 'right' }}>ADICIONALES (NO ES SU DÍA)</th>
-                <th style={{ textAlign: 'right' }}>TOTAL POSIBLE</th>
+                <th style={{ textAlign: 'right' }}>DISPONIBLES DE LA CARRERA</th>
+                <th style={{ textAlign: 'right' }}>DISPONIBLES POR OTRA CARRERA</th>
               </tr>
             </thead>
             <tbody>
@@ -344,9 +357,6 @@ export function ReporteFechasProfesores() {
                   <td style={{ textAlign: 'right' }}>{r.convocados}</td>
                   <td style={{ textAlign: 'right' }}>{r.disponibles}</td>
                   <td style={{ textAlign: 'right' }}>{r.adicionales}</td>
-                  <td style={{ textAlign: 'right' }}>
-                    <strong>{r.totalPosible}</strong>
-                  </td>
                 </tr>
               ))}
               <tr>
@@ -359,7 +369,7 @@ export function ReporteFechasProfesores() {
                 <td style={{ textAlign: 'right' }}>
                   <strong>{f.examenes * POR_MESA}</strong>
                 </td>
-                <td colSpan={4} />
+                <td colSpan={3} />
               </tr>
             </tbody>
           </table>
