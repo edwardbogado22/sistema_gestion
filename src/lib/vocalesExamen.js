@@ -45,6 +45,10 @@ const claveSedeCarrera = (f) => `${f.sede_id}|${f.carrera_id}`
 // `presencia`: Map<profesorId, Map<sedeId, Set<diaSemanaNumero>>> — de
 // dónde y qué días tiene clase cada profesor (catedra_horario). Sin
 // horario cargado, ese profesor no es convocable como vocal.
+// `opciones.clasesCarrera`: Set de `${profesor}|${sede}|${carrera}|${dia}`
+// — en qué carrera es cada clase. Regla de Dirección Académica: para una
+// mesa se convoca primero a quienes ese día vienen por esa carrera, y
+// solo si no alcanzan a quienes vienen a la sede por otra carrera.
 // `opciones.sinTopeDiario`: Complementario y Regularización. Un profesor
 // que va ese día a la sede puede integrar todas las mesas de ese día, así
 // que presidir otra mesa el mismo día no lo excluye como vocal.
@@ -53,9 +57,11 @@ export function construirContexto(filas, presencia, opciones = {}) {
   const clusterOpt = new Map() // claveCluster -> Set(profesorId) que preside una optativa de ese cluster
   const plantel = new Map() // claveSedeCarrera -> Set(profesorId) titulares de esa carrera en esa sede
   const nombrePorId = new Map()
+  const presideCarrera = new Set() // `${profesor}|${sede}|${carrera}|${fecha}`
   for (const f of filas) {
     if (!f.titular_id) continue
     nombrePorId.set(f.titular_id, f.titular_nombre)
+    presideCarrera.add(`${f.titular_id}|${f.sede_id}|${f.carrera_id}|${f.fecha}`)
     const kPlantel = claveSedeCarrera(f)
     if (!plantel.has(kPlantel)) plantel.set(kPlantel, new Set())
     plantel.get(kPlantel).add(f.titular_id)
@@ -85,11 +91,32 @@ export function construirContexto(filas, presencia, opciones = {}) {
     nombrePorId,
     vecesVocal,
     presencia: presencia || new Map(),
+    clasesCarrera: opciones.clasesCarrera || null,
+    presideCarrera,
     sinTopeDiario: !!opciones.sinTopeDiario,
   }
 }
 
 const tieneClaseEseDia = (ctx, prof, f) => !!ctx.presencia.get(prof)?.get(f.sede_id)?.has(diaSemanaNumero(f.fecha))
+
+// Ese día viene a la sede por la carrera de la mesa: tiene clase en esa
+// carrera ese día de la semana o preside ese día una mesa de esa carrera.
+// Sin el dato de carreras (clasesCarrera) no se distingue.
+const vienePorLaCarrera = (ctx, prof, f) =>
+  !ctx.clasesCarrera ||
+  ctx.clasesCarrera.has(`${prof}|${f.sede_id}|${f.carrera_id}|${diaSemanaNumero(f.fecha)}`) ||
+  ctx.presideCarrera.has(`${prof}|${f.sede_id}|${f.carrera_id}|${f.fecha}`)
+
+// Prioridad de un profesor como vocal de la fila f (menor = mejor):
+// 1 viene ese día por esa carrera, 2 viene a la sede por otra carrera,
+// null si ese día no viene. Las optativas del cluster (0) se resuelven en
+// candidatos().
+export function prioridadVocal(ctx, prof, f) {
+  if (!tieneClaseEseDia(ctx, prof, f) && !ctx.presideCarrera.has(`${prof}|${f.sede_id}|${f.carrera_id}|${f.fecha}`)) {
+    return null
+  }
+  return vienePorLaCarrera(ctx, prof, f) ? 1 : 2
+}
 
 // Co-presidente de una optativa del mismo cluster y fecha: ese día ya está
 // en la sede presidiendo, así que puede ser vocal aunque no tenga clase.
@@ -114,8 +141,9 @@ export function vocalesFueraDeCriterio(filas, i, ctx) {
 
 // Candidatos a vocal para la fila i, excluyendo los ids en `excluir`.
 // Tiers, de mejor a peor:
-//   0 optCluster — co-presidentes de una optativa del mismo cluster y fecha (excepción al choque)
-//   1 presente   — tiene clase regular ese día de semana en esa sede (catedra_horario)
+//   0 optCluster  — co-presidentes de una optativa del mismo cluster y fecha (excepción al choque)
+//   1 presente    — ese día viene por esta carrera (clase en ella o preside una mesa de ella)
+//   2 otraCarrera — ese día viene a la sede, pero por otra carrera: solo si los anteriores no alcanzan
 // Quien no entra en ninguno no es candidato.
 export function candidatos(filas, i, excluir, ctx) {
   const f = filas[i]
@@ -129,29 +157,32 @@ export function candidatos(filas, i, excluir, ctx) {
     if (!prof || prof === f.titular_id || excluir.has(prof)) continue
     if (o.sede_id !== f.sede_id || o.carrera_id !== f.carrera_id) continue
 
-    let tier = null
+    let tier
     if (soyOpt && esOptativa(o) && o.fecha === f.fecha && claveCluster(o) === kCluster) {
       tier = 0
     } else {
       if (!ctx.sinTopeDiario && ctx.ocupado.get(prof)?.has(f.fecha)) continue // choque: ya preside otra mesa ese día
-      if (tieneClaseEseDia(ctx, prof, f)) tier = 1
+      tier = prioridadVocal(ctx, prof, f)
     }
     if (tier === null) continue
     if (!mejorTier.has(prof) || mejorTier.get(prof) > tier) mejorTier.set(prof, tier)
   }
 
   const p0 = [],
-    p1 = []
+    p1 = [],
+    p2 = []
   for (const [prof, tier] of mejorTier) {
     if (tier === 0) p0.push(prof)
-    else p1.push(prof)
+    else if (tier === 1) p1.push(prof)
+    else p2.push(prof)
   }
 
   const porNombre = (a, b) => (ctx.nombrePorId.get(a) || '').localeCompare(ctx.nombrePorId.get(b) || '')
   p0.sort(porNombre)
   p1.sort(porNombre)
+  p2.sort(porNombre)
 
-  return { optCluster: p0, presente: p1, todos: [...p0, ...p1] }
+  return { optCluster: p0, presente: p1, otraCarrera: p2, todos: [...p0, ...p1, ...p2], tier: mejorTier }
 }
 
 // Por qué la fila i está en conflicto, en las mismas reglas que estado():
@@ -219,10 +250,12 @@ function contarCompletables(filas, ctx) {
   return ok
 }
 
-// Completa vocal1/vocal2 vacíos balanceando por cantidad de veces que cada
-// profesor ya es vocal (no cuenta las veces que preside). Devuelve un
-// array nuevo, no muta `filas`.
-// Equipara la carga de examinadores: pasa una mesa del vocal más cargado
+// Completa vocal1/vocal2 vacíos: primero los que ese día vienen por la
+// carrera de la mesa y, entre ellos, el que menos veces es vocal (no
+// cuenta las veces que preside). Devuelve un array nuevo, no muta `filas`.
+// Equipara la carga de examinadores. Antes, por la regla de oro, cambia
+// cada vocal que ese día viene por otra carrera por uno que viene por la
+// carrera de la mesa, si hay alguno libre. Después pasa una mesa del vocal más cargado
 // a un candidato válido (mismas reglas que candidatos(): plantel de la
 // carrera, clase ese día en esa sede, no preside otra mesa ese día) que
 // tenga al menos 2 mesas menos, hasta que no quede ningún pase posible.
@@ -245,7 +278,42 @@ export function equilibrarCarga(filas, presencia, opciones) {
   }
   const antes = resumen(carga)
 
-  let cambios = 0
+  const mover = (i, campo, q) => {
+    const f = nuevas[i]
+    const actual = f[campo]
+    const base = campo.replace(/_id$/, '')
+    nuevas[i] = { ...f, [campo]: q, [`${base}_nombre`]: ctx.nombrePorId.get(q) }
+    carga.set(actual, (carga.get(actual) || 1) - 1)
+    carga.set(q, (carga.get(q) || 0) + 1)
+    porDia.set(claveDia(actual, f.fecha), (porDia.get(claveDia(actual, f.fecha)) || 1) - 1)
+    porDia.set(claveDia(q, f.fecha), (porDia.get(claveDia(q, f.fecha)) || 0) + 1)
+  }
+  const tierActual = (prof, f) => (copresideOptativa(ctx, prof, f) ? 0 : (prioridadVocal(ctx, prof, f) ?? 3))
+
+  // Regla de oro: vocales que ese día vienen por otra carrera
+  let porCarrera = 0
+  for (let i = 0; i < nuevas.length; i++) {
+    if (nuevas[i].extras?.length) continue
+    for (const campo of ['vocal1_id', 'vocal2_id']) {
+      const f = nuevas[i]
+      const actual = f[campo]
+      if (!actual || tierActual(actual, f) < 2) continue
+      const otro = campo === 'vocal1_id' ? f.vocal2_id : f.vocal1_id
+      const c = candidatos(nuevas, i, new Set([f.titular_id, actual, otro].filter(Boolean)), ctx)
+      let mejor = null
+      for (const q of c.todos) {
+        if (c.tier.get(q) >= 2) continue
+        const cq = carga.get(q) || 0
+        const dq = porDia.get(claveDia(q, f.fecha)) || 0
+        if (!mejor || cq < mejor.c || (cq === mejor.c && dq < mejor.d)) mejor = { q, c: cq, d: dq }
+      }
+      if (!mejor) continue
+      mover(i, campo, mejor.q)
+      porCarrera++
+    }
+  }
+
+  let cambios = porCarrera
   for (let vuelta = 0; vuelta < 50; vuelta++) {
     let movio = false
     // primero las mesas del vocal más cargado
@@ -260,10 +328,14 @@ export function equilibrarCarga(filas, presencia, opciones) {
       const actual = f[campo]
       const otro = campo === 'vocal1_id' ? f.vocal2_id : f.vocal1_id
       const excluir = new Set([f.titular_id, actual, otro].filter(Boolean))
-      const cand = candidatos(nuevas, i, excluir, ctx).todos
+      const c = candidatos(nuevas, i, excluir, ctx)
       const cargaActual = carga.get(actual) || 0
+      // El pase no puede empeorar la prioridad: no se reemplaza a quien
+      // viene por la carrera con alguien que viene por otra.
+      const tierDe = tierActual(actual, f)
       let mejor = null
-      for (const q of cand) {
+      for (const q of c.todos) {
+        if (c.tier.get(q) > tierDe) continue
         const cq = carga.get(q) || 0
         if (cq > cargaActual - 2) continue
         const dq = porDia.get(claveDia(q, f.fecha)) || 0
@@ -271,19 +343,14 @@ export function equilibrarCarga(filas, presencia, opciones) {
       }
       if (!mejor) continue
 
-      const base = campo.replace(/_id$/, '')
-      nuevas[i] = { ...f, [campo]: mejor.q, [`${base}_nombre`]: ctx.nombrePorId.get(mejor.q) }
-      carga.set(actual, cargaActual - 1)
-      carga.set(mejor.q, (carga.get(mejor.q) || 0) + 1)
-      porDia.set(claveDia(actual, f.fecha), (porDia.get(claveDia(actual, f.fecha)) || 1) - 1)
-      porDia.set(claveDia(mejor.q, f.fecha), (porDia.get(claveDia(mejor.q, f.fecha)) || 0) + 1)
+      mover(i, campo, mejor.q)
       cambios++
       movio = true
     }
     if (!movio) break
   }
 
-  return { filas: nuevas, cambios, antes, despues: resumen(carga) }
+  return { filas: nuevas, cambios, porCarrera, antes, despues: resumen(carga) }
 }
 
 export function asignarAuto(filas, presencia, opciones) {
@@ -303,8 +370,11 @@ export function asignarAuto(filas, presencia, opciones) {
     if (f.vocal1_id) excl.add(f.vocal1_id)
     if (f.vocal2_id) excl.add(f.vocal2_id)
 
-    const cand = candidatos(nuevas, i, excl, ctx).todos.slice()
-    cand.sort((a, b) => (conteo.get(a) || 0) - (conteo.get(b) || 0))
+    // Primero los que vienen ese día por esta carrera; a igual prioridad,
+    // el menos cargado.
+    const c = candidatos(nuevas, i, excl, ctx)
+    const cand = c.todos.slice()
+    cand.sort((a, b) => c.tier.get(a) - c.tier.get(b) || (conteo.get(a) || 0) - (conteo.get(b) || 0))
 
     if (!f.vocal1_id && cand.length) {
       f.vocal1_id = cand.shift()

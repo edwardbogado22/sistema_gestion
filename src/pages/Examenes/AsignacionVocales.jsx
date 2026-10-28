@@ -26,6 +26,7 @@ export function AsignacionVocales() {
   const [filasOriginales, setFilasOriginales] = useState([])
   const [fechasHabilesPorDia, setFechasHabilesPorDia] = useState(new Map())
   const [presencia, setPresencia] = useState(new Map())
+  const [clasesCarrera, setClasesCarrera] = useState(new Set())
   const [filtro, setFiltro] = useState(sinFiltro)
   const [editando, setEditando] = useState(null) // { idx, campo }
   const [loading, setLoading] = useState(true)
@@ -51,7 +52,7 @@ export function AsignacionVocales() {
     const [{ data: agenda, error: eAg }, { data: bloqueados, error: eBl }, { data: horarios, error: eHo }] = await Promise.all([
       supabase.from('v_examen_agenda').select('*').eq('llamado_id', llamadoId).not('fecha', 'is', null),
       supabase.rpc('dias_bloqueados_llamado', { p_llamado: llamadoId }),
-      supabase.from('v_catedra_horario').select('profesor_id, sede_id, dia_semana').eq('periodo_lectivo', ll.periodo_lectivo),
+      supabase.from('v_catedra_horario').select('profesor_id, sede_id, carrera_id, dia_semana').eq('periodo_lectivo', ll.periodo_lectivo),
     ])
     const err = eAg || eBl || eHo
     if (err) {
@@ -68,6 +69,9 @@ export function AsignacionVocales() {
       porSede.get(h.sede_id).add(h.dia_semana)
     }
     setPresencia(presenciaMapa)
+    // En qué carrera es cada clase: se convoca primero a quien ese día
+    // viene por la carrera de la mesa.
+    setClasesCarrera(new Set((horarios || []).map((h) => `${h.profesor_id}|${h.sede_id}|${h.carrera_id}|${h.dia_semana}`)))
 
     // mesa_integrante puede superar las 1000 filas que PostgREST devuelve
     // por defecto (2 vocales × cientos de mesas) — sin paginar, esto
@@ -143,7 +147,10 @@ export function AsignacionVocales() {
   }, [llamadoId])
 
   // Complementario y Regularización: sin tope de mesas por profesor y día
-  const opcionesCtx = useMemo(() => ({ sinTopeDiario: !!llamado && llamado.tipo !== 'ORDINARIO' }), [llamado])
+  const opcionesCtx = useMemo(
+    () => ({ sinTopeDiario: !!llamado && llamado.tipo !== 'ORDINARIO', clasesCarrera }),
+    [llamado, clasesCarrera],
+  )
   const ctx = useMemo(() => construirContexto(filas, presencia, opcionesCtx), [filas, presencia, opcionesCtx])
 
   const opciones = useMemo(() => {
@@ -229,7 +236,9 @@ export function AsignacionVocales() {
     }
     setFilas(r.filas)
     setOk(
-      `Se proponen ${r.cambios} cambio(s) de examinador: el más cargado pasa de ${r.antes.max} a ${r.despues.max} mesas, ` +
+      `Se proponen ${r.cambios} cambio(s) de examinador` +
+        (r.porCarrera ? ` (${r.porCarrera} para poner a profesores que ese día vienen por la carrera de la mesa)` : '') +
+        `: el más cargado pasa de ${r.antes.max} a ${r.despues.max} mesas, ` +
         `y las examinaciones se reparten entre ${r.despues.profesores} profesores (antes ${r.antes.profesores}). ` +
         'Revisá la tabla y tocá "Guardar cambios" para confirmarlos ' +
         '(o recargá la página para descartarlos).',
@@ -728,8 +737,17 @@ function CeldaVocal({ fila, idx, campo, editando, setEditando, filas, ctx, onEle
           </optgroup>
         )}
         {cand.presente.length > 0 && (
-          <optgroup label={`Tiene clase ese día (${cand.presente.length})`}>
+          <optgroup label={`Tiene clase ese día en esta carrera (${cand.presente.length})`}>
             {porCarga(cand.presente).map((id) => (
+              <option key={id} value={id}>
+                {etiquetaCandidato(id)}
+              </option>
+            ))}
+          </optgroup>
+        )}
+        {cand.otraCarrera.length > 0 && (
+          <optgroup label={`Viene ese día por otra carrera (${cand.otraCarrera.length})`}>
+            {porCarga(cand.otraCarrera).map((id) => (
               <option key={id} value={id}>
                 {etiquetaCandidato(id)}
               </option>
