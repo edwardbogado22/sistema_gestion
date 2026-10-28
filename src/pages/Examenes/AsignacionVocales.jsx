@@ -4,7 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { fetchTodo } from '../../lib/paginar'
 import { aISO, deISO, formatoLargo } from '../../lib/fechas'
 import { descargarFilas } from '../../lib/csv'
-import { construirContexto, candidatos, estado, vocalesFueraDeCriterio, motivosConflicto, asignarAuto, equilibrarCarga, calcularRebalanceo, diaSemana } from '../../lib/vocalesExamen'
+import { construirContexto, candidatos, estado, vocalesFueraDeCriterio, vocalFueraDeSuDia, motivosConflicto, asignarAuto, equilibrarCarga, calcularRebalanceo, diaSemana } from '../../lib/vocalesExamen'
 
 const sinFiltro = { sede_id: '', carrera_id: '', curso_nivel: '', estado: '', busqueda: '' }
 
@@ -174,7 +174,9 @@ export function AsignacionVocales() {
         if (filtro.sede_id && f.sede_id !== filtro.sede_id) return false
         if (filtro.carrera_id && f.carrera_id !== filtro.carrera_id) return false
         if (filtro.curso_nivel && String(f.curso_nivel) !== filtro.curso_nivel) return false
-        if (filtro.estado && estado(filas, idx, ctx) !== filtro.estado) return false
+        if (filtro.estado === 'fueraDia') {
+          if (![f.vocal1_id, f.vocal2_id].some((v) => vocalFueraDeSuDia(ctx, v, f))) return false
+        } else if (filtro.estado && estado(filas, idx, ctx) !== filtro.estado) return false
         if (q) {
           const blob = [f.materia, f.titular_nombre, f.vocal1_nombre, f.vocal2_nombre].join(' ').toLowerCase()
           if (!blob.includes(q)) return false
@@ -447,6 +449,7 @@ export function AsignacionVocales() {
           <option value="err">Con conflicto</option>
           <option value="warn">Incompletas</option>
           <option value="ok">Completas</option>
+          <option value="fueraDia">Con vocal que no tiene clase ese día en la carrera</option>
         </select>
         <input
           value={filtro.busqueda}
@@ -696,6 +699,7 @@ function CeldaVocal({ fila, idx, campo, editando, setEditando, filas, ctx, onEle
   const abierto = editando?.idx === idx && editando?.campo === campo
   const valorId = fila[campo]
   const valorNombre = fila[`${base}_nombre`]
+  const fueraDia = vocalFueraDeSuDia(ctx, valorId, fila)
 
   if (!abierto) {
     return (
@@ -705,6 +709,19 @@ function CeldaVocal({ fila, idx, campo, editando, setEditando, filas, ctx, onEle
         title="Clic para cambiar"
       >
         {valorNombre || <span className="muted-text">— asignar —</span>}
+        {fueraDia && (
+          <span
+            className="badge badge-gold"
+            style={{ marginLeft: 6 }}
+            title={
+              fueraDia === 'otra'
+                ? 'Ese día no tiene clase en esta carrera: viene a la sede por otra carrera'
+                : 'Ese día no tiene clase en esta sede'
+            }
+          >
+            {fueraDia === 'otra' ? 'Viene por otra carrera' : 'Sin clase ese día'}
+          </span>
+        )}
       </td>
     )
   }

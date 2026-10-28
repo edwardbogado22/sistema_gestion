@@ -123,6 +123,17 @@ export function prioridadVocal(ctx, prof, f) {
 const copresideOptativa = (ctx, prof, f) =>
   esOptativa(f) && !!ctx.clusterOpt.get(claveCluster(f))?.has(prof) && !!ctx.ocupado.get(prof)?.has(f.fecha)
 
+// Si el vocal `prof` de la fila f no viene ese día por la carrera de la
+// mesa: 'otra' (viene a la sede por otra carrera), 'sinClase' (ese día no
+// tiene clase en la sede) o null (viene por la carrera, o copreside una
+// optativa del cluster).
+export function vocalFueraDeSuDia(ctx, prof, f) {
+  if (!prof || copresideOptativa(ctx, prof, f)) return null
+  const p = prioridadVocal(ctx, prof, f)
+  if (p === 1) return null
+  return p === 2 ? 'otra' : 'sinClase'
+}
+
 // Vocales de la fila i que no cumplen los dos criterios de convocatoria:
 // ser del plantel de esa carrera en esa sede (titular de alguna mesa del
 // llamado ahí) y tener clase en esa sede ese día de la semana. Devuelve
