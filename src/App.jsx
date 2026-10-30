@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { PrivateRoute } from './components/PrivateRoute'
 import { Layout } from './components/Layout'
+import { CierreInactividad } from './components/CierreInactividad'
 
 const Login = lazy(() => import('./pages/Login').then((m) => ({ default: m.Login })))
 const Home = lazy(() => import('./pages/Home').then((m) => ({ default: m.Home })))
@@ -107,6 +108,7 @@ function withLayout(element) {
 function App() {
   return (
     <Suspense fallback={<div className="page-padding">Cargando...</div>}>
+      <CierreInactividad />
       <Routes>
         <Route path="/login" element={<Login />} />
         {/* Pública a propósito: los profesores entran sin usuario desde el enlace del canal. */}
