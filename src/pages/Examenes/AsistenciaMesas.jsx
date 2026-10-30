@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
+import { fetchTodo } from '../../lib/paginar'
 import { useAuth } from '../../contexts/AuthContext'
 import { formatoLargo } from '../../lib/fechas'
 
@@ -44,10 +45,16 @@ export function AsistenciaMesas() {
       return
     }
 
-    const { data: integrantes, error: eInt } = await supabase
-      .from('mesa_integrante')
-      .select('id, examen_fecha_id, profesor_id, rol_mesa, asistio, profesores(nombres, apellidos), examen_fecha!inner(llamado_id)')
-      .eq('examen_fecha.llamado_id', llamadoId)
+    // Más de 1000 integrantes por llamado (2 vocales × cientos de mesas):
+    // sin paginar, PostgREST corta y faltan vocales en la lista.
+    const { data: integrantes, error: eInt } = await fetchTodo((desde, hasta) =>
+      supabase
+        .from('mesa_integrante')
+        .select('id, examen_fecha_id, profesor_id, rol_mesa, asistio, profesores(nombres, apellidos), examen_fecha!inner(llamado_id)')
+        .eq('examen_fecha.llamado_id', llamadoId)
+        .order('id')
+        .range(desde, hasta),
+    )
     if (eInt) {
       setError(eInt.message)
       setLoading(false)
