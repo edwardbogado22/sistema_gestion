@@ -21,6 +21,13 @@ const hoy = () => {
 
 const nombreProfesor = (p) => (p ? `${p.apellidos}, ${p.nombres}` : '')
 
+// Se imprimen dos copias: una va a cada carrera para su aprobación y la
+// otra, firmada por el Decanato y Dirección Académica, se publica.
+const COPIAS = {
+  carrera: { label: 'Copia para la carrera (aprobación)', firmas: ['Secretaría de Carrera', 'Coordinación de Carrera'] },
+  publicacion: { label: 'Copia para publicación', firmas: ['Decanato', 'Dirección Académica'] },
+}
+
 /**
  * Planilla imprimible de mesas examinadoras: Presidente + Vocal 1 + Vocal 2
  * por materia, agrupadas por carrera y sede. Mismo patrón que ReporteCarga.jsx.
@@ -34,6 +41,7 @@ export function ReporteMesas() {
   // El horario también se publica antes de oficializar las actas: sin el
   // número, la primera columna vuelve a ser el orden 1, 2, 3...
   const [mostrarActas, setMostrarActas] = useState(true)
+  const [copia, setCopia] = useState('carrera')
 
   // El filtro viaja por la URL para poder llegar ya aplicado desde
   // Asignación de Vocales ("Reporte para imprimir" ahí abajo manda el
@@ -256,6 +264,16 @@ export function ReporteMesas() {
           </button>
         )}
         <div style={{ flex: 1 }} />
+        <label>
+          Firmas
+          <select value={copia} onChange={(e) => setCopia(e.target.value)} style={{ display: 'block', minWidth: 220 }}>
+            {Object.entries(COPIAS).map(([k, c]) => (
+              <option key={k} value={k}>
+                {c.label}
+              </option>
+            ))}
+          </select>
+        </label>
         {tieneActas && (
           <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <input type="checkbox" checked={mostrarActas} onChange={(e) => setMostrarActas(e.target.checked)} />
@@ -374,11 +392,11 @@ export function ReporteMesas() {
             <tbody>
               <tr>
                 <td style={{ textAlign: 'center', borderTop: '1px solid #000', paddingTop: 6 }}>
-                  Secretaría de Carrera
+                  {COPIAS[copia].firmas[0]}
                 </td>
                 <td style={{ width: 60 }} />
                 <td style={{ textAlign: 'center', borderTop: '1px solid #000', paddingTop: 6 }}>
-                  Dirección Académica
+                  {COPIAS[copia].firmas[1]}
                 </td>
               </tr>
             </tbody>
