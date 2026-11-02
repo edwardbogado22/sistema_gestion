@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { fetchTodo } from '../lib/paginar'
 import { useAuth } from '../contexts/AuthContext'
-import { aISO } from '../lib/fechas'
+import { aISO, formatoLargo } from '../lib/fechas'
 
 const HOY = aISO(new Date())
 
@@ -87,7 +87,9 @@ export function PlanAnual() {
     }
   }, [catedras, periodo, filtro.sede_id, filtro.carrera_id, filtro.curso_nivel])
 
-  const filtradas = useMemo(() => {
+  // Sin el filtro de estado: de acá salen los contadores de los chips,
+  // que tienen que mostrar cuántas hay de cada lado sin importar cuál se eligió.
+  const sinEstado = useMemo(() => {
     const q = filtro.busqueda.trim().toLowerCase()
     return catedras
       .filter((c) => {
@@ -96,8 +98,6 @@ export function PlanAnual() {
         if (filtro.carrera_id && c.asignaturas?.carrera_id !== filtro.carrera_id) return false
         if (filtro.curso_nivel && String(c.asignaturas?.curso_nivel) !== filtro.curso_nivel) return false
         if (filtro.seccion && c.seccion_grupo?.toUpperCase() !== filtro.seccion) return false
-        if (filtro.estado === 'entregado' && !entregas[c.id]?.fecha_entrega) return false
-        if (filtro.estado === 'pendiente' && entregas[c.id]?.fecha_entrega) return false
         if (!q) return true
         return [c.profesores?.nombres, c.profesores?.apellidos, c.asignaturas?.nombre, c.asignaturas?.carreras?.nombre, c.sedes?.nombre].some(
           (v) => v?.toLowerCase().includes(q),
@@ -111,9 +111,22 @@ export function PlanAnual() {
           (a.seccion_grupo || '').localeCompare(b.seccion_grupo || '') ||
           (a.asignaturas?.nombre || '').localeCompare(b.asignaturas?.nombre || ''),
       )
-  }, [catedras, entregas, periodo, filtro])
+  }, [catedras, periodo, filtro.sede_id, filtro.carrera_id, filtro.curso_nivel, filtro.seccion, filtro.busqueda])
 
-  const entregadasVisibles = filtradas.filter((c) => entregas[c.id]?.fecha_entrega).length
+  const totalEntregadas = sinEstado.filter((c) => entregas[c.id]?.fecha_entrega).length
+  const totalPendientes = sinEstado.length - totalEntregadas
+  const porcentaje = sinEstado.length ? Math.round((totalEntregadas / sinEstado.length) * 100) : 0
+
+  const filtradas = useMemo(
+    () =>
+      sinEstado.filter((c) => {
+        const entregada = !!entregas[c.id]?.fecha_entrega
+        if (filtro.estado === 'entregado') return entregada
+        if (filtro.estado === 'pendiente') return !entregada
+        return true
+      }),
+    [sinEstado, entregas, filtro.estado],
+  )
 
   const setFiltroCampo = (campo, valor) => {
     setFiltro((f) => {
@@ -234,11 +247,6 @@ export function PlanAnual() {
             </option>
           ))}
         </select>
-        <select value={filtro.estado} onChange={(e) => setFiltroCampo('estado', e.target.value)} aria-label="Estado">
-          <option value="">Todos los estados</option>
-          <option value="pendiente">Pendientes</option>
-          <option value="entregado">Entregados</option>
-        </select>
         <input
           value={filtro.busqueda}
           onChange={(e) => setFiltroCampo('busqueda', e.target.value)}
@@ -250,14 +258,35 @@ export function PlanAnual() {
           Limpiar filtros
         </button>
       </div>
-      <p className="muted-text" style={{ marginBottom: 16 }}>
-        {filtradas.length} cátedra(s) · {entregadasVisibles} entregada(s) · {filtradas.length - entregadasVisibles} pendiente(s)
-      </p>
+      <div className="plan-anual-resumen">
+        {[
+          ['', `Todas · ${sinEstado.length}`],
+          ['pendiente', `Pendientes · ${totalPendientes}`],
+          ['entregado', `Entregadas · ${totalEntregadas}`],
+        ].map(([valor, texto]) => (
+          <button
+            key={valor}
+            type="button"
+            className={`chip${filtro.estado === valor ? ' activo' : ''}`}
+            aria-pressed={filtro.estado === valor}
+            onClick={() => setFiltroCampo('estado', valor)}
+          >
+            {texto}
+          </button>
+        ))}
+        <div className="plan-anual-progreso" title={`${totalEntregadas} de ${sinEstado.length} entregadas`}>
+          <div className="plan-anual-progreso-barra">
+            <span style={{ width: `${porcentaje}%` }} />
+          </div>
+          <span>{porcentaje}% entregado</span>
+        </div>
+      </div>
 
       <div className="data-table-wrap">
         <table className="data-table">
           <thead>
             <tr>
+              <th>Estado</th>
               <th>Profesor</th>
               <th>Asignatura</th>
               <th>Carrera</th>
@@ -266,12 +295,20 @@ export function PlanAnual() {
               <th>Período</th>
               <th style={{ width: 160 }}>Fecha de entrega</th>
               <th>Observaciones</th>
-              <th>Estado</th>
             </tr>
           </thead>
           <tbody>
             {filtradas.map((c) => (
-              <tr key={c.id}>
+              <tr key={c.id} className={yaEntregado(c.id) ? 'fila-entregada' : undefined}>
+                <td>
+                  {yaEntregado(c.id) ? (
+                    <span className="badge badge-success" style={{ whiteSpace: 'nowrap' }}>
+                      ✓ {formatoLargo(entregas[c.id].fecha_entrega)}
+                    </span>
+                  ) : (
+                    <span className="badge badge-muted">Pendiente</span>
+                  )}
+                </td>
                 <td>
                   {c.profesores?.apellidos}, {c.profesores?.nombres}
                 </td>
@@ -288,6 +325,8 @@ export function PlanAnual() {
                     value={valorDe(c.id, 'fecha_entrega')}
                     disabled={!puedeEscribir}
                     onChange={(e) => setCambio(c.id, 'fecha_entrega', e.target.value)}
+                    className={!yaEntregado(c.id) && cambios[c.id]?.fecha_entrega === undefined ? 'fecha-sugerida' : undefined}
+                    title={yaEntregado(c.id) ? undefined : 'Sugerencia: todavía no se guardó'}
                     style={{ marginBottom: 6 }}
                   />
                   {puedeEscribir && (
@@ -310,13 +349,6 @@ export function PlanAnual() {
                     style={{ minWidth: 160 }}
                     onChange={(e) => setCambio(c.id, 'observaciones', e.target.value)}
                   />
-                </td>
-                <td>
-                  {yaEntregado(c.id) ? (
-                    <span className="badge badge-success">Entregado</span>
-                  ) : (
-                    <span className="badge badge-muted">Pendiente</span>
-                  )}
                 </td>
               </tr>
             ))}

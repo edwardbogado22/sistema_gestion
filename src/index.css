@@ -1449,6 +1449,52 @@
     color: var(--gold-deep);
   }
 
+  /* ---- plan anual: resumen de entregas y filas ya entregadas ---- */
+  .plan-anual-resumen {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .plan-anual-progreso {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-left: auto;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+  }
+
+  .plan-anual-progreso-barra {
+    width: 180px;
+    height: 8px;
+    border-radius: 999px;
+    background: color-mix(in oklab, var(--green-700) 10%, transparent);
+    overflow: hidden;
+
+    span {
+      display: block;
+      height: 100%;
+      background: var(--success);
+    }
+  }
+
+  .data-table tbody tr.fila-entregada {
+    background: var(--success-soft);
+
+    td:first-child {
+      box-shadow: inset 3px 0 0 var(--success);
+    }
+  }
+
+  .fecha-sugerida {
+    color: var(--muted);
+    opacity: 0.7;
+  }
+
   /* ---- barra de puntaje (informes/resultados) ---- */
   .score-bar {
     display: flex;
