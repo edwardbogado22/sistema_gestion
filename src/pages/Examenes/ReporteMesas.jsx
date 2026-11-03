@@ -30,8 +30,10 @@ const COPIAS = {
 }
 
 // Alto útil de una hoja A4 apaisada con margen de 0.8cm (21cm - 1.6cm a
-// 96 px por pulgada), con un resto de seguridad por redondeos del navegador.
-const ALTO_HOJA = Math.floor((19.4 / 2.54) * 96) - 18
+// 96 px por pulgada).
+const ALTO_HOJA = (19.4 / 2.54) * 96
+// Resto de seguridad por redondeos del navegador
+const RESGUARDO = 18
 // Ancho útil de la misma hoja: la tabla se mide con este ancho para que
 // las materias largas envuelvan igual que en el papel.
 const ANCHO_HOJA = Math.floor((28.1 / 2.54) * 96)
@@ -41,13 +43,17 @@ const ANCHO_HOJA = Math.floor((28.1 / 2.54) * 96)
 // y no con los contadores de página del navegador (que son de todo el
 // documento). Las firmas nunca quedan solas en una hoja: si no entran, la
 // última fila pasa con ellas.
-function paginar(m) {
+function paginar(m, escala) {
+  // Si la tabla es más ancha que el papel (nombres largos en una línea),
+  // el navegador achica toda la impresión para que entre de ancho: en
+  // cada hoja entran entonces más píxeles de alto.
+  const alto = ALTO_HOJA * escala - RESGUARDO
   const hojas = [[]]
-  let libre = ALTO_HOJA - m.primera - m.thead
+  let libre = alto - m.primera - m.thead
   m.filas.forEach((h, i) => {
     if (h > libre && hojas[hojas.length - 1].length) {
       hojas.push([])
-      libre = ALTO_HOJA - m.continuacion - m.thead
+      libre = alto - m.continuacion - m.thead
     }
     hojas[hojas.length - 1].push(i)
     libre -= h
@@ -210,12 +216,15 @@ export function ReporteMesas() {
   }, [filasFiltradas])
 
   // Alturas medidas de cada bloque (ver Medidor): con ellas se arman las hojas
-  const [medidas, setMedidas] = useState({})
+  const [medidas, setMedidas] = useState({ escala: 1, bloques: {} })
   const hojasPorBloque = useMemo(() => {
     const r = {}
     for (const b of bloques) {
-      const m = medidas[claveBloque(b)]
-      r[claveBloque(b)] = m && m.filas.length === b.filas.length ? paginar(m) : [b.filas.map((_, i) => i)]
+      const m = medidas.bloques[claveBloque(b)]
+      r[claveBloque(b)] =
+        m && m.filas.length === b.filas.length
+          ? { hojas: paginar(m, medidas.escala), anchos: m.anchos }
+          : { hojas: [b.filas.map((_, i) => i)] }
     }
     return r
   }, [bloques, medidas])
@@ -280,6 +289,8 @@ export function ReporteMesas() {
         .rm-cont .rm-hoja-num { margin-left: auto; font-weight: 600; }
         .rm-medidor { position: absolute; left: -99999px; top: 0; width: ${ANCHO_HOJA}px; visibility: hidden; }
         .rm-medidor .foja-card { padding: 0; border: none; box-shadow: none; max-width: none; margin: 0; }
+        /* lo que no se imprime (Responsable) tampoco ocupa lugar al medir */
+        .rm-medidor .no-print { display: none; }
       `}</style>
 
       <div className="form-row no-print" style={{ marginBottom: '1rem', alignItems: 'flex-end' }}>
@@ -348,9 +359,17 @@ export function ReporteMesas() {
       )}
 
       {bloques.map((b) => {
-        const hojas = hojasPorBloque[claveBloque(b)]
+        const { hojas, anchos } = hojasPorBloque[claveBloque(b)]
         return hojas.map((indices, n) => (
-          <Hoja key={`${claveBloque(b)}-${n}`} {...comun} b={b} indices={indices} numero={n + 1} total={hojas.length} />
+          <Hoja
+            key={`${claveBloque(b)}-${n}`}
+            {...comun}
+            b={b}
+            indices={indices}
+            numero={n + 1}
+            total={hojas.length}
+            anchos={anchos}
+          />
         ))
       })}
 
@@ -445,10 +464,24 @@ function EncabezadoContinuacion({ enc, b, numero, total }) {
   )
 }
 
-function TablaMesas({ b, indices, hayActas }) {
+// `anchos` son los de las columnas medidas con todas las mesas del bloque:
+// cada hoja es una tabla aparte y, sin fijarlos, cada una repartiría el
+// ancho según sus propias filas y las materias envolverían distinto a lo
+// medido (sobraba lugar en una hoja y se agregaba otra de más).
+function TablaMesas({ b, indices, hayActas, anchos }) {
   return (
     <div className="rm-tabla-wrap">
-      <table className="data-table foja-tabla rm-tabla">
+      <table
+        className="data-table foja-tabla rm-tabla"
+        style={anchos ? { tableLayout: 'fixed', width: anchos.tabla } : undefined}
+      >
+        {anchos && (
+          <colgroup>
+            {anchos.columnas.map((w, i) => (
+              <col key={i} style={{ width: w }} />
+            ))}
+          </colgroup>
+        )}
         <thead>
           <tr>
             <th style={{ width: hayActas ? 48 : 28 }}>{hayActas ? 'N° Acta' : 'N°'}</th>
@@ -458,9 +491,12 @@ function TablaMesas({ b, indices, hayActas }) {
             <th style={{ width: 40 }}>Secc.</th>
             <th style={{ width: 45 }}>hora</th>
             <th>MATERIA</th>
-            <th style={{ whiteSpace: 'nowrap' }}>PRESIDENTE</th>
-            <th style={{ whiteSpace: 'nowrap' }}>EXAMINADOR N° 1</th>
-            <th style={{ whiteSpace: 'nowrap' }}>EXAMINADOR N° 2</th>
+            {/* Los nombres pueden ir en dos líneas: en una sola, los más
+                largos se llevaban el ancho, la materia envolvía en 3 o 4
+                líneas y las hojas salían con la mitad de las mesas */}
+            <th>PRESIDENTE</th>
+            <th>EXAMINADOR N° 1</th>
+            <th>EXAMINADOR N° 2</th>
           </tr>
         </thead>
         <tbody>
@@ -478,13 +514,9 @@ function TablaMesas({ b, indices, hayActas }) {
                   {f.materia}
                   {f.optativa ? ' (Opt.)' : ''}
                 </td>
-                <td style={{ whiteSpace: 'nowrap' }}>{f.profesor}</td>
-                <td className={f.vocal1 ? '' : 'error-text'} style={{ whiteSpace: 'nowrap' }}>
-                  {f.vocal1 || '— sin asignar —'}
-                </td>
-                <td className={f.vocal2 ? '' : 'error-text'} style={{ whiteSpace: 'nowrap' }}>
-                  {f.vocal2 || '— sin asignar —'}
-                </td>
+                <td>{f.profesor}</td>
+                <td className={f.vocal1 ? '' : 'error-text'}>{f.vocal1 || '— sin asignar —'}</td>
+                <td className={f.vocal2 ? '' : 'error-text'}>{f.vocal2 || '— sin asignar —'}</td>
               </tr>
             )
           })}
@@ -519,7 +551,7 @@ function Firmas({ firmas }) {
   )
 }
 
-function Hoja({ b, indices, numero, total, enc, hayActas, firmas, responsable }) {
+function Hoja({ b, indices, numero, total, enc, hayActas, firmas, responsable, anchos }) {
   return (
     <div className="foja-card rm-card rm-hoja" style={{ marginBottom: 24 }}>
       {numero === 1 ? (
@@ -527,7 +559,7 @@ function Hoja({ b, indices, numero, total, enc, hayActas, firmas, responsable })
       ) : (
         <EncabezadoContinuacion enc={enc} b={b} numero={numero} total={total} />
       )}
-      {indices.length > 0 && <TablaMesas b={b} indices={indices} hayActas={hayActas} />}
+      {indices.length > 0 && <TablaMesas b={b} indices={indices} hayActas={hayActas} anchos={anchos} />}
       {numero === total && <Firmas firmas={firmas} />}
     </div>
   )
@@ -545,20 +577,28 @@ function Medidor({ bloques, enc, hayActas, firmas, onMedir }) {
       const bottom = (x) => x.getBoundingClientRect().bottom
       const alto = (x) => x.getBoundingClientRect().height
       const r = {}
+      let ancho = ANCHO_HOJA
       for (const el of ref.current.querySelectorAll('[data-bloque]')) {
         const [prim, cont] = el.children
         const tabla = prim.querySelector('table.rm-tabla')
         const tablaCont = cont.querySelector('table.rm-tabla')
+        ancho = Math.max(ancho, tabla.getBoundingClientRect().width)
         r[el.dataset.bloque] = {
           primera: top(tabla) - top(prim),
           continuacion: top(tablaCont) - top(cont),
           thead: alto(tabla.tHead),
+          anchos: {
+            tabla: tabla.getBoundingClientRect().width,
+            columnas: [...tabla.tHead.rows[0].cells].map((c) => c.getBoundingClientRect().width),
+          },
           filas: [...tabla.tBodies[0].rows].map(alto),
           // incluye el margen de arriba de las firmas
           firmas: bottom(prim.querySelector('.rm-firmas')) - bottom(tabla),
         }
       }
-      onMedir(r)
+      // El navegador achica según lo más ancho de todo lo impreso, hasta la
+      // mitad como máximo
+      onMedir({ escala: Math.min(ancho / ANCHO_HOJA, 2), bloques: r })
     }
     // Con la letra todavía cargando las filas miden distinto
     document.fonts.ready.then(medir)
