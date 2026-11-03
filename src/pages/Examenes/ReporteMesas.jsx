@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../contexts/AuthContext'
@@ -22,10 +22,41 @@ const hoy = () => {
 const nombreProfesor = (p) => (p ? `${p.apellidos}, ${p.nombres}` : '')
 
 // Se imprimen dos copias: una va a cada carrera para su aprobación y la
-// otra, firmada por el Decanato y Dirección Académica, se publica.
+// otra, firmada solo por el Decanato, se publica (pedido de Secretaría
+// General).
 const COPIAS = {
   carrera: { label: 'Copia para la carrera (aprobación)', firmas: ['Secretaría de Carrera', 'Coordinación de Carrera'] },
-  publicacion: { label: 'Copia para publicación', firmas: ['Decanato', 'Dirección Académica'] },
+  publicacion: { label: 'Copia para publicación', firmas: ['Decanato'] },
+}
+
+// Alto útil de una hoja A4 apaisada con margen de 0.8cm (21cm - 1.6cm a
+// 96 px por pulgada), con un resto de seguridad por redondeos del navegador.
+const ALTO_HOJA = Math.floor((19.4 / 2.54) * 96) - 18
+// Ancho útil de la misma hoja: la tabla se mide con este ancho para que
+// las materias largas envuelvan igual que en el papel.
+const ANCHO_HOJA = Math.floor((28.1 / 2.54) * 96)
+
+// Reparte las filas de un bloque en hojas a partir de las alturas medidas.
+// La numeración "Hoja n de X" es por sede y carrera, por eso se pagina acá
+// y no con los contadores de página del navegador (que son de todo el
+// documento). Las firmas nunca quedan solas en una hoja: si no entran, la
+// última fila pasa con ellas.
+function paginar(m) {
+  const hojas = [[]]
+  let libre = ALTO_HOJA - m.primera - m.thead
+  m.filas.forEach((h, i) => {
+    if (h > libre && hojas[hojas.length - 1].length) {
+      hojas.push([])
+      libre = ALTO_HOJA - m.continuacion - m.thead
+    }
+    hojas[hojas.length - 1].push(i)
+    libre -= h
+  })
+  if (libre < m.firmas) {
+    const ultima = hojas[hojas.length - 1]
+    hojas.push(ultima.length > 1 ? [ultima.pop()] : [])
+  }
+  return hojas
 }
 
 /**
@@ -178,16 +209,30 @@ export function ReporteMesas() {
     )
   }, [filasFiltradas])
 
+  // Alturas medidas de cada bloque (ver Medidor): con ellas se arman las hojas
+  const [medidas, setMedidas] = useState({})
+  const hojasPorBloque = useMemo(() => {
+    const r = {}
+    for (const b of bloques) {
+      const m = medidas[claveBloque(b)]
+      r[claveBloque(b)] = m && m.filas.length === b.filas.length ? paginar(m) : [b.filas.map((_, i) => i)]
+    }
+    return r
+  }, [bloques, medidas])
+
+  const enc = filas[0]
+  const tieneActas = filas.some((f) => f.numeroActa != null)
+  const hayActas = tieneActas && mostrarActas
+  const firmas = COPIAS[copia].firmas
+
   if (loading) return <p className="page-padding muted-text">Cargando...</p>
   if (error) return <p className="page-padding error-text">{error}</p>
   if (filas.length === 0) {
     return <p className="page-padding muted-text">Este llamado no tiene mesas con fecha asignada.</p>
   }
 
-  const enc = filas[0]
-  const tieneActas = filas.some((f) => f.numeroActa != null)
-  const hayActas = tieneActas && mostrarActas
   const hayFiltro = sedeFiltro || carreraFiltro || cursoFiltro
+  const comun = { enc, hayActas, firmas, responsable: perfil?.nombre_completo }
 
   return (
     <div className="page-padding foja-desempeno rm-page">
@@ -197,31 +242,44 @@ export function ReporteMesas() {
       <style>{`
         @media print {
           @page { size: A4 landscape; margin: 0.8cm; }
-          .rm-card { max-width: none !important; }
-          .rm-tabla th, .rm-tabla td { padding: 3px 4px !important; font-size: 8.5px !important; }
-          .rm-tabla th { font-size: 8px !important; }
-          /* cada sede/carrera arranca en hoja aparte — así no quedan
-             pegadas entre sí y se puede imprimir una sola sede sin tener
-             que recortar nada. La primera no lleva salto, para no dejar
-             una hoja en blanco adelante. */
+          .rm-card { max-width: none !important; margin: 0 !important; }
+          /* cada hoja va en su propia página: la paginación ya está hecha
+             (ver paginar). La primera no lleva salto, para no dejar una
+             hoja en blanco adelante. */
           .rm-card + .rm-card { break-before: page; page-break-before: always; }
           .rm-tabla-wrap { overflow: visible !important; }
         }
         /* En pantalla esta tabla tiene más columnas que el resto de los
-           reportes (incluye los dos examinadores): el ancho angosto
-           estándar (.page-padding, 1100px) la obligaba a scrollear casi
-           siempre. Se ensancha solo esta pantalla, no afecta a Foja de
-           Desempeño ni a Reporte de Carga que comparten .page-padding. */
+           reportes (incluye los dos examinadores): se ensancha solo esta
+           pantalla, no afecta a Foja de Desempeño ni a Reporte de Carga
+           que comparten .page-padding. */
         .rm-page { max-width: 1450px; }
         .rm-card { max-width: 1400px; }
-        /* en pantalla (no al imprimir) la tabla es más ancha que la
-           tarjeta — nombres largos de presidente/examinadores en una sola
-           línea — así que entra en scroll horizontal acá en vez de
-           salirse del borde sin forma de leerla. */
         .rm-tabla-wrap { overflow-x: auto; }
         .rm-titulo { margin: 0; line-height: 1.25; }
-        .rm-titulo .uni { font-size: 1.05em; }
-        .rm-titulo .fac { font-size: 1.05em; }
+        .rm-titulo.uni, .rm-titulo.fac { font-size: 1.05em; }
+        /* Medidas de impresión también en pantalla: así lo que se mide en
+           Medidor es lo mismo que sale en el papel. Repiten los valores
+           del print de index.css (los que llevan !important allá ganan
+           igual al imprimir). */
+        .rm-hoja .foja-escudo { width: 70px; height: 70px; }
+        .rm-hoja .foja-header { padding-bottom: 10px; }
+        .rm-hoja h2 { font-size: 18px; margin: 2px 0; }
+        .rm-hoja h3 { font-size: 14px; margin: 10px 0 3px; text-align: center; }
+        .rm-hoja .rm-sub { margin: 0 0 10px; font-size: 12px; text-align: center; }
+        .rm-hoja .muted-text { font-size: 11px; line-height: 1.3; }
+        .rm-hoja .foja-datos { font-size: 12px; margin-bottom: 10px; }
+        .rm-hoja .foja-datos td { padding: 4px 8px; }
+        .rm-hoja .rm-tabla { margin-top: 10px; }
+        .rm-hoja .rm-tabla th, .rm-hoja .rm-tabla td { padding: 3px 4px !important; font-size: 8.5px !important; line-height: 1.3; }
+        .rm-hoja .rm-tabla th { font-size: 8px !important; }
+        .rm-hoja .rm-firmas { margin-top: 40px; margin-bottom: 0; }
+        .rm-hoja .rm-firmas td { border-top: 1px solid #000; padding-top: 6px; text-align: center; }
+        .rm-hoja .rm-firmas td.rm-hueco { border-top: none; }
+        .rm-cont { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: baseline; font-size: 11px; border-bottom: 2px solid var(--gold); padding-bottom: 6px; }
+        .rm-cont .rm-hoja-num { margin-left: auto; font-weight: 600; }
+        .rm-medidor { position: absolute; left: -99999px; top: 0; width: ${ANCHO_HOJA}px; visibility: hidden; }
+        .rm-medidor .foja-card { padding: 0; border: none; box-shadow: none; max-width: none; margin: 0; }
       `}</style>
 
       <div className="form-row no-print" style={{ marginBottom: '1rem', alignItems: 'flex-end' }}>
@@ -289,118 +347,236 @@ export function ReporteMesas() {
         <p className="no-print muted-text">Ninguna mesa coincide con el filtro elegido.</p>
       )}
 
-      {bloques.map((b) => (
-        <div className="foja-card rm-card" key={`${b.sede}-${b.carrera}-${b.periodo_lectivo}`} style={{ marginBottom: 24 }}>
-          <div className="foja-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
-            <img src="/escudo-une.png" alt="Escudo UNE" className="foja-escudo" />
-            <div>
-              <p className="rm-titulo uni" style={{ fontWeight: 700 }}>
-                Universidad Nacional del Este
-              </p>
-              <h2 className="rm-titulo fac" style={{ margin: 0, fontWeight: 700 }}>
-                Facultad de Ciencias Económicas
-              </h2>
-              <p className="muted-text" style={{ margin: '4px 0 0' }}>
-                Dirección Académica
-              </p>
-              <p className="muted-text" style={{ fontSize: 12, margin: '4px 0 0' }}>
-                Avda. Universidad Nacional del Este y Avda. Paraguay - Km 8 Acaray - Campus Universitario - Ciudad del
-                Este - Paraguay
-              </p>
-            </div>
-          </div>
+      {bloques.map((b) => {
+        const hojas = hojasPorBloque[claveBloque(b)]
+        return hojas.map((indices, n) => (
+          <Hoja key={`${claveBloque(b)}-${n}`} {...comun} b={b} indices={indices} numero={n + 1} total={hojas.length} />
+        ))
+      })}
 
-          <h3 style={{ textAlign: 'center', margin: '18px 0 4px' }}>
-            Mesas Examinadoras — Llamado {TIPOS[enc.llamado_tipo] || enc.llamado_tipo}
-          </h3>
-          <p style={{ textAlign: 'center', margin: '0 0 18px' }} className="muted-text">
-            {enc.llamado}
+      <Medidor bloques={bloques} enc={enc} hayActas={hayActas} firmas={firmas} onMedir={setMedidas} />
+    </div>
+  )
+}
+
+const claveBloque = (b) => `${b.sede}||${b.carrera}||${b.periodo_lectivo}`
+
+// Encabezado completo de la primera hoja de cada sede-carrera
+function EncabezadoPrincipal({ enc, b, numero, total, responsable }) {
+  return (
+    <>
+      <div className="foja-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
+        <img src="/escudo-une.png" alt="Escudo UNE" className="foja-escudo" />
+        <div>
+          <p className="rm-titulo uni" style={{ fontWeight: 700 }}>
+            Universidad Nacional del Este
           </p>
+          <h2 className="rm-titulo fac" style={{ fontWeight: 700 }}>
+            Facultad de Ciencias Económicas
+          </h2>
+          <p className="muted-text rm-titulo">Dirección Académica</p>
+          <p className="muted-text rm-titulo">
+            Avda. Universidad Nacional del Este y Avda. Paraguay - Km 8 Acaray - Campus Universitario - Ciudad del Este -
+            Paraguay
+          </p>
+        </div>
+      </div>
 
-          <table className="foja-datos">
-            <tbody>
-              <tr>
-                <td>
-                  <strong>Sede:</strong> {b.sede}
-                </td>
-                <td>
-                  <strong>Carrera:</strong> {b.carrera}
-                </td>
-                <td>
-                  <strong>Período Lectivo:</strong> {b.periodo_lectivo}
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <strong>Total de mesas:</strong> {b.filas.length}
-                </td>
-                <td colSpan={2}>
-                  <strong>Emitido:</strong> {hoy()}
-                </td>
-              </tr>
-              <tr className="no-print">
-                <td colSpan={3}>
-                  <strong>Responsable:</strong> {perfil?.nombre_completo || '—'}
-                </td>
-              </tr>
-            </tbody>
-          </table>
+      <h3>Mesas Examinadoras — Llamado {TIPOS[enc.llamado_tipo] || enc.llamado_tipo}</h3>
+      <p className="muted-text rm-sub">{enc.llamado}</p>
 
-          <div className="rm-tabla-wrap">
-            <table className="data-table foja-tabla rm-tabla">
-              <thead>
-                <tr>
-                  <th style={{ width: hayActas ? 48 : 28 }}>{hayActas ? 'N° Acta' : 'N°'}</th>
-                  <th style={{ width: 75 }}>DÍA</th>
-                  <th style={{ width: 75 }}>FECHA</th>
-                  <th style={{ width: 45 }}>Curso</th>
-                  <th style={{ width: 40 }}>Secc.</th>
-                  <th style={{ width: 45 }}>hora</th>
-                  <th>MATERIA</th>
-                  <th style={{ whiteSpace: 'nowrap' }}>PRESIDENTE</th>
-                  <th style={{ whiteSpace: 'nowrap' }}>EXAMINADOR N° 1</th>
-                  <th style={{ whiteSpace: 'nowrap' }}>EXAMINADOR N° 2</th>
-                </tr>
-              </thead>
-              <tbody>
-                {b.filas.map((f, i) => (
-                  <tr key={f.catedra_id}>
-                    <td>{hayActas ? (f.numeroActa ?? <span className="error-text">—</span>) : i + 1}</td>
-                    <td>{f.diaExamen}</td>
-                    <td style={{ whiteSpace: 'nowrap' }}>{formatoLargo(f.fecha)}</td>
-                    <td>{f.curso_nivel}º</td>
-                    <td>{f.seccion_grupo}</td>
-                    <td>{hora(f.hora_inicio)}</td>
-                    <td>
-                      {f.materia}
-                      {f.optativa ? ' (Opt.)' : ''}
-                    </td>
-                    <td style={{ whiteSpace: 'nowrap' }}>{f.profesor}</td>
-                    <td className={f.vocal1 ? '' : 'error-text'} style={{ whiteSpace: 'nowrap' }}>
-                      {f.vocal1 || '— sin asignar —'}
-                    </td>
-                    <td className={f.vocal2 ? '' : 'error-text'} style={{ whiteSpace: 'nowrap' }}>
-                      {f.vocal2 || '— sin asignar —'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      <table className="foja-datos">
+        <tbody>
+          <tr>
+            <td>
+              <strong>Sede:</strong> {b.sede}
+            </td>
+            <td>
+              <strong>Carrera:</strong> {b.carrera}
+            </td>
+            <td>
+              <strong>Período Lectivo:</strong> {b.periodo_lectivo}
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <strong>Total de mesas:</strong> {b.filas.length}
+            </td>
+            <td>
+              <strong>Emitido:</strong> {hoy()}
+            </td>
+            <td>
+              <strong>
+                Hoja {numero} de {total}
+              </strong>
+            </td>
+          </tr>
+          <tr className="no-print">
+            <td colSpan={3}>
+              <strong>Responsable:</strong> {responsable || '—'}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </>
+  )
+}
+
+// Descripción breve de las hojas siguientes (pedido de Secretaría
+// General): cada hoja suelta dice de qué período, sede, carrera y llamado es
+function EncabezadoContinuacion({ enc, b, numero, total }) {
+  return (
+    <div className="rm-cont">
+      <strong>Mesas Examinadoras — Llamado {TIPOS[enc.llamado_tipo] || enc.llamado_tipo}</strong>
+      <span>{enc.llamado}</span>
+      <span>
+        <strong>Período Lectivo:</strong> {b.periodo_lectivo}
+      </span>
+      <span>
+        <strong>Sede:</strong> {b.sede}
+      </span>
+      <span>
+        <strong>Carrera:</strong> {b.carrera}
+      </span>
+      <span className="rm-hoja-num">
+        Hoja {numero} de {total}
+      </span>
+    </div>
+  )
+}
+
+function TablaMesas({ b, indices, hayActas }) {
+  return (
+    <div className="rm-tabla-wrap">
+      <table className="data-table foja-tabla rm-tabla">
+        <thead>
+          <tr>
+            <th style={{ width: hayActas ? 48 : 28 }}>{hayActas ? 'N° Acta' : 'N°'}</th>
+            <th style={{ width: 75 }}>DÍA</th>
+            <th style={{ width: 75 }}>FECHA</th>
+            <th style={{ width: 45 }}>Curso</th>
+            <th style={{ width: 40 }}>Secc.</th>
+            <th style={{ width: 45 }}>hora</th>
+            <th>MATERIA</th>
+            <th style={{ whiteSpace: 'nowrap' }}>PRESIDENTE</th>
+            <th style={{ whiteSpace: 'nowrap' }}>EXAMINADOR N° 1</th>
+            <th style={{ whiteSpace: 'nowrap' }}>EXAMINADOR N° 2</th>
+          </tr>
+        </thead>
+        <tbody>
+          {indices.map((i) => {
+            const f = b.filas[i]
+            return (
+              <tr key={f.catedra_id}>
+                <td>{hayActas ? (f.numeroActa ?? <span className="error-text">—</span>) : i + 1}</td>
+                <td>{f.diaExamen}</td>
+                <td style={{ whiteSpace: 'nowrap' }}>{formatoLargo(f.fecha)}</td>
+                <td>{f.curso_nivel}º</td>
+                <td>{f.seccion_grupo}</td>
+                <td>{hora(f.hora_inicio)}</td>
+                <td>
+                  {f.materia}
+                  {f.optativa ? ' (Opt.)' : ''}
+                </td>
+                <td style={{ whiteSpace: 'nowrap' }}>{f.profesor}</td>
+                <td className={f.vocal1 ? '' : 'error-text'} style={{ whiteSpace: 'nowrap' }}>
+                  {f.vocal1 || '— sin asignar —'}
+                </td>
+                <td className={f.vocal2 ? '' : 'error-text'} style={{ whiteSpace: 'nowrap' }}>
+                  {f.vocal2 || '— sin asignar —'}
+                </td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+function Firmas({ firmas }) {
+  return (
+    <table className="foja-datos rm-firmas">
+      <tbody>
+        <tr>
+          {firmas.length === 1 ? (
+            <>
+              <td className="rm-hueco" style={{ width: '33%' }} />
+              <td>{firmas[0]}</td>
+              <td className="rm-hueco" style={{ width: '33%' }} />
+            </>
+          ) : (
+            firmas.map((x, i) => (
+              <Fragment key={x}>
+                {i > 0 && <td className="rm-hueco" style={{ width: 60 }} />}
+                <td>{x}</td>
+              </Fragment>
+            ))
+          )}
+        </tr>
+      </tbody>
+    </table>
+  )
+}
+
+function Hoja({ b, indices, numero, total, enc, hayActas, firmas, responsable }) {
+  return (
+    <div className="foja-card rm-card rm-hoja" style={{ marginBottom: 24 }}>
+      {numero === 1 ? (
+        <EncabezadoPrincipal enc={enc} b={b} numero={numero} total={total} responsable={responsable} />
+      ) : (
+        <EncabezadoContinuacion enc={enc} b={b} numero={numero} total={total} />
+      )}
+      {indices.length > 0 && <TablaMesas b={b} indices={indices} hayActas={hayActas} />}
+      {numero === total && <Firmas firmas={firmas} />}
+    </div>
+  )
+}
+
+// Dibuja cada bloque fuera de la vista, con el ancho del papel, y mide el
+// alto de los encabezados, de cada fila y de las firmas para paginar.
+function Medidor({ bloques, enc, hayActas, firmas, onMedir }) {
+  const ref = useRef(null)
+  useLayoutEffect(() => {
+    let vivo = true
+    const medir = () => {
+      if (!vivo || !ref.current) return
+      const top = (x) => x.getBoundingClientRect().top
+      const bottom = (x) => x.getBoundingClientRect().bottom
+      const alto = (x) => x.getBoundingClientRect().height
+      const r = {}
+      for (const el of ref.current.querySelectorAll('[data-bloque]')) {
+        const [prim, cont] = el.children
+        const tabla = prim.querySelector('table.rm-tabla')
+        const tablaCont = cont.querySelector('table.rm-tabla')
+        r[el.dataset.bloque] = {
+          primera: top(tabla) - top(prim),
+          continuacion: top(tablaCont) - top(cont),
+          thead: alto(tabla.tHead),
+          filas: [...tabla.tBodies[0].rows].map(alto),
+          // incluye el margen de arriba de las firmas
+          firmas: bottom(prim.querySelector('.rm-firmas')) - bottom(tabla),
+        }
+      }
+      onMedir(r)
+    }
+    // Con la letra todavía cargando las filas miden distinto
+    document.fonts.ready.then(medir)
+    return () => {
+      vivo = false
+    }
+  }, [bloques, enc, hayActas, firmas, onMedir])
+
+  if (!enc) return null
+  return (
+    <div ref={ref} className="rm-medidor no-print" aria-hidden="true">
+      {bloques.map((b) => (
+        <div key={claveBloque(b)} data-bloque={claveBloque(b)}>
+          <Hoja enc={enc} hayActas={hayActas} firmas={firmas} b={b} indices={b.filas.map((_, i) => i)} numero={1} total={1} />
+          <div className="foja-card rm-hoja">
+            <EncabezadoContinuacion enc={enc} b={b} numero={2} total={2} />
+            <TablaMesas b={b} indices={[]} hayActas={hayActas} />
           </div>
-
-          <table className="foja-datos" style={{ marginTop: 48 }}>
-            <tbody>
-              <tr>
-                <td style={{ textAlign: 'center', borderTop: '1px solid #000', paddingTop: 6 }}>
-                  {COPIAS[copia].firmas[0]}
-                </td>
-                <td style={{ width: 60 }} />
-                <td style={{ textAlign: 'center', borderTop: '1px solid #000', paddingTop: 6 }}>
-                  {COPIAS[copia].firmas[1]}
-                </td>
-              </tr>
-            </tbody>
-          </table>
         </div>
       ))}
     </div>
