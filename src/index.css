@@ -3432,8 +3432,10 @@
 
 @layer print {
   @media print {
+    /* margen de arriba más alto: ahí va el encabezado breve y la hoja */
     @page horario {
       size: A4 landscape;
+      margin: 1.3cm 0.9cm 1cm;
     }
 
     /* toda la pantalla, no solo la grilla: un page propio en un hijo
@@ -3444,15 +3446,164 @@
     }
 
     .horario .data-table-wrap {
+      overflow: visible;
+      border: 0;
+      border-radius: 0;
       box-shadow: none;
     }
 
+    .solo-impresion {
+      display: block;
+    }
+
+    /* ---- encabezado de la primera hoja ---- */
+    .horario-encabezado {
+      margin-bottom: 8px;
+      break-inside: avoid;
+
+      .foja-header {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 14px;
+        padding-bottom: 6px;
+      }
+
+      .foja-escudo {
+        width: 54px;
+        height: 54px;
+      }
+
+      p {
+        margin: 0;
+        line-height: 1.25;
+      }
+
+      .foja-datos {
+        margin: 0;
+        font-size: 9pt;
+
+        td {
+          padding: 2px 8px !important;
+          border-bottom: 0.5pt solid #ddd;
+        }
+      }
+    }
+
+    .horario-enc-uni,
+    .horario-enc-fac {
+      font-weight: 700;
+      font-size: 11pt;
+      color: #000;
+    }
+
+    .horario-enc-dir {
+      font-size: 9pt;
+      color: #444;
+    }
+
+    .horario-enc-titulo {
+      margin: 6px 0 4px;
+      font-size: 13pt;
+      text-align: center;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    /* ---- grilla compacta: dos líneas por clase ---- */
     .horario-grilla {
       min-width: 0;
 
+      th,
+      td {
+        padding: 2px 3px;
+        font-size: 7.5pt;
+        border: 0.5pt solid #999;
+      }
+
+      thead {
+        display: table-header-group;
+      }
+
+      thead th {
+        padding: 3px;
+        font-size: 7pt;
+        background: #eef3ef;
+        color: #000;
+      }
+
+      thead th:first-child {
+        width: 40px;
+      }
+
       tr {
+        break-inside: avoid;
         page-break-inside: avoid;
       }
+    }
+
+    .horario-curso {
+      font-size: 8pt !important;
+      color: #000;
+    }
+
+    .horario-total {
+      color: #000;
+    }
+
+    .horario-grilla thead th.horario-total {
+      width: 38px;
+      font-size: 6.5pt;
+    }
+
+    .horario-clase {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      column-gap: 3px;
+      margin: 0;
+      padding: 1px 0 2px;
+      border: 0;
+      border-bottom: 0.5pt dotted #bbb;
+      border-radius: 0;
+      background: none;
+
+      &:last-child {
+        border-bottom: 0;
+      }
+
+      &.sin-horas {
+        background: none;
+      }
+    }
+
+    .horario-materia {
+      grid-column: 1;
+      grid-row: 1;
+      line-height: 1.2;
+    }
+
+    .horario-pie {
+      display: block;
+      grid-column: 2;
+      grid-row: 1;
+      font-size: inherit;
+      line-height: 1.2;
+      font-weight: 600;
+      white-space: nowrap;
+
+      .muted-text {
+        margin-left: 1px;
+        font-size: inherit;
+        color: inherit;
+      }
+    }
+
+    .horario-profesor {
+      grid-column: 1 / -1;
+      grid-row: 2;
+      font-size: 6.8pt;
+      line-height: 1.2;
+      color: #444;
     }
 
     /* el input recorta el número al imprimir: va el valor como texto */
@@ -3463,12 +3614,47 @@
     .horario-horas-impresa {
       display: inline;
     }
+
+    .horario-aviso {
+      margin: 0 0 6px;
+      padding: 3px 8px;
+      font-size: 8pt;
+    }
+
+    .horario-nota {
+      margin-top: 4px !important;
+      font-size: 7pt !important;
+    }
+
+    /* ---- tabla de horas dictadas ---- */
+    .horario-tabla-horas {
+      .badge {
+        padding: 0 4px;
+        font-size: 6.5pt;
+      }
+
+      thead {
+        display: table-header-group;
+      }
+
+      th,
+      td {
+        padding: 2px 4px;
+        font-size: 7.5pt;
+        border-bottom: 0.5pt solid #ccc;
+      }
+
+      tr {
+        break-inside: avoid;
+      }
+    }
   }
 }
 
 @layer components {
   @media screen {
-    .horario-horas-impresa {
+    .horario-horas-impresa,
+    .solo-impresion {
       display: none;
     }
   }

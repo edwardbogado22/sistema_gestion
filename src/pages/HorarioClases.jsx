@@ -21,6 +21,91 @@ const SELECT_CATEDRAS =
 const nombreProfesor = (c) => (c.profesores ? `${c.profesores.apellidos}, ${c.profesores.nombres}` : '—')
 const clave = (c) => `${c.asignaturas?.carrera_id}|${c.sede_id}`
 
+const hoy = () => {
+  const d = new Date()
+  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`
+}
+
+// Texto para content: "..." de CSS
+const textoCSS = (s) => s.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+
+// Encabezado breve y "Hoja n de X" en el margen de cada hoja impresa. Va
+// en el margen de la página (no en el contenido) porque solo ahí el
+// navegador sabe el número de hoja; la primera lleva en cambio el
+// encabezado completo (EncabezadoImpresion).
+function MargenesImpresion({ titulo, combo, periodoLectivo }) {
+  const breve = `${titulo} · Carrera: ${combo.carrera} · Sede: ${combo.sede} · Período lectivo ${periodoLectivo}`
+  return (
+    <style>{`
+      @media print {
+        @page horario {
+          @top-left {
+            content: "${textoCSS(breve)}";
+            font-family: 'IBM Plex Sans', sans-serif;
+            font-size: 8pt;
+            color: #333;
+            vertical-align: bottom;
+            padding-bottom: 4px;
+          }
+          @top-right {
+            content: "Hoja " counter(page) " de " counter(pages);
+            font-family: 'IBM Plex Sans', sans-serif;
+            font-size: 8pt;
+            font-weight: 600;
+            color: #333;
+            vertical-align: bottom;
+            padding-bottom: 4px;
+          }
+        }
+        @page horario:first {
+          @top-left { content: none; }
+        }
+      }
+    `}</style>
+  )
+}
+
+// Encabezado institucional de la primera hoja (mismo formato que el
+// Reporte de mesas). `datos`: pares [etiqueta, valor] además de sede,
+// carrera y período.
+function EncabezadoImpresion({ titulo, combo, periodoLectivo, datos }) {
+  const celdas = [
+    ['Sede', combo.sede],
+    ['Carrera', combo.carrera],
+    ['Período lectivo', periodoLectivo],
+    ...datos,
+    ['Emitido', hoy()],
+  ]
+  const filas = []
+  for (let i = 0; i < celdas.length; i += 3) filas.push(celdas.slice(i, i + 3))
+  return (
+    <div className="horario-encabezado solo-impresion">
+      <div className="foja-header horario-encabezado-inst">
+        <img src="/escudo-une.png" alt="Escudo UNE" className="foja-escudo" />
+        <div>
+          <p className="horario-enc-uni">Universidad Nacional del Este</p>
+          <p className="horario-enc-fac">Facultad de Ciencias Económicas</p>
+          <p className="horario-enc-dir">Dirección Académica</p>
+        </div>
+      </div>
+      <h2 className="horario-enc-titulo">{titulo}</h2>
+      <table className="foja-datos">
+        <tbody>
+          {filas.map((fila, i) => (
+            <tr key={i}>
+              {fila.map(([k, v]) => (
+                <td key={k}>
+                  <strong>{k}:</strong> {v}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
 // Se guarda al salir del campo (o con Enter). Se monta con key = valor
 // guardado, así que si cambia desde afuera vuelve a arrancar de ahí.
 function HorasInput({ valor, onGuardar, disabled }) {
@@ -97,6 +182,8 @@ export function HorarioClases() {
         id: clave(c),
         carrera_id: c.asignaturas.carrera_id,
         sede_id: c.sede_id,
+        carrera: c.asignaturas.carreras?.nombre || '—',
+        sede: c.sedes?.nombre || '—',
         label: `${c.asignaturas.carreras?.nombre} — ${c.sedes?.nombre}`,
       })
     }
@@ -111,7 +198,7 @@ export function HorarioClases() {
 
   return (
     <div className="page-padding horario">
-      <div className="page-header">
+      <div className="page-header no-print">
         <h1>Horario de clases</h1>
         <p className="no-print">
           Grilla por curso y sección con la carga horaria de cada materia. Con la asistencia diaria, estima las horas
@@ -151,6 +238,11 @@ export function HorarioClases() {
 
       {combo && (
         <>
+          <MargenesImpresion
+            titulo={vista === 'horario' ? 'Horario de clases' : 'Horas dictadas'}
+            combo={combo}
+            periodoLectivo={periodoLectivo}
+          />
           <div className="tabs no-print">
             <button type="button" className={`tab${vista === 'horario' ? ' active' : ''}`} onClick={() => setVista('horario')}>
               Horario
@@ -251,7 +343,16 @@ function GrillaHorario({ combo, periodoLectivo, catedras, editable, setCatedras,
       </div>
 
       <div className="horario-imprimible">
-        <p className="horario-titulo">
+        <EncabezadoImpresion
+          titulo="Horario de clases"
+          combo={combo}
+          periodoLectivo={periodoLectivo}
+          datos={[
+            ['Cursos y secciones', filas.length],
+            ['Horas cátedra por semana', resumen.horas],
+          ]}
+        />
+        <p className="horario-titulo no-print">
           <strong>{combo.label}</strong> · Período {periodoLectivo}
         </p>
         <div className="data-table-wrap">
@@ -450,10 +551,20 @@ function HorasDictadas({ combo, periodoLectivo, periodos }) {
 
       {filas && filas.length > 0 && (
         <>
-          <p className="horario-titulo">
+          <EncabezadoImpresion
+            titulo="Horas dictadas por asignatura"
+            combo={combo}
+            periodoLectivo={periodoLectivo}
+            datos={[
+              ['Corte', `${formatoLargo(desde)} al ${formatoLargo(hasta)}`],
+              ['Horas dictadas', `${totales.dictadas + totales.suplente} de ${totales.esperadas}`],
+              ['Cumplimiento', `${pct(totales.dictadas + totales.suplente, totales.esperadas) ?? '—'}%`],
+            ]}
+          />
+          <p className="horario-titulo no-print">
             <strong>{combo.label}</strong> · Período {periodoLectivo} · del {formatoLargo(desde)} al {formatoLargo(hasta)}
           </p>
-          <div className="horario-resumen">
+          <div className="horario-resumen no-print">
             <span>
               <strong>{totales.dictadas + totales.suplente}</strong> de <strong>{totales.esperadas}</strong> horas
               cátedra dictadas ({pct(totales.dictadas + totales.suplente, totales.esperadas) ?? '—'}%)
@@ -523,7 +634,7 @@ function HorasDictadas({ combo, periodoLectivo, periodos }) {
               </tbody>
             </table>
           </div>
-          <p className="muted-text" style={{ fontSize: 13, marginTop: 10 }}>
+          <p className="muted-text horario-nota" style={{ fontSize: 13, marginTop: 10 }}>
             Cumplimiento = (dictadas + suplente) / esperadas. La asistencia se marca por profesor y día: si un profesor da
             dos materias el mismo día, la marca vale para las dos.
           </p>
