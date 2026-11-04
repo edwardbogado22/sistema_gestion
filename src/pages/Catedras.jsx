@@ -46,13 +46,27 @@ function SelectorDias({ seleccionados, onChange }) {
   )
 }
 
+// Solo quita los días desmarcados y agrega los nuevos: los que quedan
+// conservan su carga horaria (catedra_horario.horas, que se carga en
+// Horario de clases).
 async function sincronizarHorario(catedraId, dias) {
-  const { error: eDel } = await supabase.from('catedra_horario').delete().eq('catedra_id', catedraId)
-  if (eDel) return eDel
-  if (!dias.length) return null
+  const { data, error: eSel } = await supabase.from('catedra_horario').select('dia_semana').eq('catedra_id', catedraId)
+  if (eSel) return eSel
+  const actuales = (data || []).map((h) => h.dia_semana)
+  const quitar = actuales.filter((d) => !dias.includes(d))
+  const agregar = dias.filter((d) => !actuales.includes(d))
+  if (quitar.length) {
+    const { error: eDel } = await supabase
+      .from('catedra_horario')
+      .delete()
+      .eq('catedra_id', catedraId)
+      .in('dia_semana', quitar)
+    if (eDel) return eDel
+  }
+  if (!agregar.length) return null
   const { error: eIns } = await supabase
     .from('catedra_horario')
-    .insert(dias.map((dia_semana) => ({ catedra_id: catedraId, dia_semana })))
+    .insert(agregar.map((dia_semana) => ({ catedra_id: catedraId, dia_semana })))
   return eIns
 }
 

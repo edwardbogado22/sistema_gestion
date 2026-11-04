@@ -3277,3 +3277,199 @@
     }
   }
 }
+
+/* ---- horario de clases ---- */
+@layer components {
+  .horario-resumen {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 16px;
+    margin-bottom: 12px;
+    font-size: 14px;
+
+    .btn {
+      margin-left: auto;
+    }
+  }
+
+  .horario-titulo {
+    margin: 0 0 8px;
+    color: var(--green-800);
+  }
+
+  .horario-aviso {
+    padding: 8px 12px;
+    border-radius: var(--radius-sm);
+    background: var(--gold-tint);
+    color: var(--gold-deep);
+    font-size: 13.5px;
+  }
+
+  .horario-grilla {
+    width: 100%;
+    min-width: 900px;
+    border-collapse: collapse;
+    table-layout: fixed;
+
+    th,
+    td {
+      border: 1px solid var(--border);
+      padding: 6px;
+      vertical-align: top;
+      font-size: 13px;
+    }
+
+    thead th {
+      background: color-mix(in oklab, var(--green-700) 6%, transparent);
+      color: var(--green-800);
+      font-size: 11.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      text-align: center;
+    }
+
+    thead th:first-child {
+      width: 84px;
+    }
+  }
+
+  .horario-curso {
+    color: var(--green-800);
+    font-weight: 700;
+    white-space: nowrap;
+    text-align: left;
+  }
+
+  .horario-sin-dia {
+    display: block;
+    margin-top: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--muted);
+    cursor: help;
+  }
+
+  .horario-total {
+    width: 64px;
+    text-align: center;
+    font-weight: 700;
+    color: var(--green-800);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .horario-clase {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    padding: 5px 7px;
+    margin-bottom: 5px;
+    border-radius: var(--radius-sm);
+    background: color-mix(in oklab, var(--green-700) 6%, transparent);
+    border-left: 3px solid var(--green-600);
+
+    &.sin-horas {
+      border-left-color: var(--gold);
+      background: var(--gold-tint-06);
+    }
+  }
+
+  .horario-materia {
+    font-weight: 600;
+    line-height: 1.25;
+  }
+
+  .horario-profesor {
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .horario-pie {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .horario-horas-input {
+    width: 3.2em;
+    padding: 1px 4px;
+    font-size: 12px;
+    text-align: center;
+  }
+
+  .horario-quitar {
+    margin-left: auto;
+    padding: 0 6px;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--muted);
+    font-size: 15px;
+    line-height: 1.2;
+    cursor: pointer;
+
+    @media (hover: hover) {
+      &:hover {
+        color: var(--danger);
+        background: var(--danger-soft);
+      }
+    }
+  }
+
+  .horario-agregar {
+    width: 100%;
+    padding: 2px 4px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .horario-tabla-horas td {
+    font-size: 13px;
+  }
+}
+
+@layer print {
+  @media print {
+    @page horario {
+      size: A4 landscape;
+    }
+
+    /* toda la pantalla, no solo la grilla: un page propio en un hijo
+       abre hoja nueva y dejaba el título solo en una A4 vertical */
+    .horario {
+      page: horario;
+      max-width: none;
+    }
+
+    .horario .data-table-wrap {
+      box-shadow: none;
+    }
+
+    .horario-grilla {
+      min-width: 0;
+
+      tr {
+        page-break-inside: avoid;
+      }
+    }
+
+    /* el input recorta el número al imprimir: va el valor como texto */
+    .horario-horas-input {
+      display: none;
+    }
+
+    .horario-horas-impresa {
+      display: inline;
+    }
+  }
+}
+
+@layer components {
+  @media screen {
+    .horario-horas-impresa {
+      display: none;
+    }
+  }
+}

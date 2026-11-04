@@ -78,6 +78,13 @@ export const AREAS = [
         destacada: true,
       },
       {
+        to: '/horario',
+        icon: '🕒',
+        titulo: 'Horario de clases',
+        desc: 'Grilla por curso y sección con días y carga horaria de cada materia. Estima las horas dictadas con la asistencia diaria.',
+        roles: GESTION_SA,
+      },
+      {
         to: '/asistencia/reporte',
         icon: '📊',
         titulo: 'Reporte de asistencia a clases',

@@ -58,6 +58,7 @@ const ReporteAsistencia = lazy(() =>
   import('./pages/Asistencia/ReporteAsistencia').then((m) => ({ default: m.ReporteAsistencia })),
 )
 const Reemplazos = lazy(() => import('./pages/Asistencia/Reemplazos').then((m) => ({ default: m.Reemplazos })))
+const HorarioClases = lazy(() => import('./pages/HorarioClases').then((m) => ({ default: m.HorarioClases })))
 const RegistrarAsistenciaEvento = lazy(() =>
   import('./pages/Eventos/RegistrarAsistenciaEvento').then((m) => ({ default: m.RegistrarAsistenciaEvento })),
 )
@@ -177,6 +178,10 @@ function App() {
         <Route
           path="/asistencia/reemplazos"
           element={<PrivateRoute>{withLayout(<Reemplazos />)}</PrivateRoute>}
+        />
+        <Route
+          path="/horario"
+          element={<PrivateRoute roles={GESTION_SA}>{withLayout(<HorarioClases />)}</PrivateRoute>}
         />
 
         <Route
