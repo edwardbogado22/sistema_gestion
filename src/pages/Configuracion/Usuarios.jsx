@@ -30,6 +30,7 @@ export function Usuarios() {
   const [alcanceAbierto, setAlcanceAbierto] = useState({})
   const [altaDraft, setAltaDraft] = useState({})
   const [dandoAlta, setDandoAlta] = useState('')
+  const [nombreDraft, setNombreDraft] = useState({}) // user_id -> nombre en edición
 
   const cargar = async () => {
     setLoading(true)
@@ -87,6 +88,22 @@ export function Usuarios() {
     const { error } = await supabase.from('usuarios_perfil').update({ rol, actualizado_en: new Date().toISOString() }).eq('user_id', userId)
     if (error) return setError(error.message)
     setOk('Rol actualizado.')
+    cargar()
+  }
+
+  // Nombre del funcionario: sale como "Responsable" en reportes y fojas.
+  const guardarNombre = async (userId) => {
+    const nombre = (nombreDraft[userId] ?? '').trim()
+    if (!nombre) return setError('El nombre completo no puede quedar vacío.')
+    setError('')
+    setOk('')
+    const { error } = await supabase
+      .from('usuarios_perfil')
+      .update({ nombre_completo: nombre, actualizado_en: new Date().toISOString() })
+      .eq('user_id', userId)
+    if (error) return setError(error.message)
+    setNombreDraft((prev) => ({ ...prev, [userId]: undefined }))
+    setOk('Nombre actualizado.')
     cargar()
   }
 
@@ -180,7 +197,36 @@ export function Usuarios() {
               return (
                 <Fragment key={f.user_id}>
                   <tr>
-                    <td>{f.nombre_completo || <span className="muted-text">—</span>}</td>
+                    <td>
+                      {nombreDraft[f.user_id] !== undefined ? (
+                        <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+                          <input
+                            type="text"
+                            value={nombreDraft[f.user_id]}
+                            aria-label={`Nombre completo de ${f.email}`}
+                            autoFocus
+                            onChange={(e) => setNombreDraft((prev) => ({ ...prev, [f.user_id]: e.target.value }))}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') guardarNombre(f.user_id)
+                              if (e.key === 'Escape') setNombreDraft((prev) => ({ ...prev, [f.user_id]: undefined }))
+                            }}
+                            style={{ flex: '1 1 180px' }}
+                          />
+                          <button type="button" className="btn btn-primary btn-sm" onClick={() => guardarNombre(f.user_id)}>
+                            Guardar
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-secondary btn-sm"
+                            onClick={() => setNombreDraft((prev) => ({ ...prev, [f.user_id]: undefined }))}
+                          >
+                            Cancelar
+                          </button>
+                        </div>
+                      ) : (
+                        f.nombre_completo || <span className="muted-text">—</span>
+                      )}
+                    </td>
                     <td>{f.email}</td>
                     <td>
                       {tienePerfil ? (
@@ -211,6 +257,15 @@ export function Usuarios() {
                     </td>
                     <td>
                       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                        {tienePerfil && nombreDraft[f.user_id] === undefined && (
+                          <button
+                            type="button"
+                            className="btn btn-secondary btn-sm"
+                            onClick={() => setNombreDraft((prev) => ({ ...prev, [f.user_id]: f.nombre_completo || '' }))}
+                          >
+                            Editar nombre
+                          </button>
+                        )}
                         {tienePerfil && conAlcance && (
                           <button
                             type="button"
