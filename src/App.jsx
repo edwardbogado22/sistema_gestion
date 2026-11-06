@@ -83,6 +83,9 @@ const ReportePlanAnual = lazy(() =>
   import('./pages/ReportePlanAnual').then((m) => ({ default: m.ReportePlanAnual })),
 )
 const EmisionFojas = lazy(() => import('./pages/EmisionFojas').then((m) => ({ default: m.EmisionFojas })))
+const ContenidoNoConsiderado = lazy(() =>
+  import('./pages/ContenidoNoConsiderado').then((m) => ({ default: m.ContenidoNoConsiderado })),
+)
 const InformeGerencial = lazy(() => import('./pages/InformeGerencial').then((m) => ({ default: m.InformeGerencial })))
 const Ayuda = lazy(() => import('./pages/Ayuda/Ayuda').then((m) => ({ default: m.Ayuda })))
 const VerManual = lazy(() => import('./pages/Ayuda/VerManual').then((m) => ({ default: m.VerManual })))
@@ -225,6 +228,10 @@ function App() {
         <Route
           path="/informes"
           element={<PrivateRoute roles={REPORTES_DIRECTOR}>{withLayout(<InformesConsolidados />)}</PrivateRoute>}
+        />
+        <Route
+          path="/fojas/contenido"
+          element={<PrivateRoute roles={REPORTES}>{withLayout(<ContenidoNoConsiderado />)}</PrivateRoute>}
         />
         <Route
           path="/fojas/emision"

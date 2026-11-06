@@ -44,6 +44,13 @@ export const AREAS = [
         roles: REPORTES,
       },
       {
+        to: '/fojas/contenido',
+        icon: '⚖️',
+        titulo: 'Desarrollo de contenido en la foja',
+        desc: 'Por cátedra: considerar o no el desarrollo de contenido programático. Con justificación aceptada, Desarrollo pedagógico se calcula solo con la asistencia a clases.',
+        roles: REPORTES,
+      },
+      {
         to: '/plan-anual',
         icon: '📘',
         titulo: 'Plan Anual de Clases',

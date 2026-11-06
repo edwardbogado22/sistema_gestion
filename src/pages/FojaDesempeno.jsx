@@ -14,6 +14,8 @@ export function FojaDesempeno() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [impresiones, setImpresiones] = useState([])
+  // Justificación aceptada: "Desarrollo pedagógico" sin contenido programático
+  const [sinContenido, setSinContenido] = useState(null)
 
   useEffect(() => {
     setLoading(true)
@@ -26,6 +28,15 @@ export function FojaDesempeno() {
         else setFilas(data)
         setLoading(false)
       })
+  }, [catedraId])
+
+  useEffect(() => {
+    supabase
+      .from('contenido_no_considerado')
+      .select('motivo')
+      .eq('catedra_id', catedraId)
+      .maybeSingle()
+      .then(({ data }) => setSinContenido(data))
   }, [catedraId])
 
   useEffect(() => {
@@ -184,7 +195,10 @@ export function FojaDesempeno() {
             {institucionales.map((f) => (
               <tr key={f.criterio_id}>
                 <td>{f.orden}</td>
-                <td>{f.criterio_descripcion || f.criterio_nombre}</td>
+                <td>
+                  {f.criterio_descripcion || f.criterio_nombre}
+                  {sinContenido && f.origen === 'OBJETIVO_CLASES_CONTENIDO' && ' (*)'}
+                </td>
                 <td>{f.ponderacion}%</td>
                 <td>{f.obtenido_porcentaje}%</td>
               </tr>
@@ -196,6 +210,13 @@ export function FojaDesempeno() {
             </tr>
           </tbody>
         </table>
+
+        {sinContenido && (
+          <p className="muted-text" style={{ fontSize: 11, margin: '4px 0 0' }}>
+            (*) Calculado solo con la asistencia a clases, sin el desarrollo de contenido programático:{' '}
+            {sinContenido.motivo}.
+          </p>
+        )}
 
         <table className="data-table foja-tabla" style={{ marginTop: 16 }}>
           <thead>
