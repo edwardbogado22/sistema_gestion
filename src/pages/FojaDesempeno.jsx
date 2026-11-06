@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 // Escala valorativa definida por Dirección Académica. El total se
@@ -49,23 +49,49 @@ export function FojaDesempeno() {
   }, [catedraId])
 
   // Cada impresión queda registrada para el informe de Emisión de fojas.
-  // Se engancha a "beforeprint" y no al botón, así también cuenta Ctrl+P.
-  // Si el registro falla (sin permiso, sin conexión) la impresión sigue.
-  useEffect(() => {
+  //
+  // El botón Imprimir guarda el registro y ESPERA la respuesta antes de
+  // abrir el diálogo. Antes solo se registraba en "beforeprint": mientras
+  // el diálogo está abierto Chrome frena la página, el pedido salía recién
+  // al cerrarlo, y como la foja se abre en una pestaña nueva y se cierra
+  // apenas se imprime, el registro se perdía sin que nadie lo viera.
+  //
+  // "beforeprint" queda para Ctrl+P. El botón también lo dispara: dentro
+  // de los segundos siguientes no se registra dos veces.
+  // Si el registro falla, la impresión sigue, pero se avisa en pantalla.
+  const ultimoRegistro = useRef(0)
+  const [avisoRegistro, setAvisoRegistro] = useState('')
+  const [registrando, setRegistrando] = useState(false)
+
+  const registrar = useCallback(async () => {
     const e = filas[0]
-    if (!e) return undefined
-    const registrar = async () => {
-      const { data, error: eReg } = await supabase
-        .from('foja_impresion')
-        .insert({ catedra_id: e.catedra_id, profesor_id: e.profesor_id, periodo_lectivo: e.periodo_lectivo })
-        .select('id, impreso_en')
-        .single()
-      if (eReg) console.warn('No se pudo registrar la impresión de la foja:', eReg.message)
-      else setImpresiones((prev) => [data, ...prev])
+    if (!e || Date.now() - ultimoRegistro.current < 10000) return
+    ultimoRegistro.current = Date.now()
+    const { data, error: eReg } = await supabase
+      .from('foja_impresion')
+      .insert({ catedra_id: e.catedra_id, profesor_id: e.profesor_id, periodo_lectivo: e.periodo_lectivo })
+      .select('id, impreso_en')
+      .single()
+    if (eReg) {
+      ultimoRegistro.current = 0
+      setAvisoRegistro(`No se pudo registrar esta impresión en Emisión de fojas: ${eReg.message}`)
+    } else {
+      setAvisoRegistro('')
+      setImpresiones((prev) => [data, ...prev])
     }
+  }, [filas])
+
+  useEffect(() => {
     window.addEventListener('beforeprint', registrar)
     return () => window.removeEventListener('beforeprint', registrar)
-  }, [filas])
+  }, [registrar])
+
+  const imprimir = async () => {
+    setRegistrando(true)
+    await registrar()
+    setRegistrando(false)
+    window.print()
+  }
 
   if (loading) {
     return (
@@ -116,8 +142,8 @@ export function FojaDesempeno() {
         <button type="button" className="btn btn-secondary" onClick={volver}>
           ← Volver a la lista
         </button>
-        <button type="button" className="btn btn-primary" onClick={() => window.print()}>
-          Imprimir
+        <button type="button" className="btn btn-primary" onClick={imprimir} disabled={registrando}>
+          {registrando ? 'Registrando...' : 'Imprimir'}
         </button>
         <span className="muted-text">
           {impresiones.length === 0
@@ -127,6 +153,7 @@ export function FojaDesempeno() {
               ).toLocaleString('es-PY', { dateStyle: 'short', timeStyle: 'short' })}`}
         </span>
       </div>
+      {avisoRegistro && <p className="error-text no-print">{avisoRegistro}</p>}
 
       <div className="foja-card">
         <div className="foja-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
