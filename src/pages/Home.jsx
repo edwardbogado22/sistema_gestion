@@ -24,10 +24,16 @@ const DIARIOS = { SECRETARIO: 2, ADMIN: 1, DIRECTOR: 1, [SA]: 1, DECANO: 1 }
 
 const itemDe = (to) => AREAS.flatMap((a) => a.items).find((i) => i.to === to)
 
+// Cuentas de una oficina y no de una persona ("Dirección Académica",
+// "Secretaría de ...", "Decanato"): el saludo usa el nombre completo, si no
+// quedaría "Buenos días, Dirección".
+const OFICINA = /^(direcci[oó]n|secretar[ií]a|decanato|departamento|coordinaci[oó]n|rectorado|vicedecanato)\b/i
+
 // "Bogado, Edward" o "Edward Bogado" → "Edward"
 function primerNombre(perfil, user) {
   const completo = perfil?.nombre_completo?.trim()
   if (!completo) return user?.email?.split('@')[0] || ''
+  if (!completo.includes(',') && OFICINA.test(completo)) return completo
   const nombres = completo.includes(',') ? completo.split(',')[1] : completo
   return nombres.trim().split(/\s+/)[0]
 }
