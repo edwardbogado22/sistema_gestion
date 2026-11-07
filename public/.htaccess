@@ -1,0 +1,29 @@
+# Hosting del cPanel de la facultad (Apache). En server-fce lo sirve nginx y
+# este archivo no se usa.
+
+Options -MultiViews
+RewriteEngine On
+
+# Siempre por HTTPS, salvo la validación del certificado (AutoSSL).
+RewriteCond %{HTTPS} off
+RewriteCond %{REQUEST_URI} !^/\.well-known/
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# Aplicación de una sola página: lo que no es un archivo real (/horario,
+# /mis-mesas, /ayuda/...) lo resuelve React desde index.html.
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+RewriteRule ^ index.html [L]
+
+<IfModule mod_headers.c>
+  # index.html sin caché: si no, después de un deploy el navegador seguiría
+  # pidiendo los archivos de la versión anterior.
+  <FilesMatch "^index\.html$">
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+  </FilesMatch>
+  # Los de assets/ llevan un hash en el nombre: se pueden cachear un año.
+  <FilesMatch "\.(js|css|woff2?)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+</IfModule>

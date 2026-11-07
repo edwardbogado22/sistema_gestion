@@ -10,10 +10,13 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+dist-cpanel
+dist-cpanel.zip
 *.local
 .env
 .env.*
 !.env.example
+!.env.cpanel
 
 # Datos personales de docentes (nombres y cédulas) - no versionar
 planilla/*.xlsx
